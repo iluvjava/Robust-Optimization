@@ -8,11 +8,8 @@ function example_knapsack(; verbose = true)
     capacity = 10
     model = Model(GLPK.Optimizer)
     @variable(model, x[1:5], Bin)
-    # Objective: maximize profit
     @objective(model, Max, profit' * x)
-    # Constraint: can carry all
     @constraint(model, weight' * x <= capacity)
-    # Solve problem using MIP solver
     optimize!(model)
     if verbose
         println("Objective is: ", objective_value(model))
