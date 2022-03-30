@@ -7,16 +7,51 @@ struct CONST
     BREAKPOINTS
     Φ
     function CONST()
-        this = new()
-        this.Φ = 1000000 #budget
-        this.HORIZON = 3 #time HORIZON 
-        this.HORIZON #same thing as horizon but more consise notation
-        this.GENERATORS = 6 #number of generators
-        this.QS = 6 #number of quick start generators
-        this.BUSES = 6 #number of BUSES
-        this.ARCS= 7
-        this.BREAKPOINTS = 5 
+        this = new(
+            3, 6, 6, 6, 7, 5,1000000
+        )
     return this end
+end
+
+
+mutable struct Parameters
+    Pmin,
+    Pmax,
+    REGU,
+    REGD,
+    RMT,
+    SU,
+    SD,
+    Tminu,
+    Tmind,
+    RU,
+    RD,
+    RU_bar,
+    RD_bar,
+    NSP,
+    H,
+    S,
+    Pmin_prime,
+    Pmax_prime,
+    REGU_prime,
+    REGD_prime,
+    RMT_prime,
+    SU_prime,
+    SD_prime,
+    Tminu_prime,
+    Tmind_prime,
+    RU_prime,
+    RD_prime,
+    RU_bar_prime,
+    RD_bar_prime,
+    NSP_prime,
+    H_prime,
+    S_prime,
+    req_data,
+    RREGU,
+    RREGD,
+    RNSP
+    
 end
 
 CONST()
