@@ -1,4 +1,5 @@
 include("./problem_parameters.jl")
+include("./utilities.jl")
 
 
 mutable struct MP
@@ -13,20 +14,19 @@ mutable struct MP
             this.M, 
             w[
                 [:x, :y, :z],  
-                1:PROBLEM_PARAMETER.GENERATOR_PRIMARY, 
-                1:PROBLEM_PARAMETER.HORIZON
+                1:CONST_PROBLEM_PARAMETERS.GENERATOR_PRIMARY, 
+                1:CONST_PROBLEM_PARAMETERS.HORIZON
             ], Bin
         )
         # -- instnace copy of global variable: 
-        this.G = PROBLEM_PARAMETER.GENERATOR_PRIMARY
-        this.T = PROBLEM_PARAMETER.HORIZON
+        this.G = CONST_PROBLEM_PARAMETERS.GENERATOR_PRIMARY
+        this.T = CONST_PROBLEM_PARAMETERS.HORIZON
         AddConstraint2!(this)
         AddConstraint3!(this)
     return this end
     function MP() return MP(Model(GLPK.Optimizer)) end 
     
 end
-
 
 function AddConstraint2!(this::MP)
     w = (this|>GetModel)[:w]
@@ -48,13 +48,13 @@ function AddConstraint3!(this::MP)
 return end
 
 function AddConstraint4!(this::MP)
-    
+
 return end
 
 function GetModel(this::MP) return this.M end
 
 
-### Simple Tests 
-using JuMP, GLPK
+### Simple Tests ===============================================================
+
 mp = MP()
 display(mp|>GetModel)

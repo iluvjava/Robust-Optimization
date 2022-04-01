@@ -45,8 +45,13 @@ mutable struct Parameters
     RNSP
     function Parameters()
         this = new()
+        this.Tminu = 1
+        this.Tmind = 1
     return this end
     
 end
 
-const PROBLEM_PARAMETER = ConstParameters();
+if !(@isdefined(CONST_PROBLEM_PARAMETERS))
+    const CONST_PROBLEM_PARAMETERS = ConstParameters();
+    const PROBLEM_PARAMETERS = Parameters()
+end
