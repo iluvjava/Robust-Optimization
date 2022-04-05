@@ -6,6 +6,11 @@ mutable struct MP
     M::Model
     w::Array{VariableRef, 3}
     G::Int64; T::Int64
+    Tmind::Int64  # Min up down
+    Tminu::Int64  # Min up time
+
+    # settings and options stuff: 
+    Verbose::Bool
 
     function MP(M::Model)
         this = new(M)
@@ -18,12 +23,27 @@ mutable struct MP
                 1:CONST_PROBLEM_PARAMETERS.HORIZON
             ], Bin
         )
-        # -- instnace copy of global variable: 
+        # Scaler Continuous variables for demand interval. 
+        @variable(
+            this.M, 
+            γ
+        )
+        # -- copy of global variables: 
         this.G = CONST_PROBLEM_PARAMETERS.GENERATOR_PRIMARY
         this.T = CONST_PROBLEM_PARAMETERS.HORIZON
+        this.Tmind = PROBLEM_PARAMETERS.Tmind
+        @assert this.T > this.Tmind "Tmind: Minimum down time has to be less than "*
+        "time horizon"
+        this.Tminu = PROBLEM_PARAMETERS.Tminu
+        @assert this.T > this.Tminu "Tmind: Minimum up time has to be less than "*
+        "time horizon"
+
         AddConstraint2!(this)
         AddConstraint3!(this)
+        AddConstraint4!(this)
+        AddConstraint5!(this)
     return this end
+
     function MP() return MP(Model(GLPK.Optimizer)) end 
     
 end
@@ -48,13 +68,56 @@ function AddConstraint3!(this::MP)
 return end
 
 function AddConstraint4!(this::MP)
+    w = (this|>GetModel)[:w]
+    for n in 1:this.G, t in this.Tminu: this.T
+        @constraint(
+            this|>GetModel, 
+            sum(
+                w[:x, n, tau] for tau in t - this.Tminu + 1: t
+            ) 
+            <= 
+            w[:y, n, t]
+        )
+    end
+return end
 
+function AddConstraint5!(this::MP)
+    w = (this|>GetModel)[:w]
+    for n in 1:this.G, t in this.Tminu: this.T
+        @constraint(
+            this|>GetModel, 
+            sum(
+                w[:z, n, tau] for tau in t - this.Tmind + 1: t
+            ) 
+            <= 
+            1 - w[:y, n, t]
+        )
+    end
+return end
+
+"""
+    The initial MP problem requires a bounded feasible solution, we must bound
+    the demain interval γ by some large number. 
+"""
+function AddGammaConstraint!(this::MP)
+    γ = (this|>GetModel)[:γ]
+    @constraint(
+        this|>GetModel, 
+        γ <= 1e4  # a large number.  
+    )
+return end
+
+function AddObjective!(this::MP)
+    m = this|>GetModel
+    γ = m[:γ]
+    @objective(m, Max, γ)
 return end
 
 function GetModel(this::MP) return this.M end
-
 
 ### Simple Tests ===============================================================
 
 mp = MP()
 display(mp|>GetModel)
+
+
