@@ -63,5 +63,25 @@ $$
 Both composite variables $u, q$ are going to be implemented via a dictionary mapping from the name of the variable as symbols for the key and maps to the instance for the variable in the code. 
 
 **Constraints Matrix**
+It's part of the representation of the constraints. 
+
+* The Coefficient matrix for $u$ is denoted as $C$. 
+* The Coefficient matrix for $q$ is denoted as $G$. 
+* The vector $h$ is the second stage constraint RHS vector. 
+
+**Over all format**: 
+
+$$
+\begin{aligned}
+    Bw + Cu + Gq \le d + h
+\end{aligned}
+$$
 
 
+---
+### **CCGA Routine**
+
+* Choose $q^{(k)}\in Q$ construct FMP. 
+  * FMP: Finds demand $d^{(k + 1)*}$ by maximizing slack variable $v$ for the secondary constraints. Demand is a decision variable for the FMP. 
+    * Update Upper bound for slack under restricted $q^{(k)} \in Q$.
+  * FSP: Minimize the slacks variable for the secondary constraints and try to make it feasible given the demands $d^{(k + 1)*}$ found by the FMP. 
