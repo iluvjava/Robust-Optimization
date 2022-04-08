@@ -77,11 +77,31 @@ $$
 \end{aligned}
 $$
 
+---
+### **FMP Interfacing with Others**
+
+**Integration of CCGA**
+
+To integrate the decision variable with CCGA, we just put all the decision variables during the iterations of the CCGA into a list. Is that simple. 
+
+
+
 
 ---
-### **CCGA Routine**
+### **FSP Interface**
 
-* Choose $q^{(k)}\in Q$ construct FMP. 
-  * FMP: Finds demand $d^{(k + 1)*}$ by maximizing slack variable $v$ for the secondary constraints. Demand is a decision variable for the FMP. 
-    * Update Upper bound for slack under restricted $q^{(k)} \in Q$.
-  * FSP: Minimize the slacks variable for the secondary constraints and try to make it feasible given the demands $d^{(k + 1)*}$ found by the FMP. 
+
+
+---
+### **Algorithm**
+* MP: Identify candiate $\bar{w}, \bar{\gamma}$, the primary decision variable and the demand intervals that MP thinks the system can satisfy. 
+  * **For** Any $q^{(k)}\in Q$ construct FMP. 
+    * FMP: Finds demand $(d^{(k + 1)})^*$ by maximizing slack variable $v$ for the secondary constraints. Demand and slack $v$ is a decision variable for the FMP. 
+      * Update Upper bound: $UB$ for slack under restricted $q^{(k)} \in Q$.
+    * FSP: Minimize the slacks variable for the secondary constraints and try to make it feasible given the demands $(d^{(k + 1)})^*$ found by the FMP. 
+      * Update the Lower bound: $LB$
+      * Obtain feasible secondary decision variables: $(u^{(k)})^*, (v^{(k)})^*, (q^{(k)})^*$. 
+    * If $UB - LB \le \epsilon$, **terminates** CCGA. 
+    * Create new decision variable: $u^{(k + 1)}, v^{(k + 1)}, \lambda^{(k + 1)}$ and add some constraints to the FMP. 
+    * $k:= k + 1$
+  * If, $UB - LB \approx 0$, then candidate $\bar{w}, \bar{\gamma}$ is feasible. else it has to be that $UB - LB > 0$, Perform feasibility cut to MP, and REPEAT the whole process, but keep the $q^{(k)}$ for the FMP, FSP in the CCGA. 
