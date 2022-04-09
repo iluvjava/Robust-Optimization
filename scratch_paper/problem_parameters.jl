@@ -10,11 +10,11 @@ struct ConstParameters
         this = new(
             3, # HORIZON
             6, # GENERATOR_PRIMARY
-            6, 
-            6,
-            7,
-            5,
-            1000000
+            6, # QS: Quick start 
+            6, # BUSES
+            7, # ARCS
+            5, # BREAKPOINTS
+            1000000 # Budget
         )
     return this end
 end
