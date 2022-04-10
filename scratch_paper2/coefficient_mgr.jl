@@ -1,6 +1,6 @@
 include("utilities.jl")
 
-
+### ============================================================================
 mutable struct Sub2Idx{N} <: AbstractArray{UInt64, N}
     dims::NTuple{N,Int64}
     ndims::Int64
@@ -17,6 +17,9 @@ Base.length(this::Sub2Idx) = prod(this.dims)
 Base.IndexStyle(::Sub2Idx) = IndexLinear()
 Base.getindex(::Sub2Idx, i::Int) = i
 
+
+
+### ============================================================================
 mutable struct VariableCoefManager{N} <: AbstractArray{Number, N}
     dims::NTuple{N,Int64}
     ndims::Int64
@@ -56,7 +59,22 @@ function Base.empty!(this::VariableCoefManager)
     this.empty!(this.coefs)
 end
 
+function Base.show(io::IO, this::VariableCoefManager)
+    println(io, "indexer |-> Coefficients")
+    for kv in this.coefs
+        println(io, "$(kv[1]) |-> $(kv[2])")
+    end
+end
 
+function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, this::VariableCoefManager)
+    show(io, this)
+end
+
+
+
+### ============================================================================
+### Coefficient Matrix Manager
+### ============================================================================
 """
     Register variables names, and indices range. Matrix manage 
     allows efficient assignment of coefficients for the variable 
