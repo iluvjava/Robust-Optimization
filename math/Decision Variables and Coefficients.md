@@ -40,7 +40,7 @@ This is the objective of FMP: Fixing the secondary and primary decision variable
 
 Parameters: $u, q$, continuous and discrete variables for secondary problem. All discrete variable are binary. Because the variables inside are not "uniform" (different index set), the variable will be implemented by a Dictionary mapping from the name of the variable to a vector representing that variable. 
 
-Subvariables of $u$ are: 
+Continuous subvariables of $u$ are: 
 
 $$
 \begin{aligned}
@@ -55,8 +55,7 @@ $$
 \end{aligned}
 $$
 
-
-Subvariables of $q$ are going to be:
+Discrete subvariables of $q$ are going to be:
 $$
 \begin{aligned}
     & \delta_{sg}^{(t)}, (x')_n^{(t)}, (y')_n^{(t)}, (z')_n^{(t)}
@@ -65,7 +64,7 @@ $$
 \end{aligned}
 $$
 
-However, the CCGA creates another parameters for the $q$ indicating each step of the $q$ veraible in CCGA: $q^{(q)}$. And as a results, all inner variables are paramaterized too, giving us: 
+However, the CCGA creates another parameters for the $q$ indicating each step of the $q$ veraible in CCGA: $q^{(k)}$. And as a results, all inner variables are paramaterized too, giving us: 
 
 $$
 \begin{aligned}
@@ -81,6 +80,8 @@ Where $k$ is related to the step of CCGA.
 **Dual Slack Variables and Adverserial Demands**
 
 Variablse for the FCP for KKT conditions (Complementary Slack) are introduced. More specifically the variable $\xi$ and $\rho$. The FMP will optimize on $\eta$, an lower bound for slack, and then variables $\lambda, \xi, \rho, d$ are free variables. 
+
+
 
 
 **Variables Modeling**
