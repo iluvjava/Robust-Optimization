@@ -17,8 +17,9 @@ Base.length(this::Sub2Idx) = prod(this.dims)
 Base.IndexStyle(::Sub2Idx) = IndexLinear()
 Base.getindex(::Sub2Idx, i::Int) = i
 
-
-
+### ============================================================================
+### Variable Coefficients Manager: Mangages coeficients in one constraint, 
+### for one variable with indexer [i1,i2 ,i3,...,i_n]
 ### ============================================================================
 mutable struct VariableCoefManager{N} <: AbstractArray{Number, N}
     dims::NTuple{N,Int64}
@@ -47,7 +48,6 @@ function Base.getindex(this::VariableCoefManager, idx::Int...)
     
 return 0 end
 
-
 function Base.setindex!(this::VariableCoefManager, val::Number, idx::Int...)
     if idx > this.dims
         error("Index out of range. index given is: $(idx), but ndims for variable coef manager is $(this.ndims)")
@@ -74,6 +74,9 @@ end
 
 ### ============================================================================
 ### Coefficient Matrix Manager
+### Models multiple tensor variables that are non-uniform and multiple 
+### constraints coefficients involving those tensor variables, and it can 
+### convert everything into a coefficient matrix for all constraints in the end. 
 ### ============================================================================
 """
     Register variables names, and indices range. Matrix manage 
@@ -104,6 +107,7 @@ mutable struct CoefficientMatrixManager
     return this end
 end
 
+
 """
     Register a variable given it's indexer dimension. 
     For example: x[1:3, 1:5], then register like: 
@@ -122,6 +126,7 @@ function RegisterVar(
     this.n += length(idx)
 return end
 
+
 """
     Register the variable, using the an instance of the variable coefficients manager. 
 """
@@ -129,10 +134,12 @@ function RegisterVar(this::CoefficientMatrixManager, v::VariableCoefManager)
     RegisterVar(this, v.v, v.dims...)
 return end
 
+
 """
     Get the indexer, the subscript converter for a given symbol. 
 """
 function GetIndexer(this::CoefficientMatrixManager, v::Symbol) return this.var_sub[v] end
+
 
 function RegisterRow(
         this::CoefficientMatrixManager,
@@ -152,6 +159,7 @@ function RegisterRow(
     error("variable with symbol: \"$(v)\" never registered, can't add row for this variable yet.")
 return end
 
+
 function RegisterVarableCoefficients(
     this::CoefficientMatrixManager, 
     v::VariableCoefManager
@@ -161,7 +169,6 @@ function RegisterVarableCoefficients(
 return end
 
 function GetMatrix(this::CoefficientMatrixManager)
-    
 return sparse(this.row, this.col, this.val) end
 
 
