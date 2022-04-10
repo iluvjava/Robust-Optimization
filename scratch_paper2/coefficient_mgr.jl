@@ -1,4 +1,4 @@
-using SparseArrays, LinearAlgebra
+include("utilities.jl")
 
 
 mutable struct Sub2Idx{N} <: AbstractArray{UInt64, N}
@@ -28,7 +28,7 @@ mutable struct VariableCoefManager{N} <: AbstractArray{Number, N}
         this.dims = dims
         this.ndims = dims |>length
         this.v = v
-        this.coefs = Dict{NTuple{N, Int64}, Number}()
+        this.coefs = Dict{Tuple, Number}()
     return this end
 end
 
@@ -38,14 +38,14 @@ Base.length(this::VariableCoefManager) = prod(this.dims)
 Base.IndexStyle(::VariableCoefManager) = IndexCartesian()
 
 function Base.getindex(this::VariableCoefManager, idx::Int...)
-
     if idx in keys(this.coefs)
         return this.coefs[idx]
     end
+    
 return 0 end
 
+
 function Base.setindex!(this::VariableCoefManager, val::Number, idx::Int...)
-    println("var coef manager set idx: $(val), $(idx)")
     if idx > this.dims
         error("Index out of range. index given is: $(idx), but ndims for variable coef manager is $(this.ndims)")
     end
@@ -147,27 +147,3 @@ function GetMatrix(this::CoefficientMatrixManager)
 return sparse(this.row, this.col, this.val) end
 
 
-
-# ==============================================================================
-# Simple Tests
-# ==============================================================================
-
-function SimpleTest()
-
-    cm = CoefficientMatrixManager()
-    y = VariableCoefManager(:y, 3,3)
-    x = VariableCoefManager(:x, 2,2)
-    for idx in 1:3
-        y[idx, idx] = 1
-    end
-    for idx in 1:2
-        x[idx, idx] = 1
-    end
-    RegisterVar(cm, x)
-    RegisterVar(cm, y)
-    RegisterVarableCoefficients(cm, x)
-    RegisterVarableCoefficients(cm, y)
-    cm|>GetMatrix|>Matrix|>display
-return cm end
-
-SimpleTest()
