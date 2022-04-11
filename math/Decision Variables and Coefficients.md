@@ -83,7 +83,6 @@ Variablse for the FCP for KKT conditions (Complementary Slack) are introduced. M
 
 
 
-
 **Variables Modeling**
 
 Both composite variables $u, q$ are going to be implemented via a dictionary mapping from the name of the variable as symbols for the key and maps to the instance for the variable in the code. 

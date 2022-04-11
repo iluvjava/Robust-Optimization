@@ -215,6 +215,36 @@ $$
 \end{aligned}
 $$
 
+---
+### **Matrix G**
+
+RHS: 
 
 
-
+$$
+\begin{aligned}
+    & 
+    q := \begin{bmatrix}
+        \begin{bmatrix}
+            (x')_m^{(t)}
+            \\
+            (y')_m^{(t)}
+            \\
+            (z')_m^{(t)}
+        \end{bmatrix}
+        \\
+        \begin{bmatrix}
+            \delta_{sg}^{(t)}
+        \end{bmatrix}
+    \end{bmatrix}
+    \\
+    & 
+    \begin{cases}
+        m \in \mathcal G'
+        \\
+        t \in \mathcal T
+        \\
+        sg \in \mathcal N
+    \end{cases}
+\end{aligned}
+$$
