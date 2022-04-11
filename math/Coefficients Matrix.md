@@ -38,14 +38,17 @@ $$
 Relevant Constraints Matrices: $A, B$, they models constraints: 
 
 * $A$: 2 -> 5
-* $B$ 7, : 
 
 
 
 ---
 ### **Secondary Variables: Discrete**
 
-Secondary Generators on/off. 
+The secondary discrete variables are all packed into the same vector $q^{(k)}$. But before that, we make a list of then so we know what they are. 
+
+* Constraint matrix: $G$
+
+* Compositve variable: $q$
 
 $$
 w' = \begin{bmatrix}
@@ -59,6 +62,13 @@ w' = \begin{bmatrix}
 \end{bmatrix}
 $$
 
+$$
+\begin{aligned}
+    & \delta_{sg}^{(t)}, (x')_n^{(t)}, (y')_n^{(t)}, (z')_n^{(t)}
+    \\
+    & n\in \mathcal G', t\in \mathcal T, sg\in \mathcal N
+\end{aligned}
+$$
 
 
 
