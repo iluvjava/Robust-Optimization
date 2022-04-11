@@ -148,6 +148,9 @@ $$
 $$
 
 
+
+
+
 ---
 ### **Matrix C**
 
@@ -218,8 +221,7 @@ $$
 ---
 ### **Matrix G**
 
-RHS: 
-
+RHS:
 
 $$
 \begin{aligned}
@@ -232,6 +234,7 @@ $$
             \\
             (z')_m^{(t)}
         \end{bmatrix}
+        \\
         \\
         \begin{bmatrix}
             \delta_{sg}^{(t)}

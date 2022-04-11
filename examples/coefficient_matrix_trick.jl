@@ -28,7 +28,7 @@ RegisterVarableCoefficients(cmm, y)
 A = cmm|>GetMatrix
 
 vars = vcat(model[:x][:]..., model[:y][:]...)  # flatten JuMP vars
-
+## MAKE SURE THE ORDERING IS CONSISTENT
 # AND THEN WE HAVE THE CONSTRAINTS!
 @constraint(
     model, c1, A*vars .== 1

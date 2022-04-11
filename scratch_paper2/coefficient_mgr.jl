@@ -56,7 +56,7 @@ function Base.setindex!(this::VariableCoefManager, val::Number, idx::Int...)
 end
 
 function Base.empty!(this::VariableCoefManager)
-    this.empty!(this.coefs)
+    empty!(this.coefs)
 end
 
 function Base.show(io::IO, this::VariableCoefManager)
@@ -86,7 +86,7 @@ end
 mutable struct CoefficientMatrixManager
     n::Int64
     m::Int64
-    var_col::Dict{Symbol, Int64}    # variable symbol maps to starting column index.
+    var_col::Dict{Symbol, Int64}     # variable symbol maps to starting column index.
     var_sub::Dict{Symbol, Sub2Idx}   # converter for the variable subscript to linear index. 
     
     # For sparse array conversion. 
@@ -154,7 +154,7 @@ function RegisterRow(
             push!(this.row, this.m)
             push!(this.val, n)
         end
-        this.n += 1
+        # this.m += 1
     return end
     error("variable with symbol: \"$(v)\" never registered, can't add row for this variable yet.")
 return end
@@ -168,7 +168,19 @@ function RegisterVarableCoefficients(
     
 return end
 
+function NextRow(this::CoefficientMatrixManager)
+    this.m += 1
+end
+
 function GetMatrix(this::CoefficientMatrixManager)
+    totalCol = sum([sub2idx|>length for sub2idx in this.var_sub|>values])
+    push!(this.col, totalCol)
+    push!(this.row, this.m)
+    push!(this.val, 0)
 return sparse(this.row, this.col, this.val) end
+
+function Base.size(this::CoefficientMatrixManager)
+    return (this.m, this.n)
+end
 
 
