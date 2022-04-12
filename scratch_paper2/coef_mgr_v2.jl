@@ -130,17 +130,6 @@ return sparse(
 ) end
 
 
-"""
-    Given the Jump Model, transfer above defined variable 
-    into JuMP in the correct order, 
-    and returns a new JuMP variables vector, for that 
-    model. 
-    #TODO: FINISH this
-"""
-function Transfer2Model(this::CoefficientMatrix, m::JuMP.Model, bin=false)
-    
-return m end
-
 
 function FlattenTupleTensor(s::Tuple)
 return CartesianIndices(s)[:] .|> x -> convert(Tuple, x) end

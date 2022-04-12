@@ -19,6 +19,12 @@ z[:, 1].= 1
 z[:, 2].= -1
 cm(z)
 
+A = cm |> GetMatrix
 
-cm |> GetMatrix|> Matrix
-cm |> GetMatrix|> Matrix
+# Now we make the jump model variables in the same order of how we constructed the 
+# matrix 
+jmodel= Model()
+x = @variable(jmodel, x[1:3,1:3])
+y = @variable(jmodel, y[1:3,1:3])
+z = @variable(jmodel, z[1:2,1:3])
+@constraint(jmodel, A*vcat(x[:], y[:], z[:]) .== 0)
