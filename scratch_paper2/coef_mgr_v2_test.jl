@@ -8,17 +8,18 @@ cm = CoefficientMatrix()
 x[1, 1] = 1
 y[1, 1] = -1
 cm(x, y)  # add coefficient to current row
-!cm       # next row on the matrix!
+cm()       # next row on the matrix!
 
 x[2,2] = 1
 y[2,2] = 1
 cm(x, y)  # add coefficint of x, y to that row 
-!cm       # NEXT ROW!
+cm()       # NEXT ROW!
 
 z[:, 1].= 1
 z[:, 2].= -1
 cm(z)
 
+display(cm|>VariableList)  # check the order of the variable for the coefficient matrix. 
 A = cm |> GetMatrix
 
 # Now we make the jump model variables in the same order of how we constructed the 
@@ -28,3 +29,4 @@ x = @variable(jmodel, x[1:3,1:3])
 y = @variable(jmodel, y[1:3,1:3])
 z = @variable(jmodel, z[1:2,1:3])
 @constraint(jmodel, A*vcat(x[:], y[:], z[:]) .== 0)
+# as you can see, it's consistent. 

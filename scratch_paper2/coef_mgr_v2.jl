@@ -45,7 +45,7 @@ function Base.empty!(this::VariableCoefficientHolder)
     empty!(this.coefs)
 return end
 
-function Base.:!(this::VariableCoefficientHolder)
+function (this::VariableCoefficientHolder)()
     empty!(this)
 return this end
 
@@ -86,7 +86,7 @@ function (this::CoefficientMatrix)(vh::VariableCoefficientHolder)
         Register(this, vh)
     end
     AddCoefficientsFor(this, vh)
-    !vh
+    empty!(vh)
 return this end
 
 function (this::CoefficientMatrix)(vh::VariableCoefficientHolder...)
@@ -105,18 +105,14 @@ function AddCoefficientsFor(this::CoefficientMatrix, var::VariableCoefficientHol
     error("Variable with symbol: \"$(var.v)\" never registered. ")
 end
 
-function Base.:+(this::CoefficientMatrix, var::VariableCoefficientHolder)
-    AddCoefficientsFor(this, var)
-return this end
-
 function Base.in(var::VariableCoefficientHolder, this::CoefficientMatrix)
 return var.v in this.var_posi|>keys end
 
-function Base.:!(this::CoefficientMatrix)
-    this |>NextRow
+function (this::CoefficientMatrix)()
+    this |>NextRow!
 return this end
 
-function NextRow(this::CoefficientMatrix)
+function NextRow!(this::CoefficientMatrix)
     this.m += 1
 return end
 
@@ -129,7 +125,9 @@ return sparse(
     this.n
 ) end
 
-
+function VariableList(this::CoefficientMatrix)
+    
+return [s[1] for s in this.var_dims] end
 
 function FlattenTupleTensor(s::Tuple)
 return CartesianIndices(s)[:] .|> x -> convert(Tuple, x) end
