@@ -118,7 +118,8 @@ function RegisterVar(
     this::CoefficientMatrixManager, v::Symbol, i::Int64...
 )
     if v in keys(this.var_col)
-        error("symbol: $(v) already registered starting at column: $(this.var_col[v]), can't register it again")
+        error("symbol: $(v) already registered starting at column: "*
+        "$(this.var_col[v]), can't register it again")
     end
     idx = Sub2Idx(i...)
     this.var_col[v] = this.n

@@ -45,8 +45,6 @@ mutable struct Parameters
     RNSP
     function Parameters()
         this = new()
-        this.Tminu = 2
-        this.Tmind = 2
     return this end
     
 end
@@ -54,3 +52,5 @@ end
 
 CONST_PROBLEM_PARAMETERS = ConstParameters();
 PROBLEM_PARAMETERS = Parameters()
+PROBLEM_PARAMETERS.Tmind = 2
+PROBLEM_PARAMETERS.Tminu = 2
