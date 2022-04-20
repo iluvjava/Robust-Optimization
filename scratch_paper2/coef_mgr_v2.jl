@@ -1,5 +1,6 @@
 include("utilities.jl")
-### VariableCoefficientHolder
+
+### VariableCoefficientHolder --------------------------------------------------
 ###     A class that holds the coefficients using the subscripts of a variable
 ###     * Subscripts can be tensor indexer. 
 mutable struct VariableCoefficientHolder{N} <: AbstractArray{Number, N}
@@ -50,8 +51,7 @@ function (this::VariableCoefficientHolder)()
 return this end
 
 
-
-### COEFFICIENT MATRIX
+### COEFFICIENT MATRIX ---------------------------------------------------------
 ###     Keep track of the coefficient of the variables and the symbol 
 ###     representing the 
 ###     variable for each individual constraints
@@ -109,12 +109,18 @@ function Base.in(var::VariableCoefficientHolder, this::CoefficientMatrix)
 return var.v in this.var_posi|>keys end
 
 function (this::CoefficientMatrix)()
-    this |>NextRow!
+    this|>NextRow!
 return this end
 
 function NextRow!(this::CoefficientMatrix)
     this.m += 1
 return end
+
+function JumpToRow(this::CoefficientMatrix, row::Int)
+    @assert row > 0 "Expect jumping to a row that is strictly positive"*
+    ", but got: $(row)"
+    this.m = row
+end
 
 function GetMatrix(this::CoefficientMatrix)
 return sparse(
@@ -126,8 +132,4 @@ return sparse(
 ) end
 
 function VariableList(this::CoefficientMatrix)
-    
 return [s[1] for s in this.var_dims] end
-
-function FlattenTupleTensor(s::Tuple)
-return CartesianIndices(s)[:] .|> x -> convert(Tuple, x) end

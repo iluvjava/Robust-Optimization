@@ -1,3 +1,7 @@
+
+"""
+    Parameters the are constants to the whole problem. 
+"""
 struct ConstParameters
     HORIZON 
     GENERATOR_PRIMARY
@@ -45,13 +49,20 @@ mutable struct Parameters
     RNSP
     function Parameters()
         this = new()
+        this.Tmind = 2
+        this.Tminu = 2
+        
+
     return this end
+    
+end
+
+mutable struct GeneratorParameters
     
 end
 
 
 CONST_PROBLEM_PARAMETERS = ConstParameters();
 PROBLEM_PARAMETERS = Parameters()
-PROBLEM_PARAMETERS.Tmind = 2
-PROBLEM_PARAMETERS.Tminu = 2
+
 

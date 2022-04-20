@@ -2,9 +2,6 @@
 We seek to establish the standard matrix for the simple std form for the Secondary and the primary constraints groups. 
 
 
-
-
-
 ---- 
 ### **Notations**
 Subscript Indexer: 
@@ -113,9 +110,9 @@ $$
 #### Intertia Constratins
 
 ---
-### **Matrix A**
+### **Matrix A: RHS**
 
-RHS: 
+
 $$
 \begin{aligned}
     w &= 
@@ -137,9 +134,7 @@ $$
 $$
 
 ---
-### **Matrix B**
-
-RHS:
+### **Matrix B: RHS**
 
 $$
 \begin{aligned}
@@ -148,13 +143,8 @@ $$
 $$
 
 
-
-
-
 ---
-### **Matrix C**
-
-RHS: 
+### **Matrix C: RHS**
 
 $$
 \begin{aligned}
@@ -190,6 +180,8 @@ $$
         \\
         \begin{bmatrix}
             (fft)_b^{(t)}
+            \\
+            (ffr_b)^{(t)}
             \\
             (frr)_b^{(b)}
             \\ 
@@ -251,3 +243,6 @@ $$
     \end{cases}
 \end{aligned}
 $$
+
+
+
