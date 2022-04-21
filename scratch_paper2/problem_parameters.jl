@@ -1,14 +1,13 @@
 using CSV
-ALPHAS = CSV.File(open("data/alpha.csv"))
-BETAS = CSV.File(open("data/beta.csv"))
-P_GEN = CSV.File(open("data/ro_gen_data.csv"))
-STORAGE = CSV.File(open("data/storage_data.csv"))
-TRANS_LIMIT = CSV.File(open("data/transmission_limits.csv"))
-
+CSV_ALPHAS = CSV.File(open("data/alpha.csv"))
+CSV_BETAS = CSV.File(open("data/beta.csv"))
+CSV_P_GEN = CSV.File(open("data/ro_gen_data.csv"))
+CSV_STORAGE = CSV.File(open("data/storage_data.csv"))
+CSV_TRANS_LIMIT = CSV.File(open("data/transmission_limits.csv"))
+CSV_POWERFLOW_BUS = CSV.File(open("data/sigma.csv"))
 
 struct ConstParameters
     HORIZON 
-    GENERATOR_PRIMARY
     QS
     BUSES
     ARCS 
@@ -17,7 +16,6 @@ struct ConstParameters
     function ConstParameters()
         this = new(
             3, # HORIZON
-            6, # GENERATOR_PRIMARY
             6, # QS: Quick start 
             6, # BUSES
             7, # ARCS
@@ -29,6 +27,7 @@ end
 
 mutable struct Generators
     generator_count::Int
+    
     Pmin::Vector{Number}  
     Pmax::Vector{Number}
     SU::Vector{Number}
@@ -51,7 +50,7 @@ mutable struct Generators
     betas::Matrix{Number}
     function Generators(file::CSV.File)
         this = new()
-        this.generator_count = P_GEN|>length
+        this.generator_count = CSV_P_GEN|>length
         this.Pmin = file["Pmin"]
         this.Pmax = file["Pmax"]
         this.SU = file["SU"]
@@ -65,24 +64,58 @@ mutable struct Generators
         this.RREGD = file["RREGD"]
         this.REGU = file["REGU"]
         this.REGD = file["REGD"]
-        this.SR = P_GEN["SR"]
-        this.RNSP = P_GEN["RNSP"]
-        this.NSP = P_GEN["NSP"]
-        this.alphas = ConvertCSV(ALPHAS)
-        this.betas = ConvertCSV(BETAS)
+        this.SR = CSV_P_GEN["SR"]
+        this.RNSP = CSV_P_GEN["RNSP"]
+        this.NSP = CSV_P_GEN["NSP"]
+        this.alphas = ConvertCSV(CSV_ALPHAS)
+        this.betas = ConvertCSV(CSV_BETAS)
+    return this end
+    
+    function Base.length(this::Generators)
+        return this.generator_count
+    end
+end
+
+# !!! currently storage system models a single instance. 
+mutable struct StorageSystem
+    Efficiency::Number  # nu
+    Distfactor::Number  # mu
+    Capacity::Number
+    CharingLim::Number
+    DischargingLim::Number
+
+    function StorageSystem()
+        this = new()
+        properties = CSV_STORAGE|>propertynames
+        this.Efficiency = CSV_STORAGE[1][properties[2]]
+        this.Distfactor = CSV_STORAGE[1][properties[3]]
+        this.Capacity = CSV_STORAGE[1][properties[4]]
+        this.CharingLim = CSV_STORAGE[1][properties[5]]
+        this.DischargingLim = CSV_STORAGE[1][properties[6]]
     return this end
     
 end
 
-mutable struct StorageSystem
-
-
-end
-
 
 mutable struct Transmission
+    Limit::Vector{Number}
     
+    function Transmission()
+        this = new()
+        this.Limit = CSV_TRANS_LIMIT["Limit"]
+    return this end
 end
+
+
+mutable struct Sigmas
+    SigmaMatrix::Matrix{Number}
+    function Sigmas()
+        this = new()
+        this.SigmaMatrix = ConvertCSV(CSV_POWERFLOW_BUS)
+    return this end
+
+end
+
 
 function ConvertCSV(data::CSV.File)
     properties = data|>propertynames
@@ -94,4 +127,7 @@ return m end
 
 
 CONST_PROBLEM_PARAMETERS = ConstParameters();
-PRIMARY_GENERATORS = Generators(P_GEN);
+PRIMARY_GENERATORS = Generators(CSV_P_GEN);
+STORAGE_SYSTEM = StorageSystem();
+TRANSMISSION_SYSTEM = Transmission();
+SIGMAS = Sigmas()

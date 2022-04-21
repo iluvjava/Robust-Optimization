@@ -1,4 +1,4 @@
-include("utilities.jl")
+using SparseArrays, LinearAlgebra
 
 ### VariableCoefficientHolder --------------------------------------------------
 ###     A class that holds the coefficients using the subscripts of a variable
