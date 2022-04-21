@@ -169,10 +169,17 @@ function RegisterVarableCoefficients(
     
 return end
 
+"""
+    Move the cursor to the next row, meaning that next time when the manager is called with '(.)' operator with 
+    a VariableCoefficientHolder in it, it will operator on the next row. 
+"""
 function NextRow(this::CoefficientMatrixManager)
     this.m += 1
 end
 
+"""
+    Export the current matrix in the manager as a Julia Sparse Array. 
+"""
 function GetMatrix(this::CoefficientMatrixManager)
     totalCol = sum([sub2idx|>length for sub2idx in this.var_sub|>values])
     push!(this.col, totalCol)
@@ -180,6 +187,9 @@ function GetMatrix(this::CoefficientMatrixManager)
     push!(this.val, 0)
 return sparse(this.row, this.col, this.val) end
 
+"""
+    Get the size of the matrix. 
+"""
 function Base.size(this::CoefficientMatrixManager)
     return (this.m, this.n)
 end

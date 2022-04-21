@@ -31,6 +31,7 @@ mutable struct MP
         # -- copy of global variables: 
         this.G = CONST_PROBLEM_PARAMETERS.GENERATOR_PRIMARY
         this.T = CONST_PROBLEM_PARAMETERS.HORIZON
+        # TODO: FIX THE GENERATOR PARAMETER INPUT HERE!!!
         this.Tmind = PROBLEM_PARAMETERS.Tmind
         @assert this.T > this.Tmind "Tmind: Minimum down time has to be less than "*
         "time horizon"

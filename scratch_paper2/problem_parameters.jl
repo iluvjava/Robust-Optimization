@@ -1,7 +1,11 @@
+using CSV
+ALPHAS = CSV.File(open("data/alpha.csv"))
+BETAS = CSV.File(open("data/alpha.csv"))
+P_GEN = CSV.File(open("data/ro_gen_data.csv"))
+STORAGE = CSV.File(open("data/storage_data.csv"))
+TRANS_LIMIT = CSV.File(open("data/transmission_limits.csv"))
 
-"""
-    Parameters the are constants to the whole problem. 
-"""
+
 struct ConstParameters
     HORIZON 
     GENERATOR_PRIMARY
@@ -23,46 +27,52 @@ struct ConstParameters
     return this end
 end
 
-mutable struct Parameters
-    Pmin; Pmax;
-    REGU; REGD
-    RMT
-    SU
-    SD
-    Tminu; Tmind
-    RU; RD
-    RU_bar; RD_bar
-    NSP
-    H
-    S
-    Pmin_prime; Pmax_prime
-    REGU_prime; REGD_prime
-    RMT_prime; SU_prime
-    SD_prime
-    Tminu_prime; Tmind_prime
-    RU_prime; RD_prime
-    RU_bar_prime; RD_bar_prime; NSP_prime
-    H_prime
-    S_prime
-    req_data
-    RREGU; RREGD
-    RNSP
-    function Parameters()
+mutable struct Generators
+    Pmin::Vector{Number}  
+    Pmax::Vector{Number}
+    SU::Vector{Number}
+    SD::Vector{Number}
+    Tminu::Vector{Number}
+    Tmind::Vector{Number}
+    RD_bar::Vector{Number}
+    RD::Vector{Number}
+    RU_bar::Vector{Number}
+    RU::Vector{Number}
+    RREGU::Vector{Number}
+    RREGD::Vector{Number}
+    REGU::Vector{Number}
+    REGD::Vector{Number}
+    SR::Vector{Number}
+    RNSP::Vector{Number}
+    NSP::Vector{Number}
+    function Generators(file::CSV.File)
         this = new()
-        this.Tmind = 2
-        this.Tminu = 2
-        
+        this.Pmin = file["Pmin"]
+        this.Pmax = file["Pmax"]
+        this.SU = file["SU"]
+        this.SD = file["SD"]
+        this.Tminu = file["Tminu"]
+        this.Tmind = file["Tmind"]
+        this.RD_bar = file["RD_bar"]
+        this.RU_bar = file["RU_bar"]
+        this.RU = file["RU"]
+        this.RREGU = file["RREGU"]
+        this.RREGD = file["RREGD"]
+        this.REGU = file["REGU"]
+        this.REGD = file["REGD"]
+        this.SR = P_GEN["SR"]
+        this.RNSP = P_GEN["RNSP"]
+        this.NSP = P_GEN["NSP"]
 
     return this end
     
 end
 
-mutable struct GeneratorParameters
-    
+mutable struct StorageData
+
+
 end
 
 
 CONST_PROBLEM_PARAMETERS = ConstParameters();
-PROBLEM_PARAMETERS = Parameters()
-
-
+PRIMARY_GENERATORS = Generators(P_GEN);

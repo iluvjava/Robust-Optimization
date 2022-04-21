@@ -118,7 +118,7 @@ return end
 
 function JumpToRow(this::CoefficientMatrix, row::Int)
     @assert row > 0 "Expect jumping to a row that is strictly positive"*
-    ", but got: $(row)"
+    ", but got: $(row) <= 0"
     this.m = row
 end
 
