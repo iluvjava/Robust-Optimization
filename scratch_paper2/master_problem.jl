@@ -6,8 +6,8 @@ mutable struct MP
     M::Model
     w::Array{VariableRef, 3}
     G::Int64; T::Int64
-    Tmind::Int64  # Min up down
-    Tminu::Int64  # Min up time
+    Tmind::Array{Int}  # Min up down
+    Tminu::Array{Int}  # Min up time
 
     # settings and options stuff: 
     Verbose::Bool
@@ -19,7 +19,7 @@ mutable struct MP
             this.M, 
             w[
                 [:x, :y, :z],  
-                1:CONST_PROBLEM_PARAMETERS.GENERATOR_PRIMARY, 
+                1:PRIMARY_GENERATORS.generator_count, 
                 1:CONST_PROBLEM_PARAMETERS.HORIZON
             ], Bin
         )
@@ -29,14 +29,13 @@ mutable struct MP
             γ
         )
         # -- copy of global variables: 
-        this.G = CONST_PROBLEM_PARAMETERS.GENERATOR_PRIMARY
+        this.G = PRIMARY_GENERATORS.generator_count
         this.T = CONST_PROBLEM_PARAMETERS.HORIZON
-        # TODO: FIX THE GENERATOR PARAMETER INPUT HERE!!!
-        this.Tmind = PROBLEM_PARAMETERS.Tmind
-        @assert this.T > this.Tmind "Tmind: Minimum down time has to be less than "*
+        this.Tmind = PRIMARY_GENERATORS.Tmind
+        @assert any(this.T .> this.Tmind) "Tmind: Minimum down time has to be less than "*
         "time horizon"
-        this.Tminu = PROBLEM_PARAMETERS.Tminu
-        @assert this.T > this.Tminu "Tmind: Minimum up time has to be less than "*
+        this.Tminu = PRIMARY_GENERATORS.Tminu
+        @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
 
         AddConstraint2!(this)
@@ -70,11 +69,11 @@ return end
 
 function AddConstraint4!(this::MP)
     w = (this|>GetModel)[:w]
-    for n in 1:this.G, t in this.Tminu: this.T
+    for n in 1:this.G, t in this.Tminu[n]: this.T
         @constraint(
             this|>GetModel, 
             sum(
-                w[:x, n, tau] for tau in t - this.Tminu + 1: t
+                w[:x, n, tau] for tau in t - this.Tminu[n] + 1: t
             ) 
             <= 
             w[:y, n, t]
@@ -84,11 +83,11 @@ return end
 
 function AddConstraint5!(this::MP)
     w = (this|>GetModel)[:w]
-    for n in 1:this.G, t in this.Tminu: this.T
+    for n in 1:this.G, t in this.Tmind[n]: this.T
         @constraint(
             this|>GetModel, 
             sum(
-                w[:z, n, tau] for tau in t - this.Tmind + 1: t
+                w[:z, n, tau] for tau in t - this.Tmind[n] + 1: t
             ) 
             <= 
             1 - w[:y, n, t]
@@ -116,9 +115,10 @@ return end
 
 function GetModel(this::MP) return this.M end
 
+
+
+
 ### Simple Tests ===============================================================
 
 mp = MP()
 display(mp|>GetModel)
-
-
