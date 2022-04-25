@@ -193,12 +193,26 @@ $$
     \le 0
     \\&
     \underbrace{(sr)^{(t)}_n }_{\text{For} C}
-    - 
-    \underbrace{R_n^{MT}y_n^{(t)}}_{\text{For }B} \le 0 
+    \underbrace{-R_n^{MT}y_n^{(t)}}_{\text{For }B} \le 0 
     \\&
     \underbrace{- p_n^{(t)} + (regd)^{(t)}_n}_{\text{for }C} 
     \le P_n^{min} 
     \\
-    
-\end{aligned}
+    & 
+    \underbrace{(nsp)_n^{(t)}}_{\text{for }C} + \underbrace{\text{NSP}_n y_n^{(t)}}_{\text{for }B} \le \text{NSP}_n
+    \\
+    & 
+    \underbrace{(regu)^{(t)}_n}_{\text{For }C}
+    \underbrace{-\text{REGU}_ny_n^{(t)}}_{\text{for }B} 
+    \le 0
+    \\
+    & 
+    \underbrace{(regd)^{(t)}_n}_{\text{For }C} 
+    \underbrace{-\text{REGD}_ny_n^{(t)}}_{\text{for }B} 
+    \le 0
+\end{aligned}\tag{13,..., 20}
 $$
+
+
+
+

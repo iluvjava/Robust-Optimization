@@ -133,3 +133,12 @@ return sparse(
 
 function VariableList(this::CoefficientMatrix)
 return [s[1] for s in this.var_dims] end
+
+
+"""
+    Given a list of matrices, sync the cursor to the maximum row number on all 
+    of these matrices. 
+"""
+function SynRow(matrices::CoefficientMatrix...)
+
+return end
