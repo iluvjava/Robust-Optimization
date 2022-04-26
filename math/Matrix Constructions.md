@@ -56,10 +56,6 @@ u =
         (nsp)^{(t)}_n
         \\
         (nsp')^{(t)}_m
-        \\
-        \xi^+
-        \\
-        \xi^-
     \end{bmatrix}
 \end{aligned}
 $$
@@ -82,12 +78,7 @@ $$
         (y')^{(t)}_m
         \\
         (z')^{(t)}_m
-        \\
-        \rho^+
-        \\
-        \rho^-
     \end{bmatrix}
-
 \end{aligned}
 $$
 
@@ -115,14 +106,14 @@ $$
         (c')^{(t)}_m
     +
     \sum_{t \in \mathcal T}^{}
-    \sum_{n\in G}^{}
+    \sum_{n\in \mathcal G}^{}
     c^{(t)}_n }_{\text{for }C}
     \\&
     +
     \underbrace{\sum_{t \in \mathcal T}^{}
-    \sum_{n\in G}^{}
+    \sum_{n\in \mathcal G}^{}
     \left(
-        \text{SU}_nx_n^{(t)} + \text{SD}_ny_n^{(t)} \tag{6} 
+        \text{SU}_nx_n^{(t)} + \text{SD}_nz_n^{(t)} \tag{6} 
     \right)}_{\text{for } B}
     \le
     \phi
@@ -212,6 +203,10 @@ $$
     \le 0
 \end{aligned}\tag{13,..., 20}
 $$
+
+Quick start capacity constraints: Exactly the same as above, but wrt to the variable $p', x', y', z', sr', regd', regu', nsp'$. Whenever it's said "for C", it's still true, but "For B" is now "For G". 
+
+Minimum Requirement Constraints
 
 
 

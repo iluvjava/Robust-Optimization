@@ -7,7 +7,7 @@ cm = CoefficientMatrix()
 
 x[1, 1] = 1
 y[1, 1] = -1
-cm(x, y)  # add coefficient to current row
+cm(x, y)  # add coefficient to current row (automatically register new variables)
 cm()       # next row on the matrix!
 
 x[2,2] = 1

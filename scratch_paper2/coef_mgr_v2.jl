@@ -123,11 +123,15 @@ function JumpToRow(this::CoefficientMatrix, row::Int)
 end
 
 function GetMatrix(this::CoefficientMatrix)
+    if this.m == 1
+        error("Can't get matrix yet, cursor is on the first row, you need to use 'C()'"*
+        " to complete the first row of the coefficient matrix. ")
+    end
 return sparse(
-    [e[1] for e in this.coefs], 
-    [e[2] for e in this.coefs], 
-    [e[3] for e in this.coefs], 
-    this.m, 
+    [convert(Float64, e[1]) for e in this.coefs], 
+    [convert(Float64, e[2]) for e in this.coefs], 
+    [convert(Float64, e[3]) for e in this.coefs], 
+    this.m - 1, 
     this.n
 ) end
 
@@ -138,7 +142,12 @@ return [s[1] for s in this.var_dims] end
 """
     Given a list of matrices, sync the cursor to the maximum row number on all 
     of these matrices. 
-"""
-function SynRow(matrices::CoefficientMatrix...)
 
+    Returns nothing. 
+"""
+function SyncRow(matrices::CoefficientMatrix...)
+    MaxRow = maximum([m.m for m in matrices])
+    for m in matrices
+        JumpToRow(m, MaxRow)
+    end
 return end

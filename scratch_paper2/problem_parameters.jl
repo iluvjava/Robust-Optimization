@@ -1,25 +1,23 @@
 using CSV
-CSV_ALPHAS = CSV.File(open("data/alpha.csv"))
-CSV_BETAS = CSV.File(open("data/beta.csv"))
+# Primary Generators
+CSV_P_ALPHAS = CSV.File(open("data/alpha.csv"))
+CSV_P_BETAS = CSV.File(open("data/beta.csv"))
 CSV_P_GEN = CSV.File(open("data/ro_gen_data.csv"))
+CSV_S_GEN = CSV.File("data/quick_start_data.csv")
+CSV_S_ALPHAS = CSV.File("data/alpha_prime.csv")
+CSV_S_BETAS = CSV.File("data/beta_prime.csv")
+
+# Others
 CSV_STORAGE = CSV.File(open("data/storage_data.csv"))
 CSV_TRANS_LIMIT = CSV.File(open("data/transmission_limits.csv"))
 CSV_POWERFLOW_BUS = CSV.File(open("data/sigma.csv"))
 
 struct ConstParameters
     HORIZON 
-    QS
-    BUSES
-    ARCS 
-    BREAKPOINTS
     Φ
     function ConstParameters()
         this = new(
-            3, # HORIZON
-            6, # QS: Quick start 
-            6, # BUSES
-            7, # ARCS
-            5, # BREAKPOINTS
+            12, # HORIZON
             1000000 # Budget
         )
     return this end
@@ -48,27 +46,32 @@ mutable struct Generators
 
     alphas::Matrix{Number}
     betas::Matrix{Number}
-    function Generators(file::CSV.File)
+    function Generators(
+        gen_file::CSV.File, 
+        alpha_file::CSV.File, 
+        beta_file::CSV.File
+    )
         this = new()
-        this.generator_count = CSV_P_GEN|>length
-        this.Pmin = file["Pmin"]
-        this.Pmax = file["Pmax"]
-        this.SU = file["SU"]
-        this.SD = file["SD"]
-        this.Tminu = file["Tminu"]
-        this.Tmind = file["Tmind"]
-        this.RD_bar = file["RD_bar"]
-        this.RU_bar = file["RU_bar"]
-        this.RU = file["RU"]
-        this.RREGU = file["RREGU"]
-        this.RREGD = file["RREGD"]
-        this.REGU = file["REGU"]
-        this.REGD = file["REGD"]
+        this.generator_count = gen_file|>length
+        this.Pmin = gen_file["Pmin"]
+        this.Pmax = gen_file["Pmax"]
+        this.SU = gen_file["SU"]
+        this.SD = gen_file["SD"]
+        this.Tminu = gen_file["Tminu"]
+        this.Tmind = gen_file["Tmind"]
+        this.RD_bar = gen_file["RD_bar"]
+        this.RD = gen_file["RD"]
+        this.RU_bar = gen_file["RU_bar"]
+        this.RU = gen_file["RU"]
+        this.RREGU = gen_file["RREGU"]
+        this.RREGD = gen_file["RREGD"]
+        this.REGU = gen_file["REGU"]
+        this.REGD = gen_file["REGD"]
         this.SR = CSV_P_GEN["SR"]
         this.RNSP = CSV_P_GEN["RNSP"]
         this.NSP = CSV_P_GEN["NSP"]
-        this.alphas = ConvertCSV(CSV_ALPHAS)
-        this.betas = ConvertCSV(CSV_BETAS)
+        this.alphas = ConvertCSV(alpha_file)
+        this.betas = ConvertCSV(beta_file)
     return this end
     
     function Base.length(this::Generators)
@@ -78,21 +81,27 @@ end
 
 # !!! currently storage system models a single instance. 
 mutable struct StorageSystem
-    Efficiency::Number  # nu
-    Distfactor::Number  # mu
-    Capacity::Number
-    CharingLim::Number
-    DischargingLim::Number
+    Efficiency::Array{Number}  # nu
+    Distfactor::Array{Number}  # mu
+    Capacity::Array{Number}
+    CharingLim::Array{Number}
+    DischargingLim::Array{Number}
 
+    s  # total number of storage system
     function StorageSystem()
         this = new()
         properties = CSV_STORAGE|>propertynames
-        this.Efficiency = CSV_STORAGE[1][properties[2]]
-        this.Distfactor = CSV_STORAGE[1][properties[3]]
-        this.Capacity = CSV_STORAGE[1][properties[4]]
-        this.CharingLim = CSV_STORAGE[1][properties[5]]
-        this.DischargingLim = CSV_STORAGE[1][properties[6]]
+        this.Efficiency = CSV_STORAGE[properties[2]]
+        this.Distfactor = CSV_STORAGE[properties[3]]
+        this.Capacity = CSV_STORAGE[properties[4]]
+        this.CharingLim = CSV_STORAGE[properties[5]]
+        this.DischargingLim = CSV_STORAGE[properties[6]]
+        this.s = CSV_STORAGE |> length
+
     return this end
+
+    function Base.length(this::StorageSystem)
+    return this.s end
     
 end
 
@@ -126,8 +135,9 @@ function ConvertCSV(data::CSV.File)
 return m end
 
 
-CONST_PROBLEM_PARAMETERS = ConstParameters();
-PRIMARY_GENERATORS = Generators(CSV_P_GEN);
-STORAGE_SYSTEM = StorageSystem();
-TRANSMISSION_SYSTEM = Transmission();
-SIGMAS = Sigmas()
+CONST_PROBLEM_PARAMETERS = ConstParameters()
+PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
+SECONDARY_GENERATORS = Generators(CSV_S_GEN, CSV_S_ALPHAS, CSV_S_BETAS)
+STORAGE_SYSTEM = StorageSystem()
+TRANSMISSION_SYSTEM = Transmission()
+SIGMAS = Sigmas();
