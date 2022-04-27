@@ -108,6 +108,7 @@ function FuelConstraints()
         push!(rhs, 0)
     end
     # SYNC MATRICES
+    
     SyncRow(B, C, G)
 return rhs end
 
