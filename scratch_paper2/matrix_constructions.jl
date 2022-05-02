@@ -12,8 +12,10 @@ N = PRIMARY_GENERATORS|>length
 M = SECONDARY_GENERATORS|>length
 S = STORAGE_SYSTEM|>length
 
+# ==============================================================================
 # set up all decisions variables and their dimensions using the enumeration sets
 # cardinality. 
+# ==============================================================================
 x = VariableCoefficientHolder(:x, N, T)
 y = VariableCoefficientHolder(:y, N, T)
 z = VariableCoefficientHolder(:z, N, T)
@@ -67,6 +69,9 @@ B, C, G = MakeCoefMatrices()
 # All global variable, let's not worry about the bad programming for now, 
 # improve them later.
 
+# ==============================================================================
+# Constraints adding functions
+# ==============================================================================
 
 """
     Adding the first row, the fuel constraints. RHS is returned by the function, as 
@@ -112,7 +117,6 @@ function FuelConstraints()
     end
     # SYNC MATRICES
     
-    SyncRow(B, C, G)
 return rhs end
 
 """
@@ -161,7 +165,6 @@ function QuickStartConstraints()
         B(x′, y′); B()
     end
 
-    SyncRow(B, C, G)
 return rhs end
 
 
@@ -169,7 +172,7 @@ return rhs end
     The capacity constraints of the first stage generator. 
     constraints (13, ..., 20)
     * Pass in the generator instance, matrix C, or Matrix G to specify 
-    whether these sets of constraints are for primary, or seconcary generators. 
+    whether these sets of constraints are for primary, or secondary generators. 
 """
 function CapacityConstraints(
     gen::Generators, 
@@ -227,23 +230,65 @@ function CapacityConstraints(
     for t = 1:T, n = 1:(gen|>length)
         # (18)
         nsp[n, t] = 1; y[n, t] = gen.NSP[n]
-        C(nsp); C(); B(y); B();
+        C(nsp); C(); K(y); K();
         push!(rhs, gen.NSP[n])
     end
     for t = 1:T, n = 1:(gen|>length)
         # (19)
         regu[n, t] = 1; y[n, t] = - gen.REGU[n]
-        C(regu); C(); B(y); B()
+        C(regu); C(); K(y); K()
         push!(rhs, 0)
     end
     for t = 1:T, n = 1:(gen|>length)
-        # (19)
+        # (20)
         regd[n, t] = 1; y[n, t] = - gen.REGD[n]
-        C(regd); C(); B(y); B()
+        C(regd); C(); K(y); K()
         push!(rhs, 0)
     end
-    SyncRow(B, C, G)
+    
 return rhs end
+
+"""
+    Constraints 30 to 33. 
+    TODO: FIX THIS 
+"""
+function MinimumRequirement()
+    rhs = Vector{Number}()
+    sg = SECONDARY_GENERATORS
+    for t = 1: T
+        for n = 1:N
+            regu[n, t] = -1 
+        end
+        for m = 1:M
+            regu′[m, t]  = -1
+        end
+        C(regu, regu′); C();
+        push!(rhs, sg.RREGU[1])  # just use the first gen, something is off here. 
+    end
+    for t = 1: T
+        for n = 1:N
+            regd[n, t] = -1 
+        end
+        for m = 1:M
+            regd′[m, t]  = -1
+        end
+        C(regd, regd′); C();
+        push!(rhs, sg.RREGD[1]) # just use the first gen, something is off here. 
+    end
+    for t = 1:T
+
+    end
+
+
+return rhs end
+
+
+"""
+
+"""
+function Battery()
+
+end
 
 
 # ------------------------------------------------------------------------------
@@ -251,7 +296,9 @@ return rhs end
 # Visualize the matrices for debugging purpose. 
 
 FuelRHS = FuelConstraints()
+SyncRow(B, C, G)
 QuickStartRHS = QuickStartConstraints()
+SyncRow(B, C, G)
 PrimaryCapacityConstaints = CapacityConstraints(
     PRIMARY_GENERATORS,
     B,
@@ -264,7 +311,7 @@ PrimaryCapacityConstaints = CapacityConstraints(
     regu,
     nsp
 )
-
+SyncRow(B, C, G)
 SecondaryCapacityConstaints = CapacityConstraints(
     SECONDARY_GENERATORS,
     G,
@@ -277,6 +324,8 @@ SecondaryCapacityConstaints = CapacityConstraints(
     regu′,
     nsp′
 )
+SyncRow(B, C, G)
+
 
 
 heatmap((B|>GetMatrix|>Matrix).==0)|>display

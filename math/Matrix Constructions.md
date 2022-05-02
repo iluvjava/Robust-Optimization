@@ -252,4 +252,8 @@ $$
 Battery Constraints: 
 
 
-
+$$
+\begin{aligned}
+    
+\end{aligned}
+$$
