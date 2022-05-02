@@ -254,6 +254,19 @@ Battery Constraints:
 
 $$
 \begin{aligned}
-    
+    \text{for C}
+    \begin{cases}
+        h_s^{(t + 1)} = h^{(t)}_s+ \nu^+_s (g_s^+)^{(t)} - \nu^-_s(g_s^-)^{(t)}
+        \\
+        h_s^{(t)} - \overline{H}_s\le 0
+        \\
+        (g_s^+)^{(t)} - \overline{G}^+_s \le 0
+        \\
+        (g_s^-)^{(t)} - \overline{G}^-_s \le 0
+    \end{cases}
 \end{aligned}
 $$
+
+
+
+
