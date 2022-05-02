@@ -12,6 +12,8 @@ N = PRIMARY_GENERATORS|>length
 M = SECONDARY_GENERATORS|>length
 S = STORAGE_SYSTEM|>length
 
+# set up all decisions variables and their dimensions using the enumeration sets
+# cardinality. 
 x = VariableCoefficientHolder(:x, N, T)
 y = VariableCoefficientHolder(:y, N, T)
 z = VariableCoefficientHolder(:z, N, T)
@@ -62,13 +64,14 @@ return B, C, G end
 
 B, C, G = MakeCoefMatrices()
 
-## All global variable, let's not worry about the bad programming for now, 
-# improve them later. 
+# All global variable, let's not worry about the bad programming for now, 
+# improve them later.
 
 
 """
     Adding the first row, the fuel constraints. RHS is returned by the function, as 
     a vector. 
+    constraints (6, 7, 8)
 """
 function FuelConstraints()
     pg = PRIMARY_GENERATORS
@@ -112,14 +115,170 @@ function FuelConstraints()
     SyncRow(B, C, G)
 return rhs end
 
+"""
+    Adding the quick start binary constraints 
+    Constraints (9, ..., 12)
+"""
 function QuickStartConstraints()
+    sg = SECONDARY_GENERATORS
     rhs = Vector{Number}()
-    
+    for t = 1:T, m = 1:M
+        # (9)
+        x′[m, t] = 1
+        y′[m, t] = 1
+        B(x′, y′)
+        B()
+        push!(rhs, 1)
+    end
 
+    for t = 2:T, m = 1:M  # note, t starts with 2. 
+        # (10)
+        y′[m, t] = 1; y′[m ,t - 1] = -1; x′[m ,t] = -1; z′[m, t] = 1
+        B(x′, y′, z′); B()
+        push!(rhs, 0)
+        y′[m, t] = -1; y′[m ,t - 1] = 1; x′[m ,t] = 1; z′[m, t] = -1
+        B(x′, y′, z′); B()
+        push!(rhs, 0)
+    end
+
+    for t = 1:T, m = 1:M
+        # (11)
+        for tau = t - sg.Tminu[m] + 1
+            x′[m, tau] = 1
+        end
+        y′[m, t] = -1
+        push!(rhs, 0)
+        B(x′, y′); B()
+    end
+
+    for t = 1:T, m = 1:M
+        # (11)
+        for tau = t - sg.Tmind[m] + 1
+            z′[m, tau] = 1
+        end
+        y′[m, t] = 1
+        push!(rhs, 1)
+        B(x′, y′); B()
+    end
+
+    SyncRow(B, C, G)
 return rhs end
 
+
+"""
+    The capacity constraints of the first stage generator. 
+    constraints (13, ..., 20)
+    * Pass in the generator instance, matrix C, or Matrix G to specify 
+    whether these sets of constraints are for primary, or seconcary generators. 
+"""
+function CapacityConstraints(
+    gen::Generators, 
+    K::CoefficientMatrix,
+    p::VariableCoefficientHolder, 
+    x::VariableCoefficientHolder, 
+    y::VariableCoefficientHolder, 
+    z::VariableCoefficientHolder,
+    sr::VariableCoefficientHolder, 
+    regd::VariableCoefficientHolder, 
+    regu::VariableCoefficientHolder,
+    nsp::VariableCoefficientHolder
+)
+    rhs = Vector{Number}()
+
+    for t = 2:T, n = 1:(gen|>length)
+        # (13)
+        p[n, t] = 1
+        p[n, t - 1] = -1
+        y[n, t - 1] = gen.RU[n]
+        x[n, t] = - gen.RU_bar[n]
+        C(p); C()
+        K(y, x); K()
+        push!(rhs, 0)
+    end
+    for t = 2:T, n = 1:(gen|>length)
+        # (14)
+        p[n, t - 1] = 1
+        p[n, t] = -1
+        y[n, t] = -gen.RD[n]
+        z[n, t] = - gen.RD_bar[n]
+        C(p); C()
+        K(y, z); K()
+        push!(rhs, 0)
+    end
+    for t = 1:T, n = 1:(gen|>length)
+        # (15)
+        sr[n, t] = 1
+        y[n, t] = -gen.SR[n]
+        C(sr); C(); K(y); K()
+        push!(rhs, 0)
+    end
+    for t = 1:T, n = 1:(gen|>length)
+        # (16)
+        p[n, t] = 1; sr[n, t]=1; regu[n, t] = 1; y[n, t] = -gen.Pmax[n]
+        C(p, sr, regu); K(y)
+        push!(rhs, 0)
+    end
+    for t = 1:T, n = 1:(gen|>length)
+        # (17)
+        p[n, t] = -1; regd[n, t] = 1; y[n, t] = gen.Pmin[n]
+        C(p, regd); C(); K(y)
+        push!(rhs, 0)
+    end
+    for t = 1:T, n = 1:(gen|>length)
+        # (18)
+        nsp[n, t] = 1; y[n, t] = gen.NSP[n]
+        C(nsp); C(); B(y); B();
+        push!(rhs, gen.NSP[n])
+    end
+    for t = 1:T, n = 1:(gen|>length)
+        # (19)
+        regu[n, t] = 1; y[n, t] = - gen.REGU[n]
+        C(regu); C(); B(y); B()
+        push!(rhs, 0)
+    end
+    for t = 1:T, n = 1:(gen|>length)
+        # (19)
+        regd[n, t] = 1; y[n, t] = - gen.REGD[n]
+        C(regd); C(); B(y); B()
+        push!(rhs, 0)
+    end
+    SyncRow(B, C, G)
+return rhs end
 
 
 # ------------------------------------------------------------------------------
 # CALL these construction functions in the correct oder 
+# Visualize the matrices for debugging purpose. 
+
 FuelRHS = FuelConstraints()
+QuickStartRHS = QuickStartConstraints()
+PrimaryCapacityConstaints = CapacityConstraints(
+    PRIMARY_GENERATORS,
+    B,
+    p,
+    x,
+    y,
+    z,
+    sr,
+    regd,
+    regu,
+    nsp
+)
+
+SecondaryCapacityConstaints = CapacityConstraints(
+    SECONDARY_GENERATORS,
+    G,
+    p′,
+    x′,
+    y′,
+    z′,
+    sr′,
+    regd′,
+    regu′,
+    nsp′
+)
+
+
+heatmap((B|>GetMatrix|>Matrix).==0)|>display
+heatmap((C|>GetMatrix|>Matrix).==0)|>display
+heatmap((G|>GetMatrix|>Matrix).==0)|>display

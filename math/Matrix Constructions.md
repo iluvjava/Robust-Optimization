@@ -1,3 +1,14 @@
+### **Original Form of the Problem**
+How is the original form of the problem and how it's phrased??? What are these matrices part of??? Here is what the matrices are trying to make: 
+
+$$
+\begin{aligned}
+\end{aligned}
+$$
+
+
+
+---
 ### **Enumerating Sets**
 
 ---
@@ -120,7 +131,6 @@ $$
 \end{aligned}
 $$
 
-The budget of shutting down, or starting up the system. 
 
 $$
 \begin{aligned}
@@ -149,18 +159,17 @@ $$
     (x')^{(t)}_m + (z')^{(t)}_m
     \le 1
     \\[1.1em]
-    (y')^{(t)}_m - (y')^{(t)}_m - (x')^{(t)}_m + (z')_m^{(t)} 
+    (y')^{(t)}_m - (y')^{(t - 1)}_m - (x')^{(t)}_m + (z')_m^{(t)} 
     = 0
     \\[1.1em]
     
     \left(
-        \sum_{\tau=t- T_{mind} + 1}^{}
+        \sum_{\tau=t- T_{minu} + 1}^{t}
         (x')^{(\tau)}_m
     \right) - (y')^{(t)}_m \le 0 
     \\[1.1em]
-    
     \left(
-        \sum_{\tau = t - T_{tmind} + 1}^{}
+        \sum_{\tau = t - T_{mind} + 1}^{t}
         (z')^{(\tau)}_m
     \right)
     + (y')^{(t)}_m \le 1
@@ -186,19 +195,22 @@ $$
     \underbrace{(sr)^{(t)}_n }_{\text{For} C}
     \underbrace{-R_n^{MT}y_n^{(t)}}_{\text{For }B} \le 0 
     \\&
+    \underbrace{p_n^{(t)} + (sr)_n^{(t)} + (regu)_n^{(t)}}_{\text{for }C}
+    \underbrace{- P^{\max}_ny_n^{(t)}}_{\text{for } B} \le 0
+    \\&
     \underbrace{- p_n^{(t)} + (regd)^{(t)}_n}_{\text{for }C} 
-    \le P_n^{min} 
+    + \underbrace{y_n^{(t)}P_n^{min}}_{\text{for } B} \le 0
     \\
     & 
     \underbrace{(nsp)_n^{(t)}}_{\text{for }C} + \underbrace{\text{NSP}_n y_n^{(t)}}_{\text{for }B} \le \text{NSP}_n
     \\
     & 
-    \underbrace{(regu)^{(t)}_n}_{\text{For }C}
+    \underbrace{(regu)^{(t)}_n}_{\text{for }C}
     \underbrace{-\text{REGU}_ny_n^{(t)}}_{\text{for }B} 
     \le 0
     \\
     & 
-    \underbrace{(regd)^{(t)}_n}_{\text{For }C} 
+    \underbrace{(regd)^{(t)}_n}_{\text{for }C} 
     \underbrace{-\text{REGD}_ny_n^{(t)}}_{\text{for }B} 
     \le 0
 \end{aligned}\tag{13,..., 20}
@@ -208,6 +220,36 @@ Quick start capacity constraints: Exactly the same as above, but wrt to the vari
 
 Minimum Requirement Constraints
 
+
+$$
+\begin{aligned}
+    \underbrace{- \sum_{n\in \mathcal G}^{}
+    regu^{(t)}_n 
+    -
+    \sum_{m\in \mathcal G'}^{}
+    (regu')^{(t)}_m }_{\text{for }C}
+    \le 
+    - \text{RREGU}^{(t)}
+    \\
+    \underbrace{- \sum_{n\in \mathcal G}^{}
+    regd^{(t)}_n 
+    -
+    \sum_{m\in \mathcal G'}^{}
+    (regd')^{(t)}_m }_{\text{for }C}
+    \le 
+    - \text{RREGD}^{(t)}
+    \\
+    \underbrace{- \sum_{n\in \mathcal G}^{}
+    nsp^{(t)}_n 
+    -
+    \sum_{m\in \mathcal G'}^{}
+    (nsp')^{(t)}_m }_{\text{for }C}
+    \le 
+    - \text{RNSP}^{(t)}
+\end{aligned}\tag{30, \dots, 33}
+$$
+
+Battery Constraints: 
 
 
 
