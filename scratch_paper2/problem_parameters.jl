@@ -116,6 +116,9 @@ mutable struct Transmission
 end
 
 
+"""
+    Contains info for both buses and transmission line interactions!!!
+"""
 mutable struct Sigmas
     SigmaMatrix::Matrix{Number}
     function Sigmas()

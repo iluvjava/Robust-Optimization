@@ -3,10 +3,19 @@ How is the original form of the problem and how it's phrased??? What are these m
 
 $$
 \begin{aligned}
+    & 
+    \max_d\min_{q\in Q}\min_{u\ge \mathbf 0, v\mathbf \ge \mathbf 0}
+    \langle \mathbf 1, v\rangle
+    \\
+    & 
+    \hat{d} - \bar{\gamma} \le d \le \hat{d} - \bar\gamma
+    \\
+    & 
+    Cu - v + B\bar{w} + Gq\le d + h
 \end{aligned}
 $$
 
-
+Maximizes the demand $d$ to keep the problem feasible for all $q\in Q$ for all secondary continuous variable $u$, and slack variable $v\ge \mathbf 0$. 
 
 ---
 ### **Enumerating Sets**
@@ -71,8 +80,19 @@ u =
 \end{aligned}
 $$
 
-Relavent Constraints: 
+Variable range: 
 
+$$
+\begin{aligned}
+    p_n, regu, regd, sr \ge \mathbf 0
+\end{aligned}
+$$
+
+---
+### **Dangling Variables**
+Decision variables that are not involved with any matrices but they still appear in the original master problem formulations.  
+
+* $d$ is the demand variables. Directly affecting the RHS of all the constraints. Only appears on the RHS of the demand balance constraints set. 
 
 
 ---
@@ -264,9 +284,47 @@ $$
         \\
         (g_s^-)^{(t)} - \overline{G}^-_s \le 0
     \end{cases}
-\end{aligned}
+\end{aligned}\tag{34, \dots, 38}
 $$
 
+Demand balance constraints
 
-
-
+$$
+\begin{aligned}
+   \underbrace{ \sum_{n \in \mathcal G}^{}
+    p_n^{(t)} + \sum_{m \in \mathcal G'}^{}(p')^{(t)}_m
+    + \left(
+        \sum_{s\in S}^{}(g^-_s)^{(t)} - (g^+_s)^{(t)}
+    \right)}_{\text{for }C}
+    &= \sum_{b \in \mathcal B}^{}d_b^{(t)}
+    \\
+    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^l
+    \left(
+        \sum_{n \in G^b}^{}
+            p_n^{(t)}
+        + 
+            \sum_{m \in (\mathcal G')^{b}}
+                (p')_m^{(t)}
+    \right) + 
+    \sum_{s \in \mathcal S}^{}\mu_s^{(l)}
+        \left(
+            (g^-)_s^{(t)} - (g^+)_s^{(t)}
+        \right)}_{\text{for }C}
+    &\le F^{(l)} + \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}
+    \\
+    \underbrace{- \sum_{b\in \mathcal B}^{}\sigma_b^l
+    \left(
+        \sum_{n \in G^b}^{}
+            p_n^{(t)}
+        + 
+            \sum_{m \in (\mathcal G')^{b}}
+                (p')_m^{(t)}
+    \right)
+    - \sum_{s \in \mathcal S}^{}\mu_s^{(l)}
+        \left(
+            (g^-)_s^{(t)} - (g^+)_s^{(t)}
+        \right)}_{\text{for }C}
+    &\le F^{(l)} - \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}
+\end{aligned}
+$$
+The set $\mathcal G^b, (\mathcal G')^b$ are the primary and secondary generators on each of the busses. 
