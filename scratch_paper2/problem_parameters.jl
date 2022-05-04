@@ -12,14 +12,20 @@ CSV_STORAGE = CSV.File(open("data/storage_data.csv"))
 CSV_TRANS_LIMIT = CSV.File(open("data/transmission_limits.csv"))
 CSV_POWERFLOW_BUS = CSV.File(open("data/sigma.csv"))
 
-struct ConstParameters
+mutable struct ConstParameters
     HORIZON 
     Φ
+    RREGD::Vector{Number}
+    RREGU::Vector{Number}
+    RNSP::Vector{Number}
+
     function ConstParameters()
-        this = new(
-            12, # HORIZON
-            1000000 # Budget
-        )
+        this = new()
+        this.HORIZON = 4; 
+        this.Φ = 1000000; 
+        this.RREGD = zeros(this.HORIZON)
+        this.RREGU = zeros(this.HORIZON)
+        this.RNSP = zeros(this.HORIZON)
     return this end
 end
 
@@ -36,12 +42,12 @@ mutable struct Generators
     RD::Vector{Number}
     RU_bar::Vector{Number}
     RU::Vector{Number}
-    RREGU::Vector{Number}
-    RREGD::Vector{Number}
+    RREGU::Vector{Number}  # wrong parameters 
+    RREGD::Vector{Number}  # wrong parameters 
     REGU::Vector{Number}
     REGD::Vector{Number}
     SR::Vector{Number}
-    RNSP::Vector{Number}
+    RNSP::Vector{Number}   # move to global
     NSP::Vector{Number}
 
     alphas::Matrix{Number}
@@ -81,7 +87,7 @@ end
 
 # !!! currently storage system models a single instance. 
 mutable struct StorageSystem
-    Efficiency::Array{Number}  # nu
+    Efficiency::Array{Number}  # nu 
     Distfactor::Array{Number}  # mu
     Capacity::Array{Number}
     CharingLim::Array{Number}
@@ -125,7 +131,9 @@ mutable struct Sigmas
         this = new()
         this.SigmaMatrix = ConvertCSV(CSV_POWERFLOW_BUS)
     return this end
-
+    
+    function Base.size(this::Sigmas)
+    return size(this.SigmaMatrix) end 
 end
 
 
@@ -143,4 +151,4 @@ PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
 SECONDARY_GENERATORS = Generators(CSV_S_GEN, CSV_S_ALPHAS, CSV_S_BETAS)
 STORAGE_SYSTEM = StorageSystem()
 TRANSMISSION_SYSTEM = Transmission()
-SIGMAS = Sigmas();
+SIGMAS = Sigmas()

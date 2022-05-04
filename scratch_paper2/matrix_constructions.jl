@@ -11,6 +11,8 @@ T = CONST_PROBLEM_PARAMETERS.HORIZON
 N = PRIMARY_GENERATORS|>length
 M = SECONDARY_GENERATORS|>length
 S = STORAGE_SYSTEM|>length
+B̄ = (SIGMAS|>size)[2]
+L = (SIGMAS|>size)[1]
 
 # ==============================================================================
 # set up all decisions variables and their dimensions using the enumeration sets
@@ -250,11 +252,11 @@ return rhs end
 
 """
     Constraints 30 to 33. 
-    TODO: FIX THIS 
+    
 """
 function MinimumRequirement()
     rhs = Vector{Number}()
-    sg = SECONDARY_GENERATORS
+    glb = CONST_PROBLEM_PARAMETERS
     for t = 1: T
         for n = 1:N
             regu[n, t] = -1 
@@ -263,7 +265,7 @@ function MinimumRequirement()
             regu′[m, t]  = -1
         end
         C(regu, regu′); C();
-        push!(rhs, sg.RREGU[1])  # just use the first gen, something is off here. 
+        push!(rhs, glb.RREGU[t])  
     end
     for t = 1: T
         for n = 1:N
@@ -273,33 +275,42 @@ function MinimumRequirement()
             regd′[m, t]  = -1
         end
         C(regd, regd′); C();
-        push!(rhs, sg.RREGD[1]) # just use the first gen, something is off here. 
+        push!(rhs, glb.RREGD[t]) 
     end
     for t = 1:T
-
+        for n = 1:N
+            nsp[n, t] = -1
+        end
+        for m = 1:M
+            nsp′[m, t] = -1
+        end
+        C(nsp, nsp′); C();
+        push!(rhs, glb.RNSP[t])
     end
-
 
 return rhs end
 
 
 """
-
+    Batter constraints, constraints 34 ... 38
 """
 function Battery()
+    rhs = Vector{Number}()
+    
 
-end
+return rhs end
 
 
 # ------------------------------------------------------------------------------
 # CALL these construction functions in the correct oder 
 # Visualize the matrices for debugging purpose. 
+using Plots
 
 FuelRHS = FuelConstraints()
 SyncRow(B, C, G)
 QuickStartRHS = QuickStartConstraints()
 SyncRow(B, C, G)
-PrimaryCapacityConstaints = CapacityConstraints(
+PrimaryCapacityRHS = CapacityConstraints(
     PRIMARY_GENERATORS,
     B,
     p,
@@ -312,7 +323,7 @@ PrimaryCapacityConstaints = CapacityConstraints(
     nsp
 )
 SyncRow(B, C, G)
-SecondaryCapacityConstaints = CapacityConstraints(
+SecondaryCapacityRHS = CapacityConstraints(
     SECONDARY_GENERATORS,
     G,
     p′,
@@ -325,8 +336,8 @@ SecondaryCapacityConstaints = CapacityConstraints(
     nsp′
 )
 SyncRow(B, C, G)
-
-
+MinimumRHS = MinimumRequirement()
+SyncRow(B, C, G)
 
 heatmap((B|>GetMatrix|>Matrix).==0)|>display
 heatmap((C|>GetMatrix|>Matrix).==0)|>display

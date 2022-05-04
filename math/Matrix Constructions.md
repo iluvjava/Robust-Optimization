@@ -276,7 +276,11 @@ $$
 \begin{aligned}
     \text{for C}
     \begin{cases}
-        h_s^{(t + 1)} = h^{(t)}_s+ \nu^+_s (g_s^+)^{(t)} - \nu^-_s(g_s^-)^{(t)}
+        h_s^{(t + 1)} - h^{(t)}_s - \nu^+_s (g_s^+)^{(t)} + \nu^-_s(g_s^-)^{(t)} 
+        \le 0 
+        \\
+        - h_s^{(t + 1)} + h^{(t)}_s + \nu^+_s (g_s^+)^{(t)} - \nu^-_s(g_s^-)^{(t)} 
+        \le 0 
         \\
         h_s^{(t)} - \overline{H}_s\le 0
         \\
@@ -296,7 +300,14 @@ $$
     + \left(
         \sum_{s\in S}^{}(g^-_s)^{(t)} - (g^+_s)^{(t)}
     \right)}_{\text{for }C}
-    &= \sum_{b \in \mathcal B}^{}d_b^{(t)}
+    &\le \sum_{b \in \mathcal B}^{}d_b^{(t)}
+    \\
+    \underbrace{ -\sum_{n \in \mathcal G}^{}
+    p_n^{(t)} - \sum_{m \in \mathcal G'}^{}(p')^{(t)}_m
+    + \left(
+        \sum_{s\in S}^{}(g^+_s)^{(t)} - (g^-_s)^{(t)} 
+    \right)}_{\text{for }C}
+    &\le -\sum_{b \in \mathcal B}^{}d_b^{(t)}
     \\
     \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^l
     \left(
