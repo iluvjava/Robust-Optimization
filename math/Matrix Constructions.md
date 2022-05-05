@@ -282,11 +282,11 @@ $$
         - h_s^{(t + 1)} + h^{(t)}_s + \nu^+_s (g_s^+)^{(t)} - \nu^-_s(g_s^-)^{(t)} 
         \le 0 
         \\
-        h_s^{(t)} - \overline{H}_s\le 0
+        h_s^{(t)} \le \overline{H}_s
         \\
-        (g_s^+)^{(t)} - \overline{G}^+_s \le 0
+        (g_s^+)^{(t)}  \le \overline{G}^+_s
         \\
-        (g_s^-)^{(t)} - \overline{G}^-_s \le 0
+        (g_s^-)^{(t)}  \le \overline{G}^-_s
     \end{cases}
 \end{aligned}\tag{34, \dots, 38}
 $$
@@ -309,7 +309,7 @@ $$
     \right)}_{\text{for }C}
     &\le -\sum_{b \in \mathcal B}^{}d_b^{(t)}
     \\
-    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^l
+    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
     \left(
         \sum_{n \in G^b}^{}
             p_n^{(t)}
@@ -323,7 +323,7 @@ $$
         \right)}_{\text{for }C}
     &\le F^{(l)} + \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}
     \\
-    \underbrace{- \sum_{b\in \mathcal B}^{}\sigma_b^l
+    \underbrace{- \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
     \left(
         \sum_{n \in G^b}^{}
             p_n^{(t)}

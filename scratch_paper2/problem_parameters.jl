@@ -89,10 +89,10 @@ end
 mutable struct StorageSystem
     Efficiency::Array{Number}  # nu 
     Distfactor::Array{Number}  # mu
-    Capacity::Array{Number}
-    CharingLim::Array{Number}
-    DischargingLim::Array{Number}
-
+    Capacity::Array{Number}    # H̅
+    CharingLim::Array{Number}  # G̅+
+    DischargingLim::Array{Number}  # G̅-
+    
     s  # total number of storage system
     function StorageSystem()
         this = new()

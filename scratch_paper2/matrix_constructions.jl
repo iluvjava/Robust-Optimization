@@ -294,17 +294,71 @@ return rhs end
 """
     Batter constraints, constraints 34 ... 38
 """
-function Battery()
+function BatteryConstraints()
     rhs = Vector{Number}()
-    
+    v = STORAGE_SYSTEM.Efficiency
+    H̄ = STORAGE_SYSTEM.Capacity
+    G_plus = STORAGE_SYSTEM.CharingLim
+    G_minus = STORAGE_SYSTEM.DischargingLim
+    # (34)
+    for t = 1:T - 1, s = 1:S
+        h[s, t + 1] = 1
+        h[s, t] = -1
+        g_plus[s, t] = -v[s]
+        g_minus[s, t] = v[s]
+        C(h, g_plus, g_minus); C()
+        push!(rhs, 0)
+    end
+    # (35)
+    for t = 1:T - 1, s = 1:S
+        h[s, t + 1] = -1
+        h[s, t] = 1
+        g_plus[s, t] = v[s]
+        g_minus[s, t] = -v[s]
+        C(h, g_plus, g_minus); C()
+        push!(rhs, 0)
+    end
+    # (36)
+    for t = 1:T, s = 1:S
+        h[s, t] = 1
+        C(h); C()
+        push!(rhs, H̄[s])
+    end
+    # (37)
+    for t = 1:T, s = 1:S
+        g_plus[s, t] = 1
+        C(g_plus); C()
+        push!(rhs, G_plus[s])
+    end
+    # (38)
+    for t = 1:T, s = 1:S
+        g_minus[s, t] = 1
+        C(g_minus); C()
+        push!(rhs, G_minus[s])
+    end
 
 return rhs end
+
+
+"""
+    Constraints (39) to (41)
+"""
+function DemandBalanceConstraints()
+    rhs = Vector{Number}()
+    μ = STORAGE_SYSTEM.Distfactor
+    
+
+
+return rhs end
+
 
 
 # ------------------------------------------------------------------------------
 # CALL these construction functions in the correct oder 
 # Visualize the matrices for debugging purpose. 
 using Plots
+
+
 
 FuelRHS = FuelConstraints()
 SyncRow(B, C, G)
@@ -338,7 +392,6 @@ SecondaryCapacityRHS = CapacityConstraints(
 SyncRow(B, C, G)
 MinimumRHS = MinimumRequirement()
 SyncRow(B, C, G)
+BatteryRHS = BatteryConstraints()
+SyncRow(B, C, G)
 
-heatmap((B|>GetMatrix|>Matrix).==0)|>display
-heatmap((C|>GetMatrix|>Matrix).==0)|>display
-heatmap((G|>GetMatrix|>Matrix).==0)|>display
