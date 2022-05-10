@@ -300,14 +300,19 @@ $$
     + \left(
         \sum_{s\in S}^{}(g^-_s)^{(t)} - (g^+_s)^{(t)}
     \right)}_{\text{for }C}
-    &\le \sum_{b \in \mathcal B}^{}d_b^{(t)}
+    -
+    \underbrace{\sum_{b \in \mathcal B}^{}d_b^{(t)}}_{\text{For }F}
+    &\le 0
     \\
     \underbrace{ -\sum_{n \in \mathcal G}^{}
     p_n^{(t)} - \sum_{m \in \mathcal G'}^{}(p')^{(t)}_m
     + \left(
         \sum_{s\in S}^{}(g^+_s)^{(t)} - (g^-_s)^{(t)} 
     \right)}_{\text{for }C}
-    &\le -\sum_{b \in \mathcal B}^{}d_b^{(t)}
+    + 
+    \underbrace{\sum_{b \in \mathcal B}^{}d_b^{(t)}}_{For F}
+    &
+    \le 0
     \\
     \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
     \left(
@@ -321,7 +326,9 @@ $$
         \left(
             (g^-)_s^{(t)} - (g^+)_s^{(t)}
         \right)}_{\text{for }C}
-    &\le F^{(l)} + \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}
+    - 
+    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}}_{\text{For }F}
+    &\le F^{(l)}
     \\
     \underbrace{- \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
     \left(
@@ -335,7 +342,13 @@ $$
         \left(
             (g^-)_s^{(t)} - (g^+)_s^{(t)}
         \right)}_{\text{for }C}
-    &\le F^{(l)} - \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}
+    + 
+    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}}_{\text{For }F}
+    &\le F^{(l)} 
 \end{aligned}
+\tag{39, \dots, 44}
 $$
+
 The set $\mathcal G^b, (\mathcal G')^b$ are the primary and secondary generators on each of the busses. 
+
+

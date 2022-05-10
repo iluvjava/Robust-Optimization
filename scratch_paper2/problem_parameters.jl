@@ -124,6 +124,7 @@ end
 
 """
     Contains info for both buses and transmission line interactions!!!
+        [Transmission Line Index, Buses index``]
 """
 mutable struct Sigmas
     SigmaMatrix::Matrix{Number}

@@ -18,13 +18,17 @@ L = (SIGMAS|>size)[1]
 # set up all decisions variables and their dimensions using the enumeration sets
 # cardinality. 
 # ==============================================================================
+# For matrix B
 x = VariableCoefficientHolder(:x, N, T)
 y = VariableCoefficientHolder(:y, N, T)
 z = VariableCoefficientHolder(:z, N, T)
+
+# For matrix G
 x′ = VariableCoefficientHolder(:x′, N, T)
 y′ = VariableCoefficientHolder(:y′, N, T)
 z′ = VariableCoefficientHolder(:z′, N, T)
 
+# For Matrix C
 c = VariableCoefficientHolder(:c, N, T)
 c′ = VariableCoefficientHolder(:c′, M, T)
 p = VariableCoefficientHolder(:p, N, T)
@@ -41,10 +45,14 @@ g_minus = VariableCoefficientHolder(:g_minus, S, T)
 nsp = VariableCoefficientHolder(:nsp, N, T)
 nsp′ = VariableCoefficientHolder(:nps′, M, T)
 
+# For matrix F
+d = VariableCoefficientHolder(:d, B̄, T)
+
 function MakeCoefMatrices()
     B = CoefficientMatrix()
     C = CoefficientMatrix()
     G = CoefficientMatrix()
+    F = CoefficientMatrix()
     B(x, y, z)
     C(
         c, 
@@ -63,10 +71,11 @@ function MakeCoefMatrices()
         nsp, 
         nsp′
     )
+    F(d)
     G(x′, y′, z′)
-return B, C, G end
+return B, C, G, F end
 
-B, C, G = MakeCoefMatrices()
+B, C, G, F = MakeCoefMatrices()
 
 # All global variable, let's not worry about the bad programming for now, 
 # improve them later.
@@ -346,7 +355,33 @@ return rhs end
 function DemandBalanceConstraints()
     rhs = Vector{Number}()
     μ = STORAGE_SYSTEM.Distfactor
-    
+    σ = SIGMAS.SigmaMatrix
+    # (39)
+    for t = 1:T
+        p[:, t] = 1
+        p′[:, t] = 1
+        g_minus[:, t] = 1
+        g_plus[:, t] = -1
+        d[:, t] = -1
+        C(p, p′, g_minus, g_plus); F(d)
+        C();F();
+        push!(rhs, 0)
+    end
+    # (40)
+    for t = 1:T
+        p[:, t] = -1
+        p′[:, t] = -1
+        g_minus[:, t] = -1
+        g_plus[:, t] = 1
+        d[:, t] = 1
+        C(p, p′, g_minus, g_plus); F(d)
+        C();F();
+        push!(rhs, 0)
+    end
+    # (41)
+    for t=1:T
+        
+    end    
 
 
 return rhs end
@@ -361,9 +396,9 @@ using Plots
 
 
 FuelRHS = FuelConstraints()
-SyncRow(B, C, G)
+SyncRow(B, C, G, F)
 QuickStartRHS = QuickStartConstraints()
-SyncRow(B, C, G)
+SyncRow(B, C, G, F)
 PrimaryCapacityRHS = CapacityConstraints(
     PRIMARY_GENERATORS,
     B,
@@ -376,7 +411,7 @@ PrimaryCapacityRHS = CapacityConstraints(
     regu,
     nsp
 )
-SyncRow(B, C, G)
+SyncRow(B, C, G, F)
 SecondaryCapacityRHS = CapacityConstraints(
     SECONDARY_GENERATORS,
     G,
@@ -389,9 +424,9 @@ SecondaryCapacityRHS = CapacityConstraints(
     regu′,
     nsp′
 )
-SyncRow(B, C, G)
+SyncRow(B, C, G, F)
 MinimumRHS = MinimumRequirement()
-SyncRow(B, C, G)
+SyncRow(B, C, G, F)
 BatteryRHS = BatteryConstraints()
-SyncRow(B, C, G)
+SyncRow(B, C, G, F)
 
