@@ -330,18 +330,21 @@ $$
     \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}}_{\text{For }F}
     &\le F^{(l)}
     \\
-    \underbrace{- \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
-    \left(
-        \sum_{n \in G^b}^{}
-            p_n^{(t)}
-        + 
-            \sum_{m \in (\mathcal G')^{b}}
-                (p')_m^{(t)}
-    \right)
-    - \sum_{s \in \mathcal S}^{}\mu_s^{(l)}
+    \underbrace{
+        - \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
         \left(
-            (g^-)_s^{(t)} - (g^+)_s^{(t)}
-        \right)}_{\text{for }C}
+            \sum_{n \in G^b}^{}
+                p_n^{(t)}
+            + 
+                \sum_{m \in (\mathcal G')^{b}}
+                    (p')_m^{(t)}
+        \right)
+        - \sum_{s \in \mathcal S}^{}\mu_s^{(l)}
+            \left(
+                (g^-)_s^{(t)} - (g^+)_s^{(t)}
+            \right)
+        }
+    _{\text{for }C}
     + 
     \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}}_{\text{For }F}
     &\le F^{(l)} 
@@ -349,6 +352,44 @@ $$
 \tag{39, \dots, 44}
 $$
 
-The set $\mathcal G^b, (\mathcal G')^b$ are the primary and secondary generators on each of the busses. 
+The set $\mathcal G^b, (\mathcal G')^b$ are the primary and secondary generators on each of the busses. We can simplify it further and get: 
 
+$$
+\begin{aligned}
+    \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
+        \left(
+            \sum_{n \in G^b}^{}
+                p_n^{(t)}
+            + 
+                \sum_{m \in (\mathcal G')^{b}}
+                    (p')_m^{(t)}
+        \right)
+    &= 
+    \sum_{n\in \mathcal G^{b}}^{}
+        \left(
+            \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
+        \right)p_n^{(t)}
+        + 
+        \sum_{m\in (\mathcal G')^b}^{}
+            \left(
+                \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
+            \right)(p')_m^{(t)}
+    \\
+    \sum_{s \in \mathcal S}^{}\mu_s^{(l)}
+        \left(
+            (g^-)_s^{(t)} - (g^+)_s^{(t)}
+        \right)
+    &=
+    \sum_{s\in \mathcal S}^{}
+        \left(
+            \sum_{s\in \mathcal S}^{}\mu_s^{(l)}
+        \right)(g^-)_s^{(t)}
+    - 
+    \sum_{s\in \mathcal S}^{}
+        \left(
+            \sum_{s\in \mathcal S}^{}\mu_s^{(l)}
+        \right)(g^+)_s^{(t)}
+\end{aligned}
+$$
 
+Now the coefficietns are right next to the decision variables. 

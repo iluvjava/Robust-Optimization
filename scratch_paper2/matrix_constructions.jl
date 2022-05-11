@@ -379,7 +379,7 @@ function DemandBalanceConstraints()
         push!(rhs, 0)
     end
     # (41)
-    for t=1:T
+    for l=1:L
         
     end    
 

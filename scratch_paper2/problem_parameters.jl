@@ -85,6 +85,7 @@ mutable struct Generators
     end
 end
 
+
 # !!! currently storage system models a single instance. 
 mutable struct StorageSystem
     Efficiency::Array{Number}  # nu 
@@ -124,13 +125,14 @@ end
 
 """
     Contains info for both buses and transmission line interactions!!!
-        [Transmission Line Index, Buses index``]
+        [Busses Index, Transimission Line]
 """
 mutable struct Sigmas
     SigmaMatrix::Matrix{Number}
+    
     function Sigmas()
         this = new()
-        this.SigmaMatrix = ConvertCSV(CSV_POWERFLOW_BUS)
+        this.SigmaMatrix = ConvertCSV(CSV_POWERFLOW_BUS)'
     return this end
     
     function Base.size(this::Sigmas)
@@ -145,6 +147,14 @@ function ConvertCSV(data::CSV.File)
         m[II, III] = data[II][properties[III + 1]]
     end
 return m end
+
+"""
+    Models a group of generators that are in the same busses. 
+    (currently not present yet)
+"""
+mutable struct Busses
+
+end
 
 
 CONST_PROBLEM_PARAMETERS = ConstParameters()
