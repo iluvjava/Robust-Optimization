@@ -87,6 +87,7 @@ end
 
 
 # !!! currently storage system models a single instance. 
+# in general, each transmission has a storage system. 
 mutable struct StorageSystem
     Efficiency::Array{Number}  # nu 
     Distfactor::Array{Number}  # mu

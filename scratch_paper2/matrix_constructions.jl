@@ -11,8 +11,8 @@ T = CONST_PROBLEM_PARAMETERS.HORIZON
 N = PRIMARY_GENERATORS|>length
 M = SECONDARY_GENERATORS|>length
 S = STORAGE_SYSTEM|>length
-B̄ = (SIGMAS|>size)[2]
-L = (SIGMAS|>size)[1]
+B̄ = (SIGMAS|>size)[1]
+L = (SIGMAS|>size)[2]
 
 # ==============================================================================
 # set up all decisions variables and their dimensions using the enumeration sets
@@ -356,33 +356,54 @@ function DemandBalanceConstraints()
     rhs = Vector{Number}()
     μ = STORAGE_SYSTEM.Distfactor
     σ = SIGMAS.SigmaMatrix
+    f = TRANSMISSION_SYSTEM.Limit
     # (39)
     for t = 1:T
-        p[:, t] = 1
-        p′[:, t] = 1
-        g_minus[:, t] = 1
-        g_plus[:, t] = -1
-        d[:, t] = -1
+        p[:, t] .= 1
+        p′[:, t] .= 1
+        g_minus[:, t] .= 1
+        g_plus[:, t] .= -1
+        d[:, t] .= -1
         C(p, p′, g_minus, g_plus); F(d)
         C();F();
         push!(rhs, 0)
     end
     # (40)
     for t = 1:T
-        p[:, t] = -1
-        p′[:, t] = -1
-        g_minus[:, t] = -1
-        g_plus[:, t] = 1
-        d[:, t] = 1
+        p[:, t] .= -1
+        p′[:, t] .= -1
+        g_minus[:, t] .= -1
+        g_plus[:, t] .= 1
+        d[:, t] .= 1
         C(p, p′, g_minus, g_plus); F(d)
         C();F();
         push!(rhs, 0)
     end
     # (41)
-    for l=1:L
-        
+    # currently each bus has one primary generator, and one secondary generator
+    # currently all transmission line has the same storage system. 
+    for l=1:L, t=1:T
+        p[:, t] .= sum(σ[:, l])
+        p′[:, t] .= sum(σ[:, l])
+        g_minus[:, t] .= sum(μ[:])
+        g_plus[:, t] .= - sum(μ[:])
+        d[:, t] = -σ[:, l]
+        C(p, p′, g_minus, g_plus); C();
+        F(d); F();
+        push!(rhs, f[l])
     end    
 
+    # (42)
+    for l=1:L, t=1:T
+        p[n, t] = - sum(σ[:, l])
+        p′[n, t] = - sum(σ[:, l])
+        g_minus[:, t] = - sum(μ[:, l])
+        g_plus[:, t] =  sum(μ[:, l])
+        d[:, t] = σ[:, l]
+        C(p, p′, g_minus, g_plus); C();
+        F(d); F();
+        push!(rhs, f[l])
+    end
 
 return rhs end
 
@@ -428,5 +449,7 @@ SyncRow(B, C, G, F)
 MinimumRHS = MinimumRequirement()
 SyncRow(B, C, G, F)
 BatteryRHS = BatteryConstraints()
+SyncRow(B, C, G, F)
+DemandBalanceConstraints()
 SyncRow(B, C, G, F)
 
