@@ -113,6 +113,22 @@ $$
 \end{aligned}
 $$
 
+
+---
+### **Matrix $H$, Vector $d$**
+
+It's for the demand that is placed on each of the bus. And RHS vector d is defined to be: 
+
+$$
+\begin{aligned}
+    \begin{bmatrix}
+        d_b^{(t)}
+    \end{bmatrix}
+\end{aligned}
+$$
+
+Index by the busses. 
+
 ---
 ### **Constraints Classifications**
 
@@ -301,7 +317,7 @@ $$
         \sum_{s\in S}^{}(g^-_s)^{(t)} - (g^+_s)^{(t)}
     \right)}_{\text{for }C}
     -
-    \underbrace{\sum_{b \in \mathcal B}^{}d_b^{(t)}}_{\text{For }F}
+    \underbrace{\sum_{b \in \mathcal B}^{}d_b^{(t)}}_{\text{For }H}
     &\le 0
     \\
     \underbrace{ -\sum_{n \in \mathcal G}^{}
@@ -310,7 +326,7 @@ $$
         \sum_{s\in S}^{}(g^+_s)^{(t)} - (g^-_s)^{(t)} 
     \right)}_{\text{for }C}
     + 
-    \underbrace{\sum_{b \in \mathcal B}^{}d_b^{(t)}}_{For F}
+    \underbrace{\sum_{b \in \mathcal B}^{}d_b^{(t)}}_{For H}
     &
     \le 0
     \\
@@ -327,7 +343,7 @@ $$
             (g^-)_s^{(t)} - (g^+)_s^{(t)}
         \right)}_{\text{for }C}
     - 
-    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}}_{\text{For }F}
+    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}}_{\text{For }H}
     &\le F^{(l)}
     \\
     \underbrace{
@@ -346,7 +362,7 @@ $$
         }
     _{\text{for }C}
     + 
-    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}}_{\text{For }F}
+    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}}_{\text{For }H}
     &\le F^{(l)} 
 \end{aligned}
 \tag{39, \dots, 44}

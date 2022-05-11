@@ -75,7 +75,7 @@ function MakeCoefMatrices()
     G(x′, y′, z′)
 return B, C, G, F end
 
-B, C, G, F = MakeCoefMatrices()
+
 
 # All global variable, let's not worry about the bad programming for now, 
 # improve them later.
@@ -162,8 +162,8 @@ function QuickStartConstraints()
             x′[m, tau] = 1
         end
         y′[m, t] = -1
-        push!(rhs, 0)
         B(x′, y′); B()
+        push!(rhs, 0)
     end
 
     for t = 1:T, m = 1:M
@@ -172,8 +172,8 @@ function QuickStartConstraints()
             z′[m, tau] = 1
         end
         y′[m, t] = 1
-        push!(rhs, 1)
         B(x′, y′); B()
+        push!(rhs, 1)
     end
 
 return rhs end
@@ -223,19 +223,19 @@ function CapacityConstraints(
         # (15)
         sr[n, t] = 1
         y[n, t] = -gen.SR[n]
-        C(sr); C(); K(y); K()
+        C(sr); C(); K(y); K();
         push!(rhs, 0)
     end
     for t = 1:T, n = 1:(gen|>length)
         # (16)
         p[n, t] = 1; sr[n, t]=1; regu[n, t] = 1; y[n, t] = -gen.Pmax[n]
-        C(p, sr, regu); K(y)
+        C(p, sr, regu); C(); K(y); K();
         push!(rhs, 0)
     end
     for t = 1:T, n = 1:(gen|>length)
         # (17)
         p[n, t] = -1; regd[n, t] = 1; y[n, t] = gen.Pmin[n]
-        C(p, regd); C(); K(y)
+        C(p, regd); C(); K(y); K();
         push!(rhs, 0)
     end
     for t = 1:T, n = 1:(gen|>length)
@@ -247,13 +247,13 @@ function CapacityConstraints(
     for t = 1:T, n = 1:(gen|>length)
         # (19)
         regu[n, t] = 1; y[n, t] = - gen.REGU[n]
-        C(regu); C(); K(y); K()
+        C(regu); C(); K(y); K();
         push!(rhs, 0)
     end
     for t = 1:T, n = 1:(gen|>length)
         # (20)
         regd[n, t] = 1; y[n, t] = - gen.REGD[n]
-        C(regd); C(); K(y); K()
+        C(regd); C(); K(y); K();
         push!(rhs, 0)
     end
     
@@ -415,44 +415,60 @@ return rhs end
 # Visualize the matrices for debugging purpose. 
 using Plots
 
-FuelRHS = FuelConstraints()
-SyncRow(B, C, G, F)
-QuickStartRHS = QuickStartConstraints()
-SyncRow(B, C, G, F)
-PrimaryCapacityRHS = CapacityConstraints(
-    PRIMARY_GENERATORS,
-    B,
-    p,
-    x,
-    y,
-    z,
-    sr,
-    regd,
-    regu,
-    nsp
+B, C, G, F = MakeCoefMatrices()
+RHS = FuelConstraints()
+display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+
+
+RHS = vcat(RHS, QuickStartConstraints())
+display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+
+RHS = vcat(
+    RHS, 
+    CapacityConstraints(
+        PRIMARY_GENERATORS,
+        B,
+        p,
+        x,
+        y,
+        z,
+        sr,
+        regd,
+        regu,
+        nsp
+    )
 )
-SyncRow(B, C, G, F)
-SecondaryCapacityRHS = CapacityConstraints(
-    SECONDARY_GENERATORS,
-    G,
-    p′,
-    x′,
-    y′,
-    z′,
-    sr′,
-    regd′,
-    regu′,
-    nsp′
+display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+
+RHS=vcat(
+    RHS, 
+    CapacityConstraints(
+        SECONDARY_GENERATORS,
+        G,
+        p′,
+        x′,
+        y′,
+        z′,
+        sr′,
+        regd′,
+        regu′,
+        nsp′
+    )
 )
-SyncRow(B, C, G, F)
-MinimumRHS = MinimumRequirement()
-SyncRow(B, C, G, F)
-BatteryRHS = BatteryConstraints()
-SyncRow(B, C, G, F)
-DemandBalanceConstraints()
-SyncRow(B, C, G, F)
+display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+
+RHS = vcat(RHS, MinimumRequirement())
+display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+
+RHS = vcat(RHS, BatteryConstraints())
+display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+
+RHS = vcat(RHS, DemandBalanceConstraints())
+display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+
 B = B|>GetMatrix
 C = C|>GetMatrix
 G = G|>GetMatrix
-F = F|>GetMatrix
+H = F|>GetMatrix
+
 

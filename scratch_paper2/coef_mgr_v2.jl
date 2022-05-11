@@ -150,4 +150,4 @@ function SyncRow(matrices::CoefficientMatrix...)
     for m in matrices
         JumpToRow(m, MaxRow)
     end
-return end
+return MaxRow end
