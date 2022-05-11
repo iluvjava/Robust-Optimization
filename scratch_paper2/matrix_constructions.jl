@@ -354,8 +354,8 @@ return rhs end
 """
 function DemandBalanceConstraints()
     rhs = Vector{Number}()
-    μ = STORAGE_SYSTEM.Distfactor
-    σ = SIGMAS.SigmaMatrix
+    μ = DISFACTORS.the_matrix
+    σ = SIGMAS.the_matrix
     f = TRANSMISSION_SYSTEM.Limit
     # (39)
     for t = 1:T
@@ -382,6 +382,7 @@ function DemandBalanceConstraints()
     # (41)
     # currently each bus has one primary generator, and one secondary generator
     # currently all transmission line has the same storage system. 
+
     for l=1:L, t=1:T
         p[:, t] .= sum(σ[:, l])
         p′[:, t] .= sum(σ[:, l])
@@ -395,10 +396,10 @@ function DemandBalanceConstraints()
 
     # (42)
     for l=1:L, t=1:T
-        p[n, t] = - sum(σ[:, l])
-        p′[n, t] = - sum(σ[:, l])
-        g_minus[:, t] = - sum(μ[:, l])
-        g_plus[:, t] =  sum(μ[:, l])
+        p[:, t] .= - sum(σ[:, l])
+        p′[:, t] .= - sum(σ[:, l])
+        g_minus[:, t] .= - sum(μ[:])
+        g_plus[:, t] .=  sum(μ[:])
         d[:, t] = σ[:, l]
         C(p, p′, g_minus, g_plus); C();
         F(d); F();
@@ -413,8 +414,6 @@ return rhs end
 # CALL these construction functions in the correct oder 
 # Visualize the matrices for debugging purpose. 
 using Plots
-
-
 
 FuelRHS = FuelConstraints()
 SyncRow(B, C, G, F)
@@ -452,4 +451,8 @@ BatteryRHS = BatteryConstraints()
 SyncRow(B, C, G, F)
 DemandBalanceConstraints()
 SyncRow(B, C, G, F)
+B = B|>GetMatrix
+C = C|>GetMatrix
+G = G|>GetMatrix
+F = F|>GetMatrix
 

@@ -6,6 +6,7 @@ CSV_P_GEN = CSV.File(open("data/ro_gen_data.csv"))
 CSV_S_GEN = CSV.File("data/quick_start_data.csv")
 CSV_S_ALPHAS = CSV.File("data/alpha_prime.csv")
 CSV_S_BETAS = CSV.File("data/beta_prime.csv")
+CSV_DISFACTOR = CSV.File("data/mu.csv")
 
 # Others
 CSV_STORAGE = CSV.File(open("data/storage_data.csv"))
@@ -90,7 +91,7 @@ end
 # in general, each transmission has a storage system. 
 mutable struct StorageSystem
     Efficiency::Array{Number}  # nu 
-    Distfactor::Array{Number}  # mu
+    # Distfactor::Array{Number}  # mu
     Capacity::Array{Number}    # H̅
     CharingLim::Array{Number}  # G̅+
     DischargingLim::Array{Number}  # G̅-
@@ -100,10 +101,10 @@ mutable struct StorageSystem
         this = new()
         properties = CSV_STORAGE|>propertynames
         this.Efficiency = CSV_STORAGE[properties[2]]
-        this.Distfactor = CSV_STORAGE[properties[3]]
-        this.Capacity = CSV_STORAGE[properties[4]]
-        this.CharingLim = CSV_STORAGE[properties[5]]
-        this.DischargingLim = CSV_STORAGE[properties[6]]
+        # this.Distfactor = CSV_STORAGE[properties[3]]
+        this.Capacity = CSV_STORAGE[properties[3]]
+        this.CharingLim = CSV_STORAGE[properties[4]]
+        this.DischargingLim = CSV_STORAGE[properties[5]]
         this.s = CSV_STORAGE |> length
 
     return this end
@@ -128,16 +129,16 @@ end
     Contains info for both buses and transmission line interactions!!!
         [Busses Index, Transimission Line]
 """
-mutable struct Sigmas
-    SigmaMatrix::Matrix{Number}
+mutable struct DataMatrix
+    the_matrix::Matrix{Number}
     
-    function Sigmas()
+    function DataMatrix(input_file::CSV.File)
         this = new()
-        this.SigmaMatrix = ConvertCSV(CSV_POWERFLOW_BUS)'
+        this.the_matrix = ConvertCSV(input_file)'
     return this end
     
-    function Base.size(this::Sigmas)
-    return size(this.SigmaMatrix) end 
+    function Base.size(this::DataMatrix)
+    return size(this.the_matrix) end 
 end
 
 
@@ -163,4 +164,9 @@ PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
 SECONDARY_GENERATORS = Generators(CSV_S_GEN, CSV_S_ALPHAS, CSV_S_BETAS)
 STORAGE_SYSTEM = StorageSystem()
 TRANSMISSION_SYSTEM = Transmission()
-SIGMAS = Sigmas()
+SIGMAS = DataMatrix(CSV_POWERFLOW_BUS)
+DISFACTORS = DataMatrix(CSV_DISFACTOR)
+
+
+
+
