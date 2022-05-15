@@ -408,4 +408,4 @@ $$
 \end{aligned}
 $$
 
-Now the coefficietns are right next to the decision variables. 
+Now the ceofficients are right next to the decision variables. 

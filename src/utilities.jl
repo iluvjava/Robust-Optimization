@@ -1,2 +1,2 @@
-using SparseArrays, LinearAlgebra, JuMP, GLPK
+using SparseArrays, LinearAlgebra, JuMP, GLPK, HiGHS
 

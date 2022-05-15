@@ -1,5 +1,6 @@
 include("utilities.jl")
 include("matrix_construction_export.jl")
+include("master_problem.jl")
 using Logging
 
 ### Important functions for variables constructions for JuMP models. 
@@ -48,17 +49,27 @@ mutable struct FSP
     
     function FSP()
         @warn("This construction only exists for testing purposes!")
-        return FSP([0], 0, [0])
+        return FSP(
+            zeros(size(RobustOptim.B, 2)),
+            1000, 
+            2*ones(RobustOptim.d|>length)
+        )
     end
 
+    """
+        Constrct the FSP, given the parameters setting the primary 
+        variables, and then the adversarial demands vector. 
+    """
     function FSP(w, gamma, d_star)
         this = new()
-        this.model = Model(GLPK.Optimizer)
+        this.model = Model(HiGHS.Optimizer)
         this.d_star = d_star
         this.gamma = gamma
         this.w = w
         this.d_star = d_star
-        this|>PrepareVariables
+        this|>PrepareVariables!
+        this|>AddConstraints!
+        @objective(this.model, Min, sum(this.v))
     return this end
     
     """
@@ -69,7 +80,7 @@ mutable struct FSP
         As a list of flattened JuMP variable refs, it will store the flatten 
         variables to the field of this struct. 
     """
-    function PrepareVariables(this::FSP)
+    function PrepareVariables!(this::FSP)
         # Preparing variable: u into JuMP model. 
         u = RobustOptim.u
         @info "Prepareing variables for current FSP model: "
@@ -89,21 +100,21 @@ mutable struct FSP
         @variable(this.model, nsp[u[14]|>IndicesList], lower_bound=0)
         @variable(this.model, nsp′[u[15]|>IndicesList], lower_bound=0)
         this.u = [
-            this.model[:c]..., 
-            this.model[:c′]..., 
-            this.model[:p]..., 
-            this.model[:p′]..., 
-            this.model[:regu]..., 
-            this.model[:regu′]..., 
-            this.model[:regd]..., 
-            this.model[:regd′]..., 
-            this.model[:sr]..., 
-            this.model[:sr′]..., 
-            this.model[:h]..., 
-            this.model[:g_plus]..., 
-            this.model[:g_minus]..., 
-            this.model[:nsp]..., 
-            this.model[:nsp′]... 
+            this.model[:c]...,
+            this.model[:c′]...,
+            this.model[:p]...,
+            this.model[:p′]...,
+            this.model[:regu]...,
+            this.model[:regu′]...,
+            this.model[:regd]...,
+            this.model[:regd′]...,
+            this.model[:sr]...,
+            this.model[:sr′]...,
+            this.model[:h]...,
+            this.model[:g_plus]...,
+            this.model[:g_minus]...,
+            this.model[:nsp]...,
+            this.model[:nsp′]...
         ]
         # Prepare for variable q
         q = RobustOptim.q
@@ -113,10 +124,51 @@ mutable struct FSP
         this.q = [this.model[:x′]..., this.model[:y′]..., this.model[:z′]...]
 
         # Prepare for variable v, the slack. 
-        @variable(this.model, v[1:length(RobustOptim.h)])
+        # no lowerbound, negative v means more than enough feasibility 
+        # for the system. Possitive means infeasible. 
+        @variable(this.model, v[1:length(RobustOptim.h)], lower_bound=0)
         this.v = this.model[:v]
         
     return end
+
+    function AddConstraints!(this::FSP)
+        u = this.u 
+        v = this.v
+        q = this.q
+        h = RobustOptim.h
+        d = this.d_star 
+        w = this.w
+        C = RobustOptim.C
+        H = RobustOptim.H
+        B = RobustOptim.B
+        G = RobustOptim.G
+        @info "Preparing constraints for the FSP model. "
+        @constraint(this.model, C*u - v .<= H*d + h - B*w - G*q)
+    return end
+
+    function ObjVal(this::FSP)
+    return objective_value(this.model) end
+
 end
 
-fsp = FSP()
+"""
+    Given the primary parameters and the secondary discrete decision variables 
+    meshed into a giant feasible set of many many constraints, we are 
+    searching for adversarial demands that can break our delivery system. 
+        * Determines the upper bound for the feasibility slack. 
+"""
+mutable struct FMP
+    w::Vector
+    gamma::Number
+    q::Vector
+
+    function FMP(w, gamma, q)
+        this.w = w
+        this.gamma = gamma
+        this.q = q
+    return end
+end
+
+this = FSP()
+optimize!(this.model)
+
