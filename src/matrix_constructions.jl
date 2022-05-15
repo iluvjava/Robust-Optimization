@@ -1,6 +1,5 @@
 ### This file focuses on the constructions of matrices. 
 
-# include("coef_mgr_v2.jl")
 
 
 include("coef_mgr_v2.jl")
@@ -76,8 +75,7 @@ function MakeCoefMatrices()
 return B, C, G, F end
 
 
-
-# All global variable, let's not worry about the bad programming for now, 
+# All global variables, let's not worry about the bad programming for now, 
 # improve them later.
 
 # ==============================================================================
@@ -413,15 +411,14 @@ return rhs end
 # ------------------------------------------------------------------------------
 # CALL these construction functions in the correct oder 
 # Visualize the matrices for debugging purpose. 
-using Plots
+
 
 B, C, G, F = MakeCoefMatrices()
 RHS = FuelConstraints()
-display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+SyncRow(B, C, G, F)
 
 
 RHS = vcat(RHS, QuickStartConstraints())
-display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
 
 RHS = vcat(
     RHS, 
@@ -438,7 +435,7 @@ RHS = vcat(
         nsp
     )
 )
-display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+SyncRow(B, C, G, F)
 
 RHS=vcat(
     RHS, 
@@ -455,20 +452,27 @@ RHS=vcat(
         nsp′
     )
 )
-display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+SyncRow(B, C, G, F)
 
 RHS = vcat(RHS, MinimumRequirement())
-display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+SyncRow(B, C, G, F)
 
 RHS = vcat(RHS, BatteryConstraints())
-display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+SyncRow(B, C, G, F)
 
 RHS = vcat(RHS, DemandBalanceConstraints())
-display("$(SyncRow(B, C, G, F)), $(RHS|>length)")
+SyncRow(B, C, G, F)
 
 B = B|>GetMatrix
 C = C|>GetMatrix
 G = G|>GetMatrix
 H = F|>GetMatrix
+
+## Start grouping the cofficient holder for each of the groupped decision variables
+
+w = [x, y, z]
+u = [c, c′, p, p′, regu, regu', regd, regd′, sr, sr′, h, g_plus, g_minus, nsp, nsp′]
+q = [x′, y′, z′]
+# d is it's own vector. 
 
 
