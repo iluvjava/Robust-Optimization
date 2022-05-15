@@ -1,10 +1,5 @@
 ### This file focuses on the constructions of matrices. 
 
-
-
-include("coef_mgr_v2.jl")
-include("problem_parameters.jl")
-
 # Enumeration set Cardinality. 
 T = CONST_PROBLEM_PARAMETERS.HORIZON
 N = PRIMARY_GENERATORS|>length
@@ -471,7 +466,7 @@ H = F|>GetMatrix
 ## Start grouping the cofficient holder for each of the groupped decision variables
 
 w = [x, y, z]
-u = [c, c′, p, p′, regu, regu', regd, regd′, sr, sr′, h, g_plus, g_minus, nsp, nsp′]
+u = [c, c′, p, p′, regu, regu′, regd, regd′, sr, sr′, h, g_plus, g_minus, nsp, nsp′]
 q = [x′, y′, z′]
 # d is it's own vector. 
 
