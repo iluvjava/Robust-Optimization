@@ -149,6 +149,14 @@ mutable struct FSP
     function ObjVal(this::FSP)
     return objective_value(this.model) end
 
+
+    function GetQ(this::FSP)
+    return end
+
+    function GetU(this::FSP)
+    return end 
+
+    
 end
 
 """
