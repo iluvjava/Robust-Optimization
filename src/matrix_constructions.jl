@@ -134,18 +134,20 @@ function QuickStartConstraints()
         # (9)
         x′[m, t] = 1
         y′[m, t] = 1
-        B(x′, y′)
-        B()
+        G(x′, y′)
+        G()
         push!(rhs, 1)
     end
 
     for t = 2:T, m = 1:M  # note, t starts with 2. 
         # (10)
-        y′[m, t] = 1; y′[m ,t - 1] = -1; x′[m ,t] = -1; z′[m, t] = 1
-        B(x′, y′, z′); B()
+        y′[m, t] = 1; y′[m ,t - 1] = -1
+        x′[m ,t] = -1; z′[m, t] = 1
+        G(x′, y′, z′); G()
         push!(rhs, 0)
-        y′[m, t] = -1; y′[m ,t - 1] = 1; x′[m ,t] = 1; z′[m, t] = -1
-        B(x′, y′, z′); B()
+        y′[m, t] = -1; y′[m ,t - 1] = 1
+        x′[m ,t] = 1; z′[m, t] = -1
+        G(x′, y′, z′); G()
         push!(rhs, 0)
     end
 
@@ -155,7 +157,7 @@ function QuickStartConstraints()
             x′[m, tau] = 1
         end
         y′[m, t] = -1
-        B(x′, y′); B()
+        G(x′, y′); G()
         push!(rhs, 0)
     end
 
@@ -165,7 +167,7 @@ function QuickStartConstraints()
             z′[m, tau] = 1
         end
         y′[m, t] = 1
-        B(x′, y′); B()
+        G(x′, y′); G()
         push!(rhs, 1)
     end
 
@@ -409,12 +411,16 @@ return rhs end
 
 
 B, C, G, F = MakeCoefMatrices()
+
+# Fuel Constraints
 RHS = FuelConstraints()
 SyncRow(B, C, G, F)
 
-
+# Quick start Constraints
 RHS = vcat(RHS, QuickStartConstraints())
+SyncRow(B, C, G, F)
 
+# Capacity constraints primary
 RHS = vcat(
     RHS, 
     CapacityConstraints(
@@ -432,6 +438,7 @@ RHS = vcat(
 )
 SyncRow(B, C, G, F)
 
+# Capacity constraints secondary
 RHS=vcat(
     RHS, 
     CapacityConstraints(
@@ -449,12 +456,15 @@ RHS=vcat(
 )
 SyncRow(B, C, G, F)
 
+# minimum requirement constraints
 RHS = vcat(RHS, MinimumRequirement())
 SyncRow(B, C, G, F)
 
+# battery constraints 
 RHS = vcat(RHS, BatteryConstraints())
 SyncRow(B, C, G, F)
 
+# demand balance
 RHS = vcat(RHS, DemandBalanceConstraints())
 SyncRow(B, C, G, F)
 

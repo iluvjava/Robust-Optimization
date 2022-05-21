@@ -32,6 +32,10 @@ function IndicesList(
 return CartesianOutterProductList(NdimList...) end
 
 
+
+### ============================================================================
+# FSP: Lower bound searcher! 
+### ============================================================================
 """
     Given demand from FMP, test how feasible it is to determine an Lower Bound 
     for the feasibility slack variables. 
@@ -51,8 +55,8 @@ mutable struct FSP
         @warn("This construction only exists for testing purposes!")
         return FSP(
             zeros(size(RobustOptim.B, 2)),
-            1000, 
-            2*ones(RobustOptim.d|>length)
+            10, 
+            ones(RobustOptim.d|>length)
         )
     end
 
@@ -143,21 +147,26 @@ mutable struct FSP
         B = RobustOptim.B
         G = RobustOptim.G
         @info "Preparing constraints for the FSP model. "
-        @constraint(this.model, C*u - v .<= H*d + h - B*w - G*q)
+        @constraint(this.model, c1, C*u - v .<= H*d + h - B*w - G*q)
     return end
 
-    function ObjVal(this::FSP)
-    return objective_value(this.model) end
 
-
-    function GetQ(this::FSP)
-    return end
-
-    function GetU(this::FSP)
-    return end 
-
+    function Base.getindex(this::FSP, index::Symbol)
+    return this.model[index] end
     
 end
+### FSP methods clusters -------------------------------------------------------
+
+function ObjVal(this::FSP)
+return objective_value(this.model) end
+
+    
+function Getq(this::FSP)
+return value.(this.q) end
+
+
+function Getu(this::FSP)
+return value.(this.u) end 
 
 """
     Given the primary parameters and the secondary discrete decision variables 
@@ -177,6 +186,15 @@ mutable struct FMP
     return end
 end
 
+
+### Trying to experiment with the FSP instance. ------
+
 this = FSP()
 optimize!(this.model)
 
+open("constraint_print.txt", "w") do file
+    for II = 1:length(this[:c1])
+        write(file, this[:c1][II]|>repr)
+        write(file, "\n")
+    end
+end
