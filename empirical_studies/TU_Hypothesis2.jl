@@ -2,7 +2,6 @@ using JuMP, HiGHS, LinearAlgebra
 include("../src/matrix_construction_export.jl")
 H = RobustOptim.H
 
-
 function MakeModel(B::Int=6, J::Int=100; ip::Bool=false)
     model = Model(HiGHS.Optimizer)
     if ip
@@ -31,35 +30,34 @@ function MakeModel(B::Int=6, J::Int=100; ip::Bool=false)
 return model, vcat(ξ⁺[:], ξ⁻[:], λ[:]) end
 
 
-"""
-    Provide specific objective for a model, returns that model
-"""
-function RunThis()
-    J = size(H, 1)
-    B = size(H, 2)
-    d = 100 .+ 20*rand(B)
-    γ = 20
-    I = ones(J)
-    @info "LP Model Solve: "
-    model, vars = MakeModel(B, J)
-    λ = model[:λ]
-    ξ⁺ = model[:ξ⁺]
-    ξ⁻ = model[:ξ⁻]
-    @objective(model, Max, dot(λ, H*d) + γ*sum(H*ξ⁺) - γ*sum(H*ξ⁻))
-    optimize!(model)
-    ObjectVal = objective_value(model)
+
+model = nothing
+model_ip = nothing
+for II =1:100
+    model, variables = MakeModel()
+    c = randn(variables|>length)
+
     
-    @info "MIP Model Solve: "
-    model_mip, vars = MakeModel(B, J, ip=true)
-    λ = model_mip[:λ]
-    ξ⁺ = model_mip[:ξ⁺]
-    ξ⁻ = model_mip[:ξ⁻]
-    @objective(model_mip, Max, dot(λ, H*d) + γ*sum(H*ξ⁺) - γ*sum(H*ξ⁻))
-    optimize!(model_mip)
-    ObjectVal_mip = objective_value(model_mip)
+    @objective(model, Min, dot(c, variables))
+    optimize!(model)
+    Obj_LP = objective_value(model)
 
-    println("Obj Val LP: $(ObjectVal)")
-    println("Obj Val MIP: $(ObjectVal_mip)")
-return model, model_mip end
+    model_ip, variables = MakeModel(ip=true)
+    @objective(model_ip, Min, dot(c, variables))
+    optimize!(model_ip)
+    Obj_IP = objective_value(model_ip)
+    if abs(Obj_IP - Obj_LP) > 1e-10
+        display("failed at $(II)")
+        display("ip objective: $(objective_value(model_ip))")
+        display("lp objective: $(objective_value(model))")
+        break
+    end
+    
 
-model, model_mip = RunThis()
+end
+
+# Seems like this MIP problem is having total unimodularity for the variable: ρ. 
+
+value.(model_ip[:ρ⁺])|>display
+value.(model[:ρ⁻])|>display
+
