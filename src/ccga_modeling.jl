@@ -168,6 +168,10 @@ return value.(this.q) end
 function Getu(this::FSP)
 return value.(this.u) end 
 
+function Solve!(this::FSP)
+return end
+
+
 """
     Given the primary parameters and the secondary discrete decision variables 
     meshed into a giant feasible set of many many constraints, we are 
