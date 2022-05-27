@@ -14,11 +14,16 @@ function CartesianOutterProductList(v_list::AbstractVector...)
     result = Iterators.product(v_list...)|>collect
 return result[:] end
 
+
 """
     Given a variable coefficient holder, using its dimension to convert 
     it to a list of tuples representing all the possible indexing of this 
     multi-dimensional variable. 
         * k: The extra forloop indexing from the CCGA algorithm. 
+    
+    Returns: 
+        All possible indices for the decision variables represented by the 
+        instance of the coefficient holder. 
 """
 function IndicesList(
     holder::RobustOptim.VariableCoefficientHolder, 
@@ -128,8 +133,6 @@ mutable struct FSP
         this.q = [this.model[:x′]..., this.model[:y′]..., this.model[:z′]...]
 
         # Prepare for variable v, the slack. 
-        # no lowerbound, negative v means more than enough feasibility 
-        # for the system. Possitive means infeasible. 
         @variable(this.model, v[1:length(RobustOptim.h)], lower_bound=0)
         this.v = this.model[:v]
         
@@ -155,12 +158,13 @@ mutable struct FSP
     return this.model[index] end
     
 end
+
 ### FSP methods clusters -------------------------------------------------------
 
 function ObjVal(this::FSP)
 return objective_value(this.model) end
 
-    
+
 function Getq(this::FSP)
 return value.(this.q) end
 
@@ -168,8 +172,15 @@ return value.(this.q) end
 function Getu(this::FSP)
 return value.(this.u) end 
 
+
 function Solve!(this::FSP)
-return end
+    optimize!(this.model)
+return objective_value(this.model) end
+
+"""
+    Get the model from the instance of FSP. 
+"""
+function JuMPModel(this::FSP) return this.model end
 
 
 """
@@ -191,10 +202,14 @@ mutable struct FMP
 end
 
 
-### Trying to experiment with the FSP instance. ------
+### ============================================================================
+### Trying to experiment with the FSP instance. 
+### ============================================================================
 
 this = FSP()
-optimize!(this.model)
+Solve!(this)
+q = Getq(this)
+u = getu(this)
 
 open("constraint_print.txt", "w") do file
     for II = 1:length(this[:c1])
