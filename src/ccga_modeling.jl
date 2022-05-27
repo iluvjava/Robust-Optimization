@@ -190,30 +190,159 @@ function JuMPModel(this::FSP) return this.model end
         * Determines the upper bound for the feasibility slack. 
 """
 mutable struct FMP
-    w::Vector
-    gamma::Number
-    q::Vector
+    w::Vector                   # Primary Generator decision variables. 
+    gamma::Number               # the bound for the demands. 
+    q::Vector{Vector}           # the secondary discrete decision variables (GIVEN CONSTANT).  
+    v::Vector{Vector}           # The slack decision variables for each of the previous demands. 
+    u::Vector{Vector}           # The secondary continuous decision variables. 
+    k::Number                   # The iteration number from the ccga. 
+    eta::JuMP.VariableRef       # The eta lower bound for all feasibility. 
+    lambda::Vector{Vector}
 
-    function FMP(w, gamma, q)
+    model::JuMP.Model            # The JuMP model for a certain instance. 
+
+    function FMP()
+        @warn("Construction shouldn't be called except for debugging purposes. ")
+    return FMP(zeros(size(RobustOptim.B, 2)), 0) end
+
+    function FMP(w, gamma)
+        this = new()
         this.w = w
         this.gamma = gamma
-        this.q = q
-    return end
+        this.q = Vector{Vector}()
+        this.v = Vector{Vector}()
+        this.u = Vector{Vector}()
+        this.lambda = Vector{Vector}()
+        this.k = 1
+        this.model = Model(HiGHS.Optimizer) 
+
+        PrepareVariables!(this)
+    return this end
+    
+
+
+    
+
 end
+
+# ======================================================================================================================
+# The adding of the constraints API methods for FMP 
+# ======================================================================================================================
+
+"""
+    Prepare a new set of decision variables for the given instance of the problem. 
+    * u[k]::The continuous decision variable, for the kth iterations of the CCGA Algorithm. 
+        * u[k]  will be a compositive decision variables for all the modeling decision variables in the original problem.
+    * v, λ follows a similar token. 
+"""
+function PrepareVariables!(this::FMP, q_given::Union{Nothing, JuMP.VariableRef})
+    k = this.k
+    # Preparing variable: u into JuMP model. 
+    u = RobustOptim.u
+    @info "Prepareing variables for current FMP model. "
+
+    Decisionvariables = Vector()
+
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[1])], lower_bound=0, base_name="c[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[2])], lower_bound=0, base_name="c′[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[3])], lower_bound=0, base_name="p[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[4])], lower_bound=0, base_name="p′[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[5])], lower_bound=0, base_name="regu[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[6])], lower_bound=0, base_name="regu′[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[7])], lower_bound=0, base_name="regd[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[8])], lower_bound=0, base_name="regd′[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[9])], lower_bound=0, base_name="sr[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[10])], lower_bound=0, base_name="sr′[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[11])], lower_bound=0, base_name="h[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[12])], lower_bound=0, base_name="g_plus[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[13])], lower_bound=0, base_name="g_minus[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[14])], lower_bound=0, base_name="nsp[$(k)]")...)
+    push!(Decisionvariables, 
+        @variable(this.model, [IndicesList(u[15])], lower_bound=0, base_name="nsp′[$(k)]")...)
+    push!(this.u, Decisionvariables)
+    
+    # Prepare for variable q, which is going to be a constant. 
+    if q_given === nothing
+        Decisionvariables = Vector()
+        q = RobustOptim.q
+        push!(Decisionvariables, rand((0, 1), size(q[1])...)...)
+        push!(Decisionvariables, rand((0, 1), size(q[2])...)...)
+        push!(Decisionvariables, rand((0, 1), size(q[3])...)...)
+        push!(this.q, Decisionvariables)
+    else
+        push!(this.q, (q_given.|>value)[:])
+    end
+
+    # Prepare for variable v, the slack. 
+    v = @variable(this.model, [1:length(RobustOptim.h)], lower_bound=0, base_name="v[$(k)]")
+    push!(this.v, v[:])
+
+    # Parepare the variable lambda, the dual decision variables 
+    λ = @variable(this.model, [1:length(RobustOptim.h)], lower_bound=-1, upper_bound=0, base_name="λ[$(k)]")
+    push!(this.lambda, λ[:])
+    
+    # prepare the variable η
+    @variable(this.model, η)
+    this.k += 1
+
+return this end
+
+
+function PrepareVariables!(this::FMP)
+    @assert this.k == 1 "This function can only be called for the first creation of the FMP problem, where initial "*
+    "q is not given. "
+    PrepareVariables!(this, nothing)
+return this end
+
+
+"""
+    Prepare the constraints for the FMP problem. 
+"""
+function PrepareConstraints!(this::FMP)
+    for r in 1:this.k
+
+    end
+return this end
+
+function Introduce!(this::FMP, q::JuMP.VariableRef)
+
+
+return this end
+
+
+function PrepareObjective!(this::FMP)
+
+return this end
+
 
 
 ### ============================================================================
 ### Trying to experiment with the FSP instance. 
 ### ============================================================================
 
-this = FSP()
-Solve!(this)
-q = Getq(this)
-u = getu(this)
+# this = FSP()
+# Solve!(this)
+# q = Getq(this)
+# u = getu(this)
 
-open("constraint_print.txt", "w") do file
-    for II = 1:length(this[:c1])
-        write(file, this[:c1][II]|>repr)
-        write(file, "\n")
-    end
-end
+# open("constraint_print.txt", "w") do file
+#     for II = 1:length(this[:c1])
+#         write(file, this[:c1][II]|>repr)
+#         write(file, "\n")
+#     end
+# end
+this = FMP()
