@@ -5,6 +5,7 @@ using .RobustOptim
 
 ### Important functions for variables constructions for JuMP models. 
 
+
 """
     Does a cartesian outter product on a list of vectors 
     and then return all the products in the form of a tuple packed into 
@@ -139,12 +140,14 @@ function AddConstraint5!(this::MP)
     end
 return end
 
+
 """
     Introduce feasibility cut for the master problem which comes from the CCGA results.  
 """
 function IntroduceCut(this::MP)
 
 return end
+
 
 """
     The initial MP problem requires a bounded feasible solution, we must bound
@@ -158,6 +161,7 @@ function AddGammaConstraint!(this::MP)
     )
 return end
 
+
 """
     creates the objective value for it. 
 """
@@ -166,6 +170,7 @@ function AddObjective!(this::MP)
     γ = m[:γ]
     @objective(m, Max, γ)
 return end
+
 
 """
     Get the primary discrete decision variable as a vector of numbers for 
@@ -178,8 +183,6 @@ function Getw(this::MP)
     push!(Vec, this.w[2, :, :][:]...)
     push!(Vec, this.w[3, :, :][:]...)
 return Vec end
-
-
 
 
 ### ====================================================================================================================
@@ -308,15 +311,14 @@ end
 ### FSP methods clusters -------------------------------------------------------
 
 function Getq(this::FSP)
-return value.(this.q) end
+return this.q end
 
 
 function Getu(this::FSP)
-return value.(this.u) end 
+return this.u end 
 
 function Getv(this::FSP)
-return value.(this.v) end
-
+return this.v end
 
 
 # ======================================================================================================================
@@ -519,8 +521,8 @@ return this end
 
 """
     Adversarial demands are coming from vertices of the hyper cube, this will recover 
-    the term H(d̂ + γ.*ρ⁺ - γ.*ρ⁻). 
-    *   It's used for the feasibility cut for the master problem to determine primary decision variable w̄
+    the term H(d̂ + γ.*ρ⁺ - γ.*ρ⁻). s
+    *  It's used for the feasibility cut for the master problem to determine primary decision variable w̄
 """
 function GetDemandsVertex(this::FMP)
 
@@ -577,17 +579,3 @@ return this.model end
 ### ============================================================================
 ### Trying to experiment with the FSP, FMP instance. 
 ### ============================================================================
-
-# this = FSP()
-# Solve!(this)
-# q = Getq(this)
-# u = getu(this)
-
-# open("constraint_print.txt", "w") do file
-#     for II = 1:length(this[:c1])
-#         write(file, this[:c1][II]|>repr)
-#         write(file, "\n")
-#     end
-# end
-# this = FMP()
-# Solve!(this)

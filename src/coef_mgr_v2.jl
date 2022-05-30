@@ -1,6 +1,6 @@
 using SparseArrays, LinearAlgebra
 
-### VariableCoefficientHolder --------------------------------------------------
+### VariableCoefficientHolder ------------------------------------------------------------------------------------------
 ###     A class that holds the coefficients using the subscripts of a variable
 ###     * Subscripts can be tensor indexer. 
 mutable struct VariableCoefficientHolder{N} <: AbstractArray{Number, N}
@@ -51,12 +51,13 @@ function (this::VariableCoefficientHolder)()
 return this end
 
 
-### COEFFICIENT MATRIX ---------------------------------------------------------
+### COEFFICIENT MATRIX -------------------------------------------------------------------------------------------------
 ###     Keep track of the coefficient of the variables and the symbol 
 ###     representing the 
 ###     variable for each individual constraints
+
 mutable struct CoefficientMatrix
-    n::Int64        # number of columns in the matrix , 
+    n::Int64        # number of columns in the matrix. 
     m::Int64        # bumber of rows in the matrix. 
     var_posi::Dict{Symbol, Int64}   # which column is the variable assigned to.
     var_dims::Vector{Pair}
