@@ -46,7 +46,7 @@ function MakeModel(H; ip::Bool=false)
 
     ξ⁺ = @variable(model, ξ⁺[IdxTuples])
     ξ⁻ = @variable(model, ξ⁻[IdxTuples])
-    λ = @variable(model, λ[1:J], lower_bound=-1, upper_bound=0)
+    λ  = @variable(model, λ[1:J], lower_bound=-1, upper_bound=0)
 
     for (j, b) in IdxTuples
         @constraint(model, -ρ⁺[b] <= ξ⁺[(j, b)])

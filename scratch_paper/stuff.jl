@@ -1,15 +1,13 @@
-
-mutable struct Foo
-    x::Int
-    
-    function Foo(x)
-    return new(x) end
-    
-    function Get(this::Foo)
-    return this.x end
-
-    () -> (Get)
+function Foo()
+    x::Int = -1
+    setx(x_) = (x = x_) 
+    getx() = x
+    () -> (getx;setx)
 end
 
-
-foo = Foo(10) 
+f = Foo()
+f.getx()
+f.setx(22)
+f.getx()
+f.setx(1)
+f.getx()

@@ -2,6 +2,7 @@ include("utilities.jl")
 include("matrix_construction_export.jl")
 include("master_problem.jl")
 using Logging
+using .RobustOptim
 
 ### Important functions for variables constructions for JuMP models. 
 
@@ -183,6 +184,10 @@ return objective_value(this.model) end
 function JuMPModel(this::FSP) return this.model end
 
 
+# ======================================================================================================================
+# FMP
+# ======================================================================================================================
+
 """
     Given the primary parameters and the secondary discrete decision variables 
     meshed into a giant feasible set of many many constraints, we are 
@@ -190,44 +195,47 @@ function JuMPModel(this::FSP) return this.model end
         * Determines the upper bound for the feasibility slack. 
 """
 mutable struct FMP
-    w::Vector                   # Primary Generator decision variables. 
-    gamma::Number               # the bound for the demands. 
-    q::Vector{Vector}           # the secondary discrete decision variables (GIVEN CONSTANT).  
-    v::Vector{Vector}           # The slack decision variables for each of the previous demands. 
-    u::Vector{Vector}           # The secondary continuous decision variables. 
-    k::Number                   # The iteration number from the ccga. 
-    eta::JuMP.VariableRef       # The eta lower bound for all feasibility. 
-    lambda::Vector{Vector}
+    w::Vector                                     # Primary Generator decision variables. (GIVEN CONSTANT)
+    gamma::Float64                                 # the bound for the demands. (GIVEN CONSTANT)
+    q::Vector{Vector{Int}}                        # the secondary discrete decision variables (GIVEN CONSTANT).  
+    v::Vector{Vector{JuMP.VariableRef}}           # The slack decision variables for each of the previous demands. 
+    u::Vector{Vector{JuMP.VariableRef}}           # The secondary continuous decision variables. 
+    k::Int                                     # The iteration number from the ccga. 
+    d::Vector{JuMP.VariableRef}                   # The demand decision variable, as a giant vector. 
+    eta::JuMP.VariableRef                         # The eta lower bound for all feasibility. 
+    lambda::Vector{Vector{JuMP.VariableRef}}      # the dual decision variables. 
+    rho_plus::Vector{Vector{JuMP.VariableRef}}    # binary decision variables for the bilinear demands
+    rho_minus::Vector{Vector{JuMP.VariableRef}}   # binary decision variables for the bilinear demands
+    d_hat::Vector{Float64}                         # the average testing demands vector.  (GIVEN CONSTAINT)
 
-    model::JuMP.Model            # The JuMP model for a certain instance. 
+    model::JuMP.Model                             # The JuMP model for a certain instance. 
 
     function FMP()
         @warn("Construction shouldn't be called except for debugging purposes. ")
-    return FMP(zeros(size(RobustOptim.B, 2)), 0) end
+        d̂ = 100.0*ones(size(RobustOptim.H, 2))
+    return FMP(zeros(size(RobustOptim.B, 2)), 100.0, d̂) end
 
-    function FMP(w, gamma)
+    function FMP(w::Vector, gamma, d_hat::Vector)
         this = new()
         this.w = w
         this.gamma = gamma
         this.q = Vector{Vector}()
         this.v = Vector{Vector}()
         this.u = Vector{Vector}()
+        this.rho_plus = Vector{Vector}()
+        this.rho_minus = Vector{Vector}()        
         this.lambda = Vector{Vector}()
         this.k = 1
-        this.model = Model(HiGHS.Optimizer) 
-
+        this.model = Model(HiGHS.Optimizer)
+        this.d_hat = d_hat
         PrepareVariables!(this)
-    return this end
-    
-
-
-    
+        PrepareConstraints!(this)
+        PrepareObjective!(this)
+    return this end    
 
 end
 
-# ======================================================================================================================
 # The adding of the constraints API methods for FMP 
-# ======================================================================================================================
 
 """
     Prepare a new set of decision variables for the given instance of the problem. 
@@ -242,16 +250,15 @@ function PrepareVariables!(this::FMP, q_given::Union{Nothing, JuMP.VariableRef})
     @info "Prepareing variables for current FMP model. "
 
     Decisionvariables = Vector()
-
-    push!(Decisionvariables, 
+    push!(Decisionvariables,
         @variable(this.model, [IndicesList(u[1])], lower_bound=0, base_name="c[$(k)]")...)
-    push!(Decisionvariables, 
+    push!(Decisionvariables,
         @variable(this.model, [IndicesList(u[2])], lower_bound=0, base_name="c′[$(k)]")...)
-    push!(Decisionvariables, 
+    push!(Decisionvariables,
         @variable(this.model, [IndicesList(u[3])], lower_bound=0, base_name="p[$(k)]")...)
-    push!(Decisionvariables, 
+    push!(Decisionvariables,
         @variable(this.model, [IndicesList(u[4])], lower_bound=0, base_name="p′[$(k)]")...)
-    push!(Decisionvariables, 
+    push!(Decisionvariables,
         @variable(this.model, [IndicesList(u[5])], lower_bound=0, base_name="regu[$(k)]")...)
     push!(Decisionvariables, 
         @variable(this.model, [IndicesList(u[6])], lower_bound=0, base_name="regu′[$(k)]")...)
@@ -294,10 +301,12 @@ function PrepareVariables!(this::FMP, q_given::Union{Nothing, JuMP.VariableRef})
     # Parepare the variable lambda, the dual decision variables 
     λ = @variable(this.model, [1:length(RobustOptim.h)], lower_bound=-1, upper_bound=0, base_name="λ[$(k)]")
     push!(this.lambda, λ[:])
+
+    # prepare the variable d
+    this.d = @variable(this.model, d[1:size(RobustOptim.H, 2)])[:]
     
     # prepare the variable η
-    @variable(this.model, η)
-    this.k += 1
+    this.eta = @variable(this.model, η)
 
 return this end
 
@@ -310,28 +319,96 @@ return this end
 
 
 """
-    Prepare the constraints for the FMP problem. 
+    Prepare the constraints for the FMP problem, however, it will only add for all the most recent variables with 
+    r = k. 
 """
 function PrepareConstraints!(this::FMP)
-    for r in 1:this.k
+    k = this.k
+    η = this.eta
+    u = this.u[k]
+    v = this.v[k]
+    w = this.w
+    H = RobustOptim.H
+    B = RobustOptim.B 
+    G = RobustOptim.G
+    C = RobustOptim.C
+    h = RobustOptim.h
+    λ = this.lambda[k]
+    d = this.d
+    d̂ = this.d_hat
+    γ = this.gamma
+    q = this.q[k]
+    model = this.model
 
+    @constraint(model, η <= sum(v), base_name="constraint[$(k)][1]")
+    @constraint(model, C*u - v .<= H*d + h - B*w - G*q, base_name="constraint[$(k)][2]")
+    @constraint(model, λ'*C .<= 0, base_name="constraint[$(k)][3]")
+    @constraint(model, d .<= d̂ .+ γ, base_name="constraint[$(k)][4]")
+    @constraint(model, d̂ .>= d̂ .- γ, base_name="constraint[$(k)][5]")
+
+    # Sparse bilinear constraints setup: 
+    B̄ = size(H, 2)
+    ρ⁺ = @variable(model, [1:B̄], Bin, base_name="ρ⁺[$(k)]")
+    push!(this.rho_plus, ρ⁺)
+    ρ⁻ = @variable(model, [1:B̄], Bin, base_name="ρ⁻[$(k)]")
+    push!(this.rho_minus, ρ⁻)
+
+    IdxTuples = findall(!=(0), H).|>Tuple
+    ξ⁺ = @variable(model, [IdxTuples], base_name="ξ⁺[$(k)]")
+    ξ⁻ = @variable(model, [IdxTuples], base_name="ξ⁻[$(k)]")
+    
+    for (j, b) in IdxTuples
+        @constraint(model, -ρ⁺[b] <= ξ⁺[(j, b)])
+        @constraint(model, ξ⁺[(j, b)] <= ρ⁺[b])
+        @constraint(model, λ[j] - (1 - ρ⁺[b])<=ξ⁺[(j, b)])
+        @constraint(model, ξ⁺[(j, b)] <= λ[j] + (1 - ρ⁺[b]))
+        @constraint(model, -ρ⁻[b] <= ξ⁻[(j, b)])
+        @constraint(model, ξ⁻[(j, b)] <= ρ⁻[b])
+        @constraint(model, λ[j] - (1 - ρ⁻[b]) <= ξ⁻[(j, b)])
+        @constraint(model, ξ⁻[(j, b)] <= λ[j] + (1 - ρ⁻[b]))
     end
+    @constraint(model, [b=1:B̄], ρ⁺[b] + ρ⁻[b] == 1, base_name="constraint[$(k)][6]")
+    @constraint(
+        model, 
+        dot(λ, H*d̂) + 
+        γ*dot(H[H.!=0], ξ⁺[:] .- ξ⁻[:]) + 
+        dot(λ,h - B*w - G*q) == sum(v), base_name="constraint[$(k)][7]")
+
 return this end
 
+
+"""
+    Introduce a new secondary binary decision variable as a fixed variable for te system. 
+"""
 function Introduce!(this::FMP, q::JuMP.VariableRef)
-
-
+    this.k += 1
+    PrepareVariables!(this, q)
+    PrepareConstraints!(this)
 return this end
 
 
 function PrepareObjective!(this::FMP)
-
+    @objective(this.model, Max, this.eta)
 return this end
+
+
+function Solve!(this::FMP)
+return optimize!(this.model) end
+
+"""
+    * NaN is returned if there is no solution to the problem. 
+"""
+function objective_value(this::FMP)
+    status = primale_status(this.model)
+    if status == NO_SOLUTION
+        return NaN
+    end
+return objective_value(this.model) end 
 
 
 
 ### ============================================================================
-### Trying to experiment with the FSP instance. 
+### Trying to experiment with the FSP, FMP instance. 
 ### ============================================================================
 
 # this = FSP()
@@ -346,3 +423,4 @@ return this end
 #     end
 # end
 this = FMP()
+Solve!(this)
