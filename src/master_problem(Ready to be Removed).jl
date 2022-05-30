@@ -1,8 +1,11 @@
 include("./problem_parameters.jl")
 include("./utilities.jl")
 
+abstract type Problem
+    # has a JuMP model in it. 
+end
 
-mutable struct MP
+mutable struct MP<:Problem
     M::Model
     w::Array{VariableRef, 3}
     G::Int64; T::Int64
@@ -37,14 +40,13 @@ mutable struct MP
         this.Tminu = PRIMARY_GENERATORS.Tminu
         @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
-
         AddConstraint2!(this)
         AddConstraint3!(this)
         AddConstraint4!(this)
         AddConstraint5!(this)
     return this end
 
-    function MP() return MP(Model(GLPK.Optimizer)) end 
+    function MP() return MP(Model(HiGHS.Optimizer)) end
     
 end
 
@@ -107,18 +109,31 @@ function AddGammaConstraint!(this::MP)
     )
 return end
 
+"""
+    creates the objective value for it. 
+"""
 function AddObjective!(this::MP)
     m = this|>GetModel
     γ = m[:γ]
     @objective(m, Max, γ)
 return end
 
-function GetModel(this::MP) return this.M end
+"""
+    Get the primary discrete decision variable as a vector of numbers for 
+        the CCGA algorithm. 
+    It returns vector as decision variable
+"""
+function Getw(this::MP)
+    Vec = Vector{JuMP.VariableRef}()
+    push!(Vec, this.w[:x, :, :])
+    push!(Vec, this.w[:y, :, :])
+    push!(Vec, this.w[:z, :, :])
+return Vec end
 
 
 
 
 ### Simple Tests ===============================================================
 
-mp = MP()
-display(mp|>GetModel)
+# mp = MP()
+# display(mp|>GetModel)

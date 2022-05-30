@@ -1,6 +1,5 @@
 include("utilities.jl")
 include("matrix_construction_export.jl")
-include("master_problem.jl")
 using Logging
 using .RobustOptim
 
@@ -38,23 +37,169 @@ function IndicesList(
 return CartesianOutterProductList(NdimList...) end
 
 
+abstract type Problem
+    # has a JuMP model in it. 
+    # MUST IMPLEMENT: GetModel Method. 
+end
 
-### ============================================================================
+
+### ====================================================================================================================
+### Master Problem: 
+###   * Search for primary feasible solution given branch cut and bounds. 
+### ====================================================================================================================
+mutable struct MP<:Problem
+    M::Model
+    w::Array{VariableRef, 3}
+    G::Int64; T::Int64
+    Tmind::Array{Int}  # Min up down
+    Tminu::Array{Int}  # Min up time
+
+    # settings and options stuff: 
+    Verbose::Bool
+
+    function MP(M::Model)
+        this = new(M)
+        this.w = 
+        @variable(
+            this.M, 
+            w[
+                [:x, :y, :z],  
+                1:PRIMARY_GENERATORS.generator_count, 
+                1:CONST_PROBLEM_PARAMETERS.HORIZON
+            ], Bin
+        )
+        # Scaler Continuous variables for demand interval. 
+        @variable(
+            this.M, 
+            γ
+        )
+        # -- copy of global variables: 
+        this.G = PRIMARY_GENERATORS.generator_count
+        this.T = CONST_PROBLEM_PARAMETERS.HORIZON
+        this.Tmind = PRIMARY_GENERATORS.Tmind
+        @assert any(this.T .> this.Tmind) "Tmind: Minimum down time has to be less than "*
+        "time horizon"
+        this.Tminu = PRIMARY_GENERATORS.Tminu
+        @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
+        "time horizon"
+        AddConstraint2!(this)
+        AddConstraint3!(this)
+        AddConstraint4!(this)
+        AddConstraint5!(this)
+    return this end
+
+    function MP() return MP(Model(HiGHS.Optimizer)) end
+    
+end
+
+function AddConstraint2!(this::MP)
+    w = (this|>GetModel)[:w]
+    for n in 1: this.G, t in 1: this.T
+        @constraint(
+            this|>GetModel, w[:x, n, t] + w[:z, n, t] <= 1
+        )
+    end
+return end
+
+function AddConstraint3!(this::MP)
+    w = (this|>GetModel)[:w]
+    for n in 1: this.G, t in 2: this.T
+        @constraint(
+            this|>GetModel,
+            w[:y, n, t] - w[:y, n, t - 1] == w[:x, n, t] - w[:z, n, t]
+        )
+    end
+return end
+
+function AddConstraint4!(this::MP)
+    w = (this|>GetModel)[:w]
+    for n in 1:this.G, t in this.Tminu[n]: this.T
+        @constraint(
+            this|>GetModel, 
+            sum(
+                w[:x, n, tau] for tau in t - this.Tminu[n] + 1: t
+            ) 
+            <= 
+            w[:y, n, t]
+        )
+    end
+return end
+
+function AddConstraint5!(this::MP)
+    w = (this|>GetModel)[:w]
+    for n in 1:this.G, t in this.Tmind[n]: this.T
+        @constraint(
+            this|>GetModel, 
+            sum(
+                w[:z, n, tau] for tau in t - this.Tmind[n] + 1: t
+            ) 
+            <= 
+            1 - w[:y, n, t]
+        )
+    end
+return end
+
+"""
+    Introduce feasibility cut for the master problem which comes from the CCGA results.  
+"""
+function IntroduceCut(this::MP)
+
+return end
+
+"""
+    The initial MP problem requires a bounded feasible solution, we must bound
+    the demain interval γ by some large number. 
+"""
+function AddGammaConstraint!(this::MP)
+    γ = (this|>GetModel)[:γ]
+    @constraint(
+        this|>GetModel, 
+        γ <= 1e4  # a large number.  
+    )
+return end
+
+"""
+    creates the objective value for it. 
+"""
+function AddObjective!(this::MP)
+    m = this|>GetModel
+    γ = m[:γ]
+    @objective(m, Max, γ)
+return end
+
+"""
+    Get the primary discrete decision variable as a vector of numbers for 
+        the CCGA algorithm. 
+    It returns vector as decision variable
+"""
+function Getw(this::MP)
+    Vec = Vector{JuMP.VariableRef}()
+    push!(Vec, this.w[1, :, :][:]...)
+    push!(Vec, this.w[2, :, :][:]...)
+    push!(Vec, this.w[3, :, :][:]...)
+return Vec end
+
+
+
+
+### ====================================================================================================================
 # FSP: Lower bound searcher! 
-### ============================================================================
+#   * Takes in a demands and it tries to satisfies it by choosing the secondary
+#   * discrete and contiuous variables. 
+### ====================================================================================================================
 """
     Given demand from FMP, test how feasible it is to determine an Lower Bound 
     for the feasibility slack variables. 
 """
-mutable struct FSP
+mutable struct FSP<:Problem
     model::JuMP.Model
-    u::Vector
-    v::Vector
-    q::Vector
+    u::Vector{JuMP.VariableRef}
+    v::Vector{JuMP.VariableRef}
+    q::Vector{JuMP.VariableRef}
     
     # Given parameters 
-    w::Vector
-    d_star::Vector
+    w::Vector{Float64}
+    d_star::Vector{Float64}
     gamma::Number
     
     function FSP()
@@ -162,10 +307,6 @@ end
 
 ### FSP methods clusters -------------------------------------------------------
 
-function ObjVal(this::FSP)
-return objective_value(this.model) end
-
-
 function Getq(this::FSP)
 return value.(this.q) end
 
@@ -173,19 +314,15 @@ return value.(this.q) end
 function Getu(this::FSP)
 return value.(this.u) end 
 
+function Getv(this::FSP)
+return value.(this.v) end
 
-function Solve!(this::FSP)
-    optimize!(this.model)
-return objective_value(this.model) end
-
-"""
-    Get the model from the instance of FSP. 
-"""
-function JuMPModel(this::FSP) return this.model end
 
 
 # ======================================================================================================================
-# FMP
+# FMP, the Upper bound locator. 
+#   * Obtains a lower bound by giving a demands that can break the feasibility for all discrete secondary 
+#     decision variables. 
 # ======================================================================================================================
 
 """
@@ -194,19 +331,19 @@ function JuMPModel(this::FSP) return this.model end
     searching for adversarial demands that can break our delivery system. 
         * Determines the upper bound for the feasibility slack. 
 """
-mutable struct FMP
-    w::Vector                                     # Primary Generator decision variables. (GIVEN CONSTANT)
-    gamma::Float64                                 # the bound for the demands. (GIVEN CONSTANT)
-    q::Vector{Vector{Int}}                        # the secondary discrete decision variables (GIVEN CONSTANT).  
+mutable struct FMP<:Problem
+    w::Vector{Float64}                            # Primary Generator decision variables.               (GIVEN CONSTANT)
+    gamma::Float64                                # the bound for the demands.                          (GIVEN CONSTANT)
+    q::Vector{Vector{Int}}                        # the secondary discrete decision variables           (GIVEN CONSTANT)
     v::Vector{Vector{JuMP.VariableRef}}           # The slack decision variables for each of the previous demands. 
     u::Vector{Vector{JuMP.VariableRef}}           # The secondary continuous decision variables. 
-    k::Int                                     # The iteration number from the ccga. 
+    k::Int                                        # The iteration number from the ccga. 
     d::Vector{JuMP.VariableRef}                   # The demand decision variable, as a giant vector. 
     eta::JuMP.VariableRef                         # The eta lower bound for all feasibility. 
     lambda::Vector{Vector{JuMP.VariableRef}}      # the dual decision variables. 
     rho_plus::Vector{Vector{JuMP.VariableRef}}    # binary decision variables for the bilinear demands
     rho_minus::Vector{Vector{JuMP.VariableRef}}   # binary decision variables for the bilinear demands
-    d_hat::Vector{Float64}                         # the average testing demands vector.  (GIVEN CONSTAINT)
+    d_hat::Vector{Float64}                        # the average testing demands vector.                (GIVEN CONSTAINT)
 
     model::JuMP.Model                             # The JuMP model for a certain instance. 
 
@@ -240,7 +377,7 @@ end
 """
     Prepare a new set of decision variables for the given instance of the problem. 
     * u[k]::The continuous decision variable, for the kth iterations of the CCGA Algorithm. 
-        * u[k]  will be a compositive decision variables for all the modeling decision variables in the original problem.
+        * u[k] will be a compositive decision variables for all the modeling decision variables in the original problem.
     * v, λ follows a similar token. 
 """
 function PrepareVariables!(this::FMP, q_given::Union{Nothing, JuMP.VariableRef})
@@ -248,7 +385,6 @@ function PrepareVariables!(this::FMP, q_given::Union{Nothing, JuMP.VariableRef})
     # Preparing variable: u into JuMP model. 
     u = RobustOptim.u
     @info "Prepareing variables for current FMP model. "
-
     Decisionvariables = Vector()
     push!(Decisionvariables,
         @variable(this.model, [IndicesList(u[1])], lower_bound=0, base_name="c[$(k)]")...)
@@ -298,19 +434,22 @@ function PrepareVariables!(this::FMP, q_given::Union{Nothing, JuMP.VariableRef})
     v = @variable(this.model, [1:length(RobustOptim.h)], lower_bound=0, base_name="v[$(k)]")
     push!(this.v, v[:])
 
-    # Parepare the variable lambda, the dual decision variables 
+    # Parepare the variable lambda, the dual decision variables. 
     λ = @variable(this.model, [1:length(RobustOptim.h)], lower_bound=-1, upper_bound=0, base_name="λ[$(k)]")
     push!(this.lambda, λ[:])
 
-    # prepare the variable d
+    # prepare the variable d. 
     this.d = @variable(this.model, d[1:size(RobustOptim.H, 2)])[:]
     
-    # prepare the variable η
+    # prepare the variable η. 
     this.eta = @variable(this.model, η)
 
 return this end
 
 
+"""
+    Prepare the variables for the r=k th iterations of the CCGA algorithm. 
+"""
 function PrepareVariables!(this::FMP)
     @assert this.k == 1 "This function can only be called for the first creation of the FMP problem, where initial "*
     "q is not given. "
@@ -372,7 +511,18 @@ function PrepareConstraints!(this::FMP)
         model, 
         dot(λ, H*d̂) + 
         γ*dot(H[H.!=0], ξ⁺[:] .- ξ⁻[:]) + 
-        dot(λ,h - B*w - G*q) == sum(v), base_name="constraint[$(k)][7]")
+        dot(λ,h - B*w - G*q) == sum(v), 
+        base_name="constraint[$(k)][7]"
+    )
+
+return this end
+
+"""
+    Adversarial demands are coming from vertices of the hyper cube, this will recover 
+    the term H(d̂ + γ.*ρ⁺ - γ.*ρ⁻). 
+    *   It's used for the feasibility cut for the master problem to determine primary decision variable w̄
+"""
+function GetDemandsVertex(this::FMP)
 
 return this end
 
@@ -380,8 +530,9 @@ return this end
 """
     Introduce a new secondary binary decision variable as a fixed variable for te system. 
 """
-function Introduce!(this::FMP, q::JuMP.VariableRef)
+function Introduce!(this::FMP, q::Vector{JuMP.VariableRef})
     this.k += 1
+    @assert length(q) == size(G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
     PrepareVariables!(this, q)
     PrepareConstraints!(this)
 return this end
@@ -392,19 +543,35 @@ function PrepareObjective!(this::FMP)
 return this end
 
 
-function Solve!(this::FMP)
-return optimize!(this.model) end
+
+### ====================================================================================================================
+### Generics Functions for abstract type of problems that contain a JuMP inner model. 
+### ====================================================================================================================
 
 """
-    * NaN is returned if there is no solution to the problem. 
+    * NaN is returned if there is no solution to the problem, which means it's either infeasible
+    or unbounded. 
 """
-function objective_value(this::FMP)
-    status = primale_status(this.model)
+function objective_value(this::Problem)
+    model = GetModel(this)
+    status = primale_status(model)
     if status == NO_SOLUTION
         return NaN
     end
-return objective_value(this.model) end 
+return objective_value(model) end 
 
+"""
+    Solve the inner JuMP optimization problem by directly invoking `optimize!` in JuMP on the model. 
+"""
+function Solve!(this::Problem)
+return optimize!(this|>GetModel) end
+
+
+"""
+    Get the JuMP instance from this model. 
+"""
+function GetModel(this::Problem) 
+return this.model end
 
 
 ### ============================================================================
@@ -422,5 +589,5 @@ return objective_value(this.model) end
 #         write(file, "\n")
 #     end
 # end
-this = FMP()
-Solve!(this)
+# this = FMP()
+# Solve!(this)
