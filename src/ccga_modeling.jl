@@ -58,14 +58,14 @@ mutable struct MP <: Problem
     # settings and options stuff: 
     Verbose::Bool
 
-    function MP(M::Model)
+    function MP(M::Model, gamma_upper=1e4)
         this = new(M)
         this.G = RobustOptim.PRIMARY_GENERATORS.generator_count
         this.T = RobustOptim.CONST_PROBLEM_PARAMETERS.HORIZON
         this.Tmind = RobustOptim.PRIMARY_GENERATORS.Tmind
         @assert any(this.T .> this.Tmind) "Tmind: Minimum down time has to be less than "*
         "time horizon"
-        this.Tminu = PRIMARY_GENERATORS.Tminu
+        this.Tminu = RobustOptim.PRIMARY_GENERATORS.Tminu
         @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
         this.w = 
@@ -80,7 +80,8 @@ mutable struct MP <: Problem
         # Scaler Continuous variables for demand interval. 
         @variable(
             this.M, 
-            γ
+            γ, 
+            lower_bound=0, upper_bound=gamma_upper
         )
         # -- copy of global variables: 
         
@@ -88,9 +89,10 @@ mutable struct MP <: Problem
         AddConstraint3!(this)
         AddConstraint4!(this)
         AddConstraint5!(this)
+        AddObjective!(this)
     return this end
 
-    function MP() return MP(Model(HiGHS.Optimizer)) end
+    function MP(gamma_upper=1e4) return MP(Model(HiGHS.Optimizer), gamma_upper) end
     
 end
 
@@ -168,19 +170,6 @@ return this end
 
 
 """
-    The initial MP problem requires a bounded feasible solution, we must bound
-    the demain interval γ by some large number. 
-"""
-function AddGammaConstraint!(this::MP)
-    γ = (this|>GetModel)[:γ]
-    @constraint(
-        this|>GetModel, 
-        γ <= 1e4  # a large number.  
-    )
-return end
-
-
-"""
     creates the objective value for it. 
 """
 function AddObjective!(this::MP)
@@ -193,7 +182,7 @@ return end
 """
     Get the primary discrete decision variable as a vector of numbers for 
         the CCGA algorithm. 
-    It returns vector as decision variable
+    * It returns vector as decision variable
 """
 function Getw(this::MP)
     Vec = Vector{JuMP.VariableRef}()
@@ -202,6 +191,9 @@ function Getw(this::MP)
     push!(Vec, this.w[3, :, :][:]...)
 return Vec end
 
+"""
+    Get the gamma, the objective of the LP function. 
+"""
 function GetGamma(this::MP)
     model = GetModel(this)
 return model[:γ] end
@@ -403,7 +395,7 @@ end
         * u[k] will be a compositive decision variables for all the modeling decision variables in the original problem.
     * v, λ follows a similar token. 
 """
-function PrepareVariables!(this::FMP, q_given::Union{Nothing, JuMP.VariableRef})
+function PrepareVariables!(this::FMP, q_given::Union{Nothing, Vector{JuMP.VariableRef}})
     k = this.k
     # Preparing variable: u into JuMP model. 
     u = RobustOptim.u
@@ -449,6 +441,8 @@ function PrepareVariables!(this::FMP, q_given::Union{Nothing, JuMP.VariableRef})
         push!(Decisionvariables, rand((0, 1), size(q[2])...)...)
         push!(Decisionvariables, rand((0, 1), size(q[3])...)...)
         push!(this.q, Decisionvariables)
+        this.d = @variable(this.model, d[1:size(RobustOptim.H, 2)])[:]
+        this.eta = @variable(this.model, η)
     else
         push!(this.q, (q_given.|>value)[:])
     end
@@ -460,12 +454,6 @@ function PrepareVariables!(this::FMP, q_given::Union{Nothing, JuMP.VariableRef})
     # Parepare the variable lambda, the dual decision variables. 
     λ = @variable(this.model, [1:length(RobustOptim.h)], lower_bound=-1, upper_bound=0, base_name="λ[$(k)]")
     push!(this.lambda, λ[:])
-
-    # prepare the variable d. 
-    this.d = @variable(this.model, d[1:size(RobustOptim.H, 2)])[:]
-    
-    # prepare the variable η. 
-    this.eta = @variable(this.model, η)
 
 return this end
 
@@ -549,7 +537,8 @@ return this end
 """
     Adversarial demands are coming from vertices of the hyper cube, this will recover 
     the term (d̂ + γ.*ρ⁺ - γ.*ρ⁻), which represents the extreme demands which breaks the system. 
-    *  It's used for the feasibility cut for the master problem to determine primary decision variable w̄. 
+        * It's used for the feasibility cut for the master problem to determine primary decision variable w̄. 
+        * Returns the actual value for the FSP lower bound searcher. 
 """
 function GetDemandVertex(this::FMP)
     ρ⁺ = value.(this.rho_plus[end])
@@ -565,7 +554,7 @@ return d̂ + γ*ρ⁺ - γ*ρ⁻ end
 """
 function Introduce!(this::FMP, q::Vector{JuMP.VariableRef})
     this.k += 1
-    @assert length(q) == size(G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
+    @assert length(q) == size(RobustOptim.G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
     PrepareVariables!(this, q)
     PrepareConstraints!(this)
 return this end
@@ -610,6 +599,11 @@ return this.model end
 function GetModel(this::MP)
 return this.M end
 
+"""
+    Print out a debug report for the given Problem object. 
+"""
+function DebugReport(this::Problem)
+return end
 
 ### ====================================================================================================================
 ### Trying to experiment with the FSP, FMP instance. 
