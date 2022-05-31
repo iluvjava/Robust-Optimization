@@ -113,13 +113,13 @@ function FuelConstraints()
 
     for m in 1:M, t in 1:T, k in 1:(sg.alphas|>length)
         p′[m, t] = sg.alphas[k]
-        y′[m, t] = sg.betas[k]
+        y[m, t] = sg.betas[k]
         c′[m, t] = -1
-        C(p′, c′); B(y′)
+        C(p′, c′); B(y)
         C(); B()
         push!(rhs, 0)
     end
-    # SYNC MATRICES
+
     
 return rhs end
 

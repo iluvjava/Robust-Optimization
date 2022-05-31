@@ -48,7 +48,7 @@ end
 ### Master Problem: 
 ###   * Search for primary feasible solution given branch cut and bounds. 
 ### ====================================================================================================================
-mutable struct MP<:Problem
+mutable struct MP <: Problem
     M::Model
     w::Array{VariableRef, 3}
     G::Int64; T::Int64
@@ -60,13 +60,21 @@ mutable struct MP<:Problem
 
     function MP(M::Model)
         this = new(M)
+        this.G = RobustOptim.PRIMARY_GENERATORS.generator_count
+        this.T = RobustOptim.CONST_PROBLEM_PARAMETERS.HORIZON
+        this.Tmind = RobustOptim.PRIMARY_GENERATORS.Tmind
+        @assert any(this.T .> this.Tmind) "Tmind: Minimum down time has to be less than "*
+        "time horizon"
+        this.Tminu = PRIMARY_GENERATORS.Tminu
+        @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
+        "time horizon"
         this.w = 
         @variable(
             this.M, 
             w[
                 [:x, :y, :z],  
-                1:PRIMARY_GENERATORS.generator_count, 
-                1:CONST_PROBLEM_PARAMETERS.HORIZON
+                1:this.G, 
+                1:this.T
             ], Bin
         )
         # Scaler Continuous variables for demand interval. 
@@ -75,14 +83,7 @@ mutable struct MP<:Problem
             γ
         )
         # -- copy of global variables: 
-        this.G = PRIMARY_GENERATORS.generator_count
-        this.T = CONST_PROBLEM_PARAMETERS.HORIZON
-        this.Tmind = PRIMARY_GENERATORS.Tmind
-        @assert any(this.T .> this.Tmind) "Tmind: Minimum down time has to be less than "*
-        "time horizon"
-        this.Tminu = PRIMARY_GENERATORS.Tminu
-        @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
-        "time horizon"
+        
         AddConstraint2!(this)
         AddConstraint3!(this)
         AddConstraint4!(this)
@@ -143,10 +144,27 @@ return end
 
 """
     Introduce feasibility cut for the master problem which comes from the CCGA results.  
+        * Continuous decision variable from FSP: u
+        * Discrete decision variable from FMP: q
+        * Adversarial demands from FMP: d
 """
-function IntroduceCut(this::MP)
-
-return end
+function IntroduceCut(
+    this::MP, 
+    u::Vector{JuMP.VariableRef},
+    q::Vector{JuMP.VariableRef}, 
+    d::Vector{JuMP.VariableRef}
+)
+    model = this|>GetModel
+    u = u.|>value
+    q = q.|>value
+    d = d.|>value
+    w = Getw(this)
+    B = RobustOptim.B
+    h = RobustOptim.h
+    G = RobustOptim.G
+    C = RobustOptim.C
+    @constraint(model, C*u + G*q .<= H*d + h - B*w)
+return this end
 
 
 """
@@ -184,6 +202,10 @@ function Getw(this::MP)
     push!(Vec, this.w[3, :, :][:]...)
 return Vec end
 
+function GetGamma(this::MP)
+    model = GetModel(this)
+return model[:γ] end
+
 
 ### ====================================================================================================================
 # FSP: Lower bound searcher! 
@@ -194,7 +216,7 @@ return Vec end
     Given demand from FMP, test how feasible it is to determine an Lower Bound 
     for the feasibility slack variables. 
 """
-mutable struct FSP<:Problem
+mutable struct FSP <: Problem
     model::JuMP.Model
     u::Vector{JuMP.VariableRef}
     v::Vector{JuMP.VariableRef}
@@ -308,11 +330,10 @@ mutable struct FSP<:Problem
     
 end
 
-### FSP methods clusters -------------------------------------------------------
+### FSP methods clusters -----------------------------------------------------------------------------------------------
 
 function Getq(this::FSP)
 return this.q end
-
 
 function Getu(this::FSP)
 return this.u end 
@@ -352,7 +373,7 @@ mutable struct FMP<:Problem
     function FMP()
         @warn("Construction shouldn't be called except for debugging purposes. ")
         d̂ = 100.0*ones(size(RobustOptim.H, 2))
-    return FMP(zeros(size(RobustOptim.B, 2)), 100.0, d̂) end
+    return FMP(zeros(size(RobustOptim.B, 2)), 10.0, d̂) end
 
     function FMP(w::Vector, gamma, d_hat::Vector)
         this = new()
@@ -482,10 +503,9 @@ function PrepareConstraints!(this::FMP)
     model = this.model
 
     @constraint(model, η <= sum(v), base_name="constraint[$(k)][1]")
-    @constraint(model, C*u - v .<= H*d + h - B*w - G*q, base_name="constraint[$(k)][2]")
     @constraint(model, λ'*C .<= 0, base_name="constraint[$(k)][3]")
     @constraint(model, d .<= d̂ .+ γ, base_name="constraint[$(k)][4]")
-    @constraint(model, d̂ .>= d̂ .- γ, base_name="constraint[$(k)][5]")
+    @constraint(model, d .>= d̂ .- γ, base_name="constraint[$(k)][5]")
 
     # Sparse bilinear constraints setup: 
     B̄ = size(H, 2)
@@ -509,6 +529,7 @@ function PrepareConstraints!(this::FMP)
         @constraint(model, ξ⁻[(j, b)] <= λ[j] + (1 - ρ⁻[b]))
     end
     @constraint(model, [b=1:B̄], ρ⁺[b] + ρ⁻[b] == 1, base_name="constraint[$(k)][6]")
+    # Binlinear constraints
     @constraint(
         model, 
         dot(λ, H*d̂) + 
@@ -516,17 +537,27 @@ function PrepareConstraints!(this::FMP)
         dot(λ,h - B*w - G*q) == sum(v), 
         base_name="constraint[$(k)][7]"
     )
+    # new added demand feasibility constraints. 
+    @constraint(
+        model,
+        C*u - v .<= H*(d̂ + γ*ρ⁺ + γ*ρ⁻) + h - B*w - G*q, 
+        base_name="constraint[$(k)][2]"
+    )  
 
 return this end
 
 """
     Adversarial demands are coming from vertices of the hyper cube, this will recover 
-    the term H(d̂ + γ.*ρ⁺ - γ.*ρ⁻). s
-    *  It's used for the feasibility cut for the master problem to determine primary decision variable w̄
+    the term (d̂ + γ.*ρ⁺ - γ.*ρ⁻), which represents the extreme demands which breaks the system. 
+    *  It's used for the feasibility cut for the master problem to determine primary decision variable w̄. 
 """
-function GetDemandsVertex(this::FMP)
+function GetDemandVertex(this::FMP)
+    ρ⁺ = value.(this.rho_plus[end])
+    ρ⁻ = value.(this.rho_minus[end])
+    γ = this.gamma
+    d̂ = this.d_hat
 
-return this end
+return d̂ + γ*ρ⁺ - γ*ρ⁻ end
 
 
 """
@@ -547,20 +578,21 @@ return this end
 
 
 ### ====================================================================================================================
-### Generics Functions for abstract type of problems that contain a JuMP inner model. 
+### Generics Functions for abstract type of problems that contain a JuMP inner model, specific overrides too. 
 ### ====================================================================================================================
 
 """
     * NaN is returned if there is no solution to the problem, which means it's either infeasible
     or unbounded. 
+
 """
 function objective_value(this::Problem)
     model = GetModel(this)
-    status = primale_status(model)
+    status = primal_status(model)
     if status == NO_SOLUTION
         return NaN
     end
-return objective_value(model) end 
+return JuMP.objective_value(model) end 
 
 """
     Solve the inner JuMP optimization problem by directly invoking `optimize!` in JuMP on the model. 
@@ -575,7 +607,15 @@ return optimize!(this|>GetModel) end
 function GetModel(this::Problem) 
 return this.model end
 
+function GetModel(this::MP)
+return this.M end
 
-### ============================================================================
+
+### ====================================================================================================================
 ### Trying to experiment with the FSP, FMP instance. 
-### ============================================================================
+### ====================================================================================================================
+
+
+
+
+
