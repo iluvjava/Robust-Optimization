@@ -266,10 +266,10 @@ function MinimumRequirement()
             regu[n, t] = -1 
         end
         for m = 1:M
-            regu′[m, t]  = -1
+            regu′[m, t] = -1
         end
         C(regu, regu′); C();
-        push!(rhs, glb.RREGU[t])  
+        push!(rhs, -glb.RREGU[t])  
     end
     for t = 1: T
         for n = 1:N
@@ -279,7 +279,7 @@ function MinimumRequirement()
             regd′[m, t]  = -1
         end
         C(regd, regd′); C();
-        push!(rhs, glb.RREGD[t]) 
+        push!(rhs, -glb.RREGD[t]) 
     end
     for t = 1:T
         for n = 1:N
@@ -289,7 +289,7 @@ function MinimumRequirement()
             nsp′[m, t] = -1
         end
         C(nsp, nsp′); C();
-        push!(rhs, glb.RNSP[t])
+        push!(rhs, -glb.RNSP[t])
     end
 
 return rhs end
@@ -382,7 +382,7 @@ function DemandBalanceConstraints()
         p[:, t] .= sum(σ[:, l])
         p′[:, t] .= sum(σ[:, l])
         g_minus[:, t] .= sum(μ[:])
-        g_plus[:, t] .= - sum(μ[:])
+        g_plus[:, t] .= -sum(μ[:])
         d[:, t] = -σ[:, l]
         C(p, p′, g_minus, g_plus); C();
         F(d); F();
@@ -391,9 +391,9 @@ function DemandBalanceConstraints()
 
     # (42)
     for l=1:L, t=1:T
-        p[:, t] .= - sum(σ[:, l])
-        p′[:, t] .= - sum(σ[:, l])
-        g_minus[:, t] .= - sum(μ[:])
+        p[:, t] .= -sum(σ[:, l])
+        p′[:, t] .= -sum(σ[:, l])
+        g_minus[:, t] .= -sum(μ[:])
         g_plus[:, t] .=  sum(μ[:])
         d[:, t] = σ[:, l]
         C(p, p′, g_minus, g_plus); C();
@@ -413,6 +413,7 @@ return rhs end
 B, C, G, F = MakeCoefMatrices()
 
 # Fuel Constraints
+# RHS = Vector{Float64}()
 RHS = FuelConstraints()
 SyncRow(B, C, G, F)
 
@@ -439,7 +440,7 @@ RHS = vcat(
 SyncRow(B, C, G, F)
 
 # Capacity constraints secondary
-RHS=vcat(
+RHS = vcat(
     RHS, 
     CapacityConstraints(
         SECONDARY_GENERATORS,

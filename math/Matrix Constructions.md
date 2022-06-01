@@ -189,7 +189,7 @@ Quick Start Binary Constraints
 
 $$
 \begin{aligned}
-\text{For }G
+\text{For G}
 \begin{cases}
     
     (x')^{(t)}_m + (z')^{(t)}_m

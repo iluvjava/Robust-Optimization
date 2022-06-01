@@ -62,7 +62,7 @@ mutable struct CoefficientMatrix
     var_posi::Dict{Symbol, Int64}   # which column is the variable assigned to.
     var_dims::Vector{Pair}
     
-    coefs::Vector{Tuple}
+    coefs::Vector{NTuple{3, Float64}}
     function CoefficientMatrix()
         this = new()
         this.n = 0

@@ -43,6 +43,17 @@ abstract type Problem
     # MUST IMPLEMENT: GetModel Method. 
 end
 
+"""
+    Given a JuMP model, prepare the q, u variable for that model. 
+        * Returns the variable u, q packed into Vector{JuMP.VariableRef}. 
+"""
+function PrepareVarieblesForTheModel!(model::Model)
+    u = Vector{JuMP.VariableRef}()
+    q = Vector{JuMP.VariableRef}()
+    
+    # TODO: Use this to simplify code in other places. 
+return model end
+
 
 ### ====================================================================================================================
 ### Master Problem: 
@@ -150,22 +161,26 @@ return end
         * Discrete decision variable from FMP: q
         * Adversarial demands from FMP: d
 """
-function IntroduceCut(
+function IntroduceCut!(
     this::MP, 
-    u::Vector{JuMP.VariableRef},
-    q::Vector{JuMP.VariableRef}, 
-    d::Vector{JuMP.VariableRef}
+    u::Vector{Float64},
+    q::Vector{Float64}, 
+    d_hat::Vector{Float64}, 
+    rho_plus::Vector{Float64}, 
+    rho_minus::Vector{Float64}
 )
     model = this|>GetModel
-    u = u.|>value
-    q = q.|>value
-    d = d.|>value
     w = Getw(this)
     B = RobustOptim.B
     h = RobustOptim.h
     G = RobustOptim.G
     C = RobustOptim.C
-    @constraint(model, C*u + G*q .<= H*d + h - B*w)
+    H = RobustOptim.H
+    d̂ = d_hat
+    ρ⁺ = rho_plus
+    ρ⁻ = rho_minus
+    γ = this.M[:γ]
+    @constraint(model, C*u + G*q .<= H*(d̂ + γ*(ρ⁺-ρ⁻)) + h - B*w)
 return this end
 
 
@@ -175,6 +190,7 @@ return this end
 function AddObjective!(this::MP)
     m = this|>GetModel
     γ = m[:γ]
+    w = m[:w]
     @objective(m, Max, γ)
 return end
 
@@ -538,15 +554,28 @@ return this end
     Adversarial demands are coming from vertices of the hyper cube, this will recover 
     the term (d̂ + γ.*ρ⁺ - γ.*ρ⁻), which represents the extreme demands which breaks the system. 
         * It's used for the feasibility cut for the master problem to determine primary decision variable w̄. 
-        * Returns the actual value for the FSP lower bound searcher. 
+        * Returns the decision variable from the model, explicit conversion to value vectors is needed. 
 """
 function GetDemandVertex(this::FMP)
-    ρ⁺ = value.(this.rho_plus[end])
-    ρ⁻ = value.(this.rho_minus[end])
+    ρ⁺ = this.rho_plus[end]
+    ρ⁻ = this.rho_minus[end]
     γ = this.gamma
     d̂ = this.d_hat
-
 return d̂ + γ*ρ⁺ - γ*ρ⁻ end
+
+
+"""
+    Get the most recent ρ⁺, the worse demands for all the secondary configurations. 
+"""
+function GetRhoPlus(this::FMP)
+return this.rho_plus[end].|>value end
+
+
+"""
+    Get the most recent ρ⁻, the worst demands for all the secondary configurations. 
+"""
+function GetRhoMinus(this::FMP)
+return this.rho_minus[end].|>value end
 
 
 """
