@@ -82,9 +82,14 @@ return nothing end
 mutable struct MP <: Problem
     M::Model
     w::Array{VariableRef, 3}
-    G::Int64; T::Int64
-    Tmind::Array{Int}  # Min up down
-    Tminu::Array{Int}  # Min up time
+    gamma::VariableRef
+    gamma_upper::Number        # an upper bound for the gamma variable. 
+    u::Vector{VariableRef}      # secondary continuous decision variables. 
+    q::Vector{VariableRef}      # secondary discrete decision variables. 
+    d::Vector{VariableRef}      # the demand variables, continuous in the case of master problem. 
+    G::Int64; T::Int64          # Given number of generators and time horizon for the problem. 
+    Tmind::Array{Int}           # Min up down for primary generators 
+    Tminu::Array{Int}           # Min up time for primary generators
 
     # settings and options stuff: 
     Verbose::Bool
@@ -99,27 +104,14 @@ mutable struct MP <: Problem
         this.Tminu = RobustOptim.PRIMARY_GENERATORS.Tminu
         @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
-        this.w = 
-        @variable(
-            this.M, 
-            w[
-                [:x, :y, :z],  
-                1:this.G, 
-                1:this.T
-            ], Bin
-        )
-        # Scaler Continuous variables for demand interval. 
-        @variable(
-            this.M, 
-            γ, 
-            lower_bound=0, upper_bound=gamma_upper
-        )
-
+        this.gamma_upper = gamma_upper
+        PrepareVariables!(this)
         # -- copy of global variables: 
         AddConstraint2!(this)
         AddConstraint3!(this)
         AddConstraint4!(this)
         AddConstraint5!(this)
+        AddPrimalFeasibilityConstraints!(this)
         AddObjective!(this)
     return this end
 
@@ -129,15 +121,33 @@ end
 
 """
     Introduce variables to the model: 
-        * Secondary continuous decision variables. 
-        * Secondary discrete decision variables. 
-        * demands variables. 
-        * Demands intervals variables. 
+        * primary generator discrete decision variables: w
+        * the demand interval constraint variable: γ
+        * Secondary continuous decision variables: u
+        * Secondary discrete decision variables: q
+        * demands variables: d
 """
-function PrepareVariables(this::MP)
-    # TODO: FILL THIS IN. 
-    
-return end
+function PrepareVariables!(this::MP)
+    model = this |> GetModel
+    this.w = @variable(
+        model,
+        w[
+            [:x, :y, :z],
+            1:this.G,
+            1:this.T
+        ], Bin
+    )
+    # Scaler Continuous variables for demand interval. 
+    this.gamma = @variable(
+        model,
+        γ,
+        lower_bound=0, upper_bound=this.gamma_upper
+    )
+    this.u = PrepareVarieblesForTheModel!(model, :u)
+    this.q = PrepareVarieblesForTheModel!(model, :q)
+    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=50)
+    return this
+end
 
 function AddConstraint2!(this::MP)
     w = (this|>GetModel)[:w]
@@ -185,6 +195,29 @@ function AddConstraint5!(this::MP)
         )
     end
 return end
+
+
+
+"""
+    Create the constraints for the primal problem, with all variables considered, it should help with 
+    searching for an initial feasible solutions for the system. 
+
+"""
+function AddPrimalFeasibilityConstraints!(this::MP)
+    model = this|>GetModel
+    w = Getw(this)
+    u = this.u
+    q = this.q
+    d = this.d
+    B = RobustOptim.B
+    C = RobustOptim.C
+    G = RobustOptim.G
+    H = RobustOptim.H
+    h = RobustOptim.h
+    γ = this.gamma
+    @constraint(model, B*w + C*u + G*q .<= H*d + h)
+    @constraint(model, d .<= γ)
+return this end
 
 
 """
