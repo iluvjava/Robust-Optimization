@@ -412,17 +412,16 @@ return rhs end
 
 B, C, G, F = MakeCoefMatrices()
 
-# Fuel Constraints
+
 # RHS = Vector{Float64}()
-RHS = FuelConstraints()
+RHS = FuelConstraints() # Fuel Constraints
 SyncRow(B, C, G, F)
 
-# Quick start Constraints
-RHS = vcat(RHS, QuickStartConstraints())
+RHS = vcat(RHS, QuickStartConstraints()) # Quick start Constraints
 SyncRow(B, C, G, F)
 
-# Capacity constraints primary
-RHS = vcat(
+
+RHS = vcat( # Capacity constraints primary
     RHS, 
     CapacityConstraints(
         PRIMARY_GENERATORS,
@@ -439,8 +438,8 @@ RHS = vcat(
 )
 SyncRow(B, C, G, F)
 
-# Capacity constraints secondary
-RHS = vcat(
+
+RHS = vcat( # Capacity constraints secondary
     RHS, 
     CapacityConstraints(
         SECONDARY_GENERATORS,
@@ -457,16 +456,16 @@ RHS = vcat(
 )
 SyncRow(B, C, G, F)
 
-# minimum requirement constraints
-RHS = vcat(RHS, MinimumRequirement())
+
+RHS = vcat(RHS, MinimumRequirement()) # minimum requirement constraints
 SyncRow(B, C, G, F)
 
-# battery constraints 
-RHS = vcat(RHS, BatteryConstraints())
+
+RHS = vcat(RHS, BatteryConstraints()) # battery constraints 
 SyncRow(B, C, G, F)
 
-# demand balance
-RHS = vcat(RHS, DemandBalanceConstraints())
+
+RHS = vcat(RHS, DemandBalanceConstraints()) # demand balance
 SyncRow(B, C, G, F)
 
 B = B|>GetMatrix

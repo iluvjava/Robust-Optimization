@@ -8,8 +8,8 @@ include("../src/ccga_modeling.jl")
     * Cut it on MP and get a legit setup for the primary decision variable. 
 """
 # function FirstCCGA()
-    d̂ = 0.0*ones(size(RobustOptim.H, 2))
-    mp = MP(400)
+    d̂ = 200.0*ones(size(RobustOptim.H, 2))
+    mp = MP(200)
     @info "First MP solve"
     Solve!(mp)
     # CCGA First Iterations: Initializations
@@ -26,7 +26,7 @@ include("../src/ccga_modeling.jl")
     Upper, Lower = objective_value(fmp), objective_value(fsp) # This is huge, without a doubt. 
     @info "CCGAA: Upper bound: $(Upper), Lower Bound: $(Lower)"
     ρ⁺ = GetRhoPlus(fmp)
-    ρ⁻ = GetRhoPlus(fmp)
+    ρ⁻ = GetRhoMinus(fmp)
     @info "Introduce Cut to MP: "
     IntroduceCut!(mp, u.|>value, q.|>value, d̂, ρ⁺, ρ⁻)
     Solve!(mp)

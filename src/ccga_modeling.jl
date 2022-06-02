@@ -3,7 +3,9 @@ include("matrix_construction_export.jl")
 using Logging
 using .RobustOptim
 
+### ====================================================================================================================
 ### Important functions for variables constructions for JuMP models. 
+### ====================================================================================================================
 
 
 """
@@ -45,19 +47,37 @@ end
 
 """
     Given a JuMP model, prepare the q, u variable for that model. 
-        * Returns the variable u, q packed into Vector{JuMP.VariableRef}. 
+        * Returns the variable u/q packed into Vector{JuMP.VariableRef}. 
 """
-function PrepareVarieblesForTheModel!(model::Model)
-    u = Vector{JuMP.VariableRef}()
-    q = Vector{JuMP.VariableRef}()
-    
-    # TODO: Use this to simplify code in other places. 
-return model end
+function PrepareVarieblesForTheModel!(model::Model, variable::Symbol, ccga_itr::Union{Nothing, Int}=0)
+    ccga_itr = ccga_itr == 0 ? "" : "[$(ccga_itr)]"
+    if variable == :u
+        u = Vector{JuMP.VariableRef}()
+        for v in RobustOptim.u
+            push!(u, @variable(model, [IndicesList(v)], base_name="$(v.v)$(ccga_itr)", lower_bound=0)...)
+            
+        end
+        return u
+    end
+    if variable == :q
+        q = Vector{JuMP.VariableRef}()
+        for v in RobustOptim.q
+            push!(q, @variable(model, [IndicesList(v)], base_name="$(v.v)$(ccga_itr)", lower_bound=0)...)
+            
+        end
+        return q
+    end
+
+return nothing end
+
 
 
 ### ====================================================================================================================
 ### Master Problem: 
 ###   * Search for primary feasible solution given branch cut and bounds. 
+###   * Is able to perform a feasibility search for all the involved variables in the model. Both primary and secondary
+###     variables. 
+###     * Is able to produce report. 
 ### ====================================================================================================================
 mutable struct MP <: Problem
     M::Model
@@ -94,8 +114,8 @@ mutable struct MP <: Problem
             γ, 
             lower_bound=0, upper_bound=gamma_upper
         )
+
         # -- copy of global variables: 
-        
         AddConstraint2!(this)
         AddConstraint3!(this)
         AddConstraint4!(this)
@@ -106,6 +126,18 @@ mutable struct MP <: Problem
     function MP(gamma_upper=1e4) return MP(Model(HiGHS.Optimizer), gamma_upper) end
     
 end
+
+"""
+    Introduce variables to the model: 
+        * Secondary continuous decision variables. 
+        * Secondary discrete decision variables. 
+        * demands variables. 
+        * Demands intervals variables. 
+"""
+function PrepareVariables(this::MP)
+    # TODO: FILL THIS IN. 
+    
+return end
 
 function AddConstraint2!(this::MP)
     w = (this|>GetModel)[:w]
@@ -199,6 +231,8 @@ return end
     Get the primary discrete decision variable as a vector of numbers for 
         the CCGA algorithm. 
     * It returns vector as decision variable
+    * The vector is w flattend into x, y, z, column major flattening. 
+    * The returned type is Vector{VariableRef}
 """
 function Getw(this::MP)
     Vec = Vector{JuMP.VariableRef}()
@@ -206,6 +240,7 @@ function Getw(this::MP)
     push!(Vec, this.w[2, :, :][:]...)
     push!(Vec, this.w[3, :, :][:]...)
 return Vec end
+
 
 """
     Get the gamma, the objective of the LP function. 
@@ -269,51 +304,9 @@ mutable struct FSP <: Problem
         variables to the field of this struct. 
     """
     function PrepareVariables!(this::FSP)
-        # Preparing variable: u into JuMP model. 
-        u = RobustOptim.u
-        @info "Prepareing variables for current FSP model: "
-        @variable(this.model, c[u[1]|>IndicesList], lower_bound=0)
-        @variable(this.model, c′[u[2]|>IndicesList], lower_bound=0)
-        @variable(this.model, p[u[3]|>IndicesList], lower_bound=0)
-        @variable(this.model, p′[u[4]|>IndicesList], lower_bound=0)
-        @variable(this.model, regu[u[5]|>IndicesList], lower_bound=0)
-        @variable(this.model, regu′[u[6]|>IndicesList], lower_bound=0)
-        @variable(this.model, regd[u[7]|>IndicesList], lower_bound=0)
-        @variable(this.model, regd′[u[8]|>IndicesList], lower_bound=0)
-        @variable(this.model, sr[u[9]|>IndicesList], lower_bound=0)
-        @variable(this.model, sr′[u[10]|>IndicesList], lower_bound=0)
-        @variable(this.model, h[u[11]|>IndicesList], lower_bound=0)
-        @variable(this.model, g_plus[u[12]|>IndicesList], lower_bound=0)
-        @variable(this.model, g_minus[u[13]|>IndicesList], lower_bound=0)
-        @variable(this.model, nsp[u[14]|>IndicesList], lower_bound=0)
-        @variable(this.model, nsp′[u[15]|>IndicesList], lower_bound=0)
-        this.u = [
-            this.model[:c]...,
-            this.model[:c′]...,
-            this.model[:p]...,
-            this.model[:p′]...,
-            this.model[:regu]...,
-            this.model[:regu′]...,
-            this.model[:regd]...,
-            this.model[:regd′]...,
-            this.model[:sr]...,
-            this.model[:sr′]...,
-            this.model[:h]...,
-            this.model[:g_plus]...,
-            this.model[:g_minus]...,
-            this.model[:nsp]...,
-            this.model[:nsp′]...
-        ]
-        # Prepare for variable q
-        q = RobustOptim.q
-        @variable(this.model, x′[q[1]|>IndicesList], binary=true)
-        @variable(this.model, y′[q[2]|>IndicesList], binary=true)
-        @variable(this.model, z′[q[3]|>IndicesList], binary=true)
-        this.q = [this.model[:x′]..., this.model[:y′]..., this.model[:z′]...]
-
-        # Prepare for variable v, the slack. 
-        @variable(this.model, v[1:length(RobustOptim.h)], lower_bound=0)
-        this.v = this.model[:v]
+        this.u = PrepareVarieblesForTheModel!(this|>GetModel, :u)
+        this.q = PrepareVarieblesForTheModel!(this|>GetModel, :q)
+        this.v = @variable(this.model, v[1:length(RobustOptim.h)], lower_bound=0)
         
     return end
 
@@ -413,42 +406,8 @@ end
 """
 function PrepareVariables!(this::FMP, q_given::Union{Nothing, Vector{JuMP.VariableRef}})
     k = this.k
-    # Preparing variable: u into JuMP model. 
-    u = RobustOptim.u
-    @info "Prepareing variables for current FMP model. "
-    Decisionvariables = Vector()
-    push!(Decisionvariables,
-        @variable(this.model, [IndicesList(u[1])], lower_bound=0, base_name="c[$(k)]")...)
-    push!(Decisionvariables,
-        @variable(this.model, [IndicesList(u[2])], lower_bound=0, base_name="c′[$(k)]")...)
-    push!(Decisionvariables,
-        @variable(this.model, [IndicesList(u[3])], lower_bound=0, base_name="p[$(k)]")...)
-    push!(Decisionvariables,
-        @variable(this.model, [IndicesList(u[4])], lower_bound=0, base_name="p′[$(k)]")...)
-    push!(Decisionvariables,
-        @variable(this.model, [IndicesList(u[5])], lower_bound=0, base_name="regu[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[6])], lower_bound=0, base_name="regu′[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[7])], lower_bound=0, base_name="regd[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[8])], lower_bound=0, base_name="regd′[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[9])], lower_bound=0, base_name="sr[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[10])], lower_bound=0, base_name="sr′[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[11])], lower_bound=0, base_name="h[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[12])], lower_bound=0, base_name="g_plus[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[13])], lower_bound=0, base_name="g_minus[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[14])], lower_bound=0, base_name="nsp[$(k)]")...)
-    push!(Decisionvariables, 
-        @variable(this.model, [IndicesList(u[15])], lower_bound=0, base_name="nsp′[$(k)]")...)
-    push!(this.u, Decisionvariables)
-    
+    # Prepare variable u for the model. 
+    push!(this.u, PrepareVarieblesForTheModel!(this|>GetModel, :u, k))
     # Prepare for variable q, which is going to be a constant. 
     if q_given === nothing
         Decisionvariables = Vector()
@@ -632,7 +591,16 @@ return this.M end
     Print out a debug report for the given Problem object. 
 """
 function DebugReport(this::Problem)
+    error("Not yet implemented for all Type{Problem} objects.")
 return end
+
+"""
+    Produce a report for the master problem, which also checks feasibility of the original problem and stuff. 
+"""
+function DebugReport(this::MP)
+
+return end
+
 
 ### ====================================================================================================================
 ### Trying to experiment with the FSP, FMP instance. 
