@@ -237,7 +237,7 @@ function AddPrimalFeasibilityConstraints!(this::MP)
     v = this.v
     push!(this.con, @constraint(model, B*w + C*u + G*q - v .<= H*d + h)...)
     push!(this.con, @constraint(model, d .<= γ)...)
-    # push!(this.con, @constraint(model, v .== 0))
+    # push!(this.con, @constraint(model, v .== 0)...)
     
 return this end
 
@@ -267,7 +267,7 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.M[:γ]
-    push!(this.con, @constraint(model, C*u + G*q .<= H*(d̂ + γ*(ρ⁺-ρ⁻)) + h - B*w))
+    push!(this.con, @constraint(model, C*u + G*q .<= H*(d̂ + γ*(ρ⁺-ρ⁻)) + h - B*w)...)
 
 return this end
 
@@ -280,7 +280,7 @@ function AddObjective!(this::MP)
     γ = m[:γ]
     w = m[:w]
     v = this.v
-    @objective(m, Max, sum(m[:w][:x, :, :]))
+    @objective(m, Min, sum(v))
 return end
 
 
@@ -669,8 +669,6 @@ return this end
 ### Trying to experiment with the FSP, FMP instance. 
 ### ====================================================================================================================
 
-mp = MP()
-Solve!(mp)
-DebugReport(mp)
+
 
 
