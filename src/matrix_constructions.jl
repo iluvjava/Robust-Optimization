@@ -102,25 +102,23 @@ function FuelConstraints()
     
     push!(rhs, CONST_PROBLEM_PARAMETERS.Φ)
 
-    for n in 1:N, t in 1:T, k in 1:(pg.alphas|>length)
-        p[n, t] = pg.alphas[k]
-        y[n, t] = pg.betas[k]
+    for n in 1:N, t in 1:T, k in 1:(size(pg.alphas, 2))
+        p[n, t] = pg.alphas[n, k]
+        y[n, t] = pg.betas[n, k]
         c[n, t] = -1
         C(p, c); B(y)
         C(); B()
         push!(rhs, 0)
     end
-
-    for m in 1:M, t in 1:T, k in 1:(sg.alphas|>length)
-        p′[m, t] = sg.alphas[k]
-        y[m, t] = sg.betas[k]
+    SyncRow(C, B, G) 
+    for m in 1:M, t in 1:T, k in 1:(size(pg.alphas, 2))
+        p′[m, t] = sg.alphas[m, k]
+        y′[m, t] = sg.betas[m, k]
         c′[m, t] = -1
-        C(p′, c′); B(y)
-        C(); B()
+        C(p′, c′); G(y′)
+        C(); G()
         push!(rhs, 0)
     end
-
-    
 return rhs end
 
 """
@@ -153,9 +151,7 @@ function QuickStartConstraints()
 
     for t = 1:T, m = 1:M
         # (11)
-        for tau = t - sg.Tminu[m] + 1
-            x′[m, tau] = 1
-        end
+        x′[m, (t - sg.Tminu[m] + 1):t] .= 1
         y′[m, t] = -1
         G(x′, y′); G()
         push!(rhs, 0)
@@ -163,11 +159,9 @@ function QuickStartConstraints()
 
     for t = 1:T, m = 1:M
         # (11)
-        for tau = t - sg.Tmind[m] + 1
-            z′[m, tau] = 1
-        end
+        z′[m, (t - sg.Tmind[m] + 1:t)] .= 1
         y′[m, t] = 1
-        G(x′, y′); G()
+        G(z′, y′); G()
         push!(rhs, 1)
     end
 
@@ -198,7 +192,7 @@ function CapacityConstraints(
         # (13)
         p[n, t] = 1
         p[n, t - 1] = -1
-        y[n, t - 1] = gen.RU[n]
+        y[n, t - 1] = -gen.RU[n]
         x[n, t] = - gen.RU_bar[n]
         C(p); C()
         K(y, x); K()
@@ -228,7 +222,7 @@ function CapacityConstraints(
         push!(rhs, 0)
     end
     for t = 1:T, n = 1:(gen|>length)
-        # (17)
+        # (17) 
         p[n, t] = -1; regd[n, t] = 1; y[n, t] = gen.Pmin[n]
         C(p, regd); C(); K(y); K();
         push!(rhs, 0)
@@ -241,13 +235,13 @@ function CapacityConstraints(
     end
     for t = 1:T, n = 1:(gen|>length)
         # (19)
-        regu[n, t] = 1; y[n, t] = - gen.REGU[n]
+        regu[n, t] = 1; y[n, t] = -gen.REGU[n]
         C(regu); C(); K(y); K();
         push!(rhs, 0)
     end
     for t = 1:T, n = 1:(gen|>length)
         # (20)
-        regd[n, t] = 1; y[n, t] = - gen.REGD[n]
+        regd[n, t] = 1; y[n, t] = -gen.REGD[n]
         C(regd); C(); K(y); K();
         push!(rhs, 0)
     end
@@ -354,17 +348,6 @@ function DemandBalanceConstraints()
     f = TRANSMISSION_SYSTEM.Limit
     # (39)
     for t = 1:T
-        p[:, t] .= 1
-        p′[:, t] .= 1
-        g_minus[:, t] .= 1
-        g_plus[:, t] .= -1
-        d[:, t] .= -1
-        C(p, p′, g_minus, g_plus); F(d)
-        C();F();
-        push!(rhs, 0)
-    end
-    # (40)
-    for t = 1:T
         p[:, t] .= -1
         p′[:, t] .= -1
         g_minus[:, t] .= -1
@@ -374,15 +357,26 @@ function DemandBalanceConstraints()
         C();F();
         push!(rhs, 0)
     end
+    # (40)
+    for t = 1:T
+        p[:, t] .= 1
+        p′[:, t] .= 1
+        g_minus[:, t] .= 1
+        g_plus[:, t] .= -1
+        d[:, t] .= -1
+        C(p, p′, g_minus, g_plus); F(d)
+        C();F();
+        push!(rhs, 0)
+    end
     # (41)
     # currently each bus has one primary generator, and one secondary generator
     # currently all transmission line has the same storage system. 
 
-    for l=1:L, t=1:T
+    for t=1:T, l=1:L
         p[:, t] .= sum(σ[:, l])
         p′[:, t] .= sum(σ[:, l])
-        g_minus[:, t] .= sum(μ[:])
-        g_plus[:, t] .= -sum(μ[:])
+        g_minus[:, t] .= μ[l]
+        g_plus[:, t] .= -μ[l]
         d[:, t] = -σ[:, l]
         C(p, p′, g_minus, g_plus); C();
         F(d); F();
@@ -390,14 +384,13 @@ function DemandBalanceConstraints()
     end    
 
     # (42)
-    for l=1:L, t=1:T
+    for  t=1:T, l=1:L
         p[:, t] .= -sum(σ[:, l])
         p′[:, t] .= -sum(σ[:, l])
-        g_minus[:, t] .= -sum(μ[:])
-        g_plus[:, t] .=  sum(μ[:])
+        g_minus[:, t] .= -μ[l]
+        g_plus[:, t] .=  μ[l]
         d[:, t] = σ[:, l]
         C(p, p′, g_minus, g_plus); C();
-        F(d); F();
         push!(rhs, f[l])
     end
 
@@ -413,7 +406,7 @@ return rhs end
 B, C, G, F = MakeCoefMatrices()
 
 
-# RHS = Vector{Float64}()
+RHS = Vector{Float64}()
 RHS = FuelConstraints() # Fuel Constraints
 SyncRow(B, C, G, F)
 

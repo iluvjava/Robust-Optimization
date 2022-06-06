@@ -167,6 +167,7 @@ $$
 \end{aligned}
 $$
 
+Fuel Curve: 
 
 $$
 \begin{aligned}
@@ -180,7 +181,7 @@ $$
     \underbrace{(\alpha')_n^{(k)}(p')_n^{(t)}
     - (c')_n^{(t)}}_{\text{for }C}
     + 
-    \underbrace{(\beta')_n^{(k)}y_n^{(t)}}_{\text{for }B}
+    \underbrace{(\beta')_n^{(k)}(y')_n^{(t)}}_{\text{for }G}
     \le 0 
 \end{aligned}\tag{7, 8}
 $$
@@ -397,14 +398,12 @@ $$
         \right)
     &=
     \sum_{s\in \mathcal S}^{}
-        \left(
-            \sum_{s\in \mathcal S}^{}\mu_s^{(l)}
-        \right)(g^-)_s^{(t)}
+        \mu_s^{(l)}
+        (g^-)_s^{(t)}
     - 
     \sum_{s\in \mathcal S}^{}
-        \left(
-            \sum_{s\in \mathcal S}^{}\mu_s^{(l)}
-        \right)(g^+)_s^{(t)}
+        \mu_s^{(l)}
+        (g^+)_s^{(t)}
 \end{aligned}
 $$
 

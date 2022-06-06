@@ -62,7 +62,7 @@ function PrepareVarieblesForTheModel!(model::Model, variable::Symbol, ccga_itr::
     if variable == :q
         q = Vector{JuMP.VariableRef}()
         for v in RobustOptim.q
-            push!(q, @variable(model, [IndicesList(v)], base_name="$(v.v)$(ccga_itr)", lower_bound=0)...)
+            push!(q, @variable(model, [IndicesList(v)], Bin, base_name="$(v.v)$(ccga_itr)")...)
             
         end
         return q
@@ -83,16 +83,20 @@ mutable struct MP <: Problem
     M::Model
     w::Array{VariableRef, 3}
     gamma::VariableRef
-    gamma_upper::Number        # an upper bound for the gamma variable. 
+    gamma_upper::Number         # an upper bound for the gamma variable. 
     u::Vector{VariableRef}      # secondary continuous decision variables. 
     q::Vector{VariableRef}      # secondary discrete decision variables. 
     d::Vector{VariableRef}      # the demand variables, continuous in the case of master problem. 
+    con::Vector                 # constraints list in the ordere being added. 
+    v::Vector{VariableRef}      # The slack decision variable. 
+    
     G::Int64; T::Int64          # Given number of generators and time horizon for the problem. 
     Tmind::Array{Int}           # Min up down for primary generators 
     Tminu::Array{Int}           # Min up time for primary generators
 
     # settings and options stuff: 
     Verbose::Bool
+    
 
     function MP(M::Model, gamma_upper=1e4)
         this = new(M)
@@ -105,7 +109,9 @@ mutable struct MP <: Problem
         @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
         this.gamma_upper = gamma_upper
+        this.con = Vector()
         PrepareVariables!(this)
+
         # -- copy of global variables: 
         AddConstraint2!(this)
         AddConstraint3!(this)
@@ -146,14 +152,18 @@ function PrepareVariables!(this::MP)
     this.u = PrepareVarieblesForTheModel!(model, :u)
     this.q = PrepareVarieblesForTheModel!(model, :q)
     this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=50)
+    this.v = @variable(model, v[1:size(RobustOptim.H, 1)], lower_bound=0)
     return this
 end
 
 function AddConstraint2!(this::MP)
     w = (this|>GetModel)[:w]
     for n in 1: this.G, t in 1: this.T
-        @constraint(
-            this|>GetModel, w[:x, n, t] + w[:z, n, t] <= 1
+        push!(
+            this.con, 
+            @constraint(
+                this|>GetModel, w[:x, n, t] + w[:z, n, t] <= 1
+            )
         )
     end
 return end
@@ -161,23 +171,29 @@ return end
 function AddConstraint3!(this::MP)
     w = (this|>GetModel)[:w]
     for n in 1: this.G, t in 2: this.T
-        @constraint(
-            this|>GetModel,
-            w[:y, n, t] - w[:y, n, t - 1] == w[:x, n, t] - w[:z, n, t]
-        )
+        push!(
+            this.con, 
+            @constraint(
+                this|>GetModel,
+                w[:y, n, t] - w[:y, n, t - 1] == w[:x, n, t] - w[:z, n, t]
+            )
+        ) 
     end
 return end
 
 function AddConstraint4!(this::MP)
     w = (this|>GetModel)[:w]
     for n in 1:this.G, t in this.Tminu[n]: this.T
-        @constraint(
-            this|>GetModel, 
-            sum(
-                w[:x, n, tau] for tau in t - this.Tminu[n] + 1: t
-            ) 
-            <= 
-            w[:y, n, t]
+        push!(
+            this.con, 
+            @constraint(
+                this|>GetModel, 
+                sum(
+                    w[:x, n, tau] for tau in t - this.Tminu[n] + 1: t
+                ) 
+                <= 
+                w[:y, n, t]
+            )
         )
     end
 return end
@@ -185,13 +201,16 @@ return end
 function AddConstraint5!(this::MP)
     w = (this|>GetModel)[:w]
     for n in 1:this.G, t in this.Tmind[n]: this.T
-        @constraint(
-            this|>GetModel, 
-            sum(
-                w[:z, n, tau] for tau in t - this.Tmind[n] + 1: t
-            ) 
-            <= 
-            1 - w[:y, n, t]
+        push!(
+            this.con, 
+            @constraint(
+                this|>GetModel, 
+                sum(
+                    w[:z, n, tau] for tau in t - this.Tmind[n] + 1: t
+                ) 
+                <= 
+                1 - w[:y, n, t]
+            )
         )
     end
 return end
@@ -215,8 +234,11 @@ function AddPrimalFeasibilityConstraints!(this::MP)
     H = RobustOptim.H
     h = RobustOptim.h
     γ = this.gamma
-    @constraint(model, B*w + C*u + G*q .<= H*d + h)
-    @constraint(model, d .<= γ)
+    v = this.v
+    push!(this.con, @constraint(model, B*w + C*u + G*q - v .<= H*d + h)...)
+    push!(this.con, @constraint(model, d .<= γ)...)
+    # push!(this.con, @constraint(model, v .== 0))
+    
 return this end
 
 
@@ -245,7 +267,8 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.M[:γ]
-    @constraint(model, C*u + G*q .<= H*(d̂ + γ*(ρ⁺-ρ⁻)) + h - B*w)
+    push!(this.con, @constraint(model, C*u + G*q .<= H*(d̂ + γ*(ρ⁺-ρ⁻)) + h - B*w))
+
 return this end
 
 
@@ -256,7 +279,8 @@ function AddObjective!(this::MP)
     m = this|>GetModel
     γ = m[:γ]
     w = m[:w]
-    @objective(m, Max, γ)
+    v = this.v
+    @objective(m, Max, sum(m[:w][:x, :, :]))
 return end
 
 
@@ -629,17 +653,24 @@ return end
 
 """
     Produce a report for the master problem, which also checks feasibility of the original problem and stuff. 
+    * Print out the string representation of the model. 
+    * Print out the constraints for the model. 
+    * Print out the objective for the model. 
 """
-function DebugReport(this::MP)
+function DebugReport(this::MP, filename="MP_Debug_report")
+    open("$(filename).txt", "w") do io
+        this.con.|>repr.|>(to_print) -> println(io, to_print)
+    end
 
-return end
+return this end
 
 
 ### ====================================================================================================================
 ### Trying to experiment with the FSP, FMP instance. 
 ### ====================================================================================================================
 
-
-
+mp = MP()
+Solve!(mp)
+DebugReport(mp)
 
 
