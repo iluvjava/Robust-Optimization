@@ -151,7 +151,7 @@ function PrepareVariables!(this::MP)
     )
     this.u = PrepareVarieblesForTheModel!(model, :u)
     this.q = PrepareVarieblesForTheModel!(model, :q)
-    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=50)
+    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=20)
     this.v = @variable(model, v[1:size(RobustOptim.H, 1)], lower_bound=0)
     return this
 end
@@ -237,8 +237,12 @@ function AddPrimalFeasibilityConstraints!(this::MP)
     v = this.v
     push!(this.con, @constraint(model, B*w + C*u + G*q - v .<= H*d + h)...)
     push!(this.con, @constraint(model, d .<= γ)...)
-    # push!(this.con, @constraint(model, v .== 0)...)
-    
+    push!(this.con, @constraint(model, v[180] == 0))
+    push!(this.con, @constraint(model, v[181] == 0))
+    push!(this.con, @constraint(model, v[171] == 0))
+    push!(this.con, @constraint(model, v[174] == 0))
+    push!(this.con, @constraint(model, v[175] == 0))
+
 return this end
 
 
