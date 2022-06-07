@@ -12,7 +12,9 @@ if !isnan(objective_value(mp))
     @info "Secondary Discreate decision variables:"
     mp.q.|>value.|>println;
     @info "Non-zero slack"
-    findall(>(0), mp.v.|>value)
+    findall(>(0), mp.v.|>value).|>println;
+    @info "Coitinuous Decision Vars"
+    zip(mp.u, mp.u.|>value).|>println;
 else
     println("Problem is Infeasible. ")
 end

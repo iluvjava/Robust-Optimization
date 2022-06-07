@@ -73,7 +73,7 @@ return nothing end
 
 
 ### ====================================================================================================================
-### Master Problem: 
+### Master Problem/Main Problem: 
 ###   * Search for primary feasible solution given branch cut and bounds. 
 ###   * Is able to perform a feasibility search for all the involved variables in the model. Both primary and secondary
 ###     variables. 
@@ -170,6 +170,12 @@ return end
 
 function AddConstraint3!(this::MP)
     w = (this|>GetModel)[:w]
+    push!(
+        this.con, 
+        @constraint(this|>GetModel,
+            w[:y, :, 1] .== w[:x, :, 1] - w[:z, :, 1]
+        )...
+    )
     for n in 1: this.G, t in 2: this.T
         push!(
             this.con, 
@@ -218,8 +224,7 @@ return end
 
 
 """
-    Create the constraints for the primal problem, with all variables considered, it should help with 
-    searching for an initial feasible solutions for the system. 
+    Craete a constraints to check whether there exists an initial feasiblity solutions to the system. 
 
 """
 function AddPrimalFeasibilityConstraints!(this::MP)
@@ -235,13 +240,8 @@ function AddPrimalFeasibilityConstraints!(this::MP)
     h = RobustOptim.h
     γ = this.gamma
     v = this.v
-    push!(this.con, @constraint(model, B*w + C*u + G*q - v .<= H*d + h)...)
+    push!(this.con, @constraint(model, B*w + C*u + G*q - v  + H*d.<=  + h)...)
     push!(this.con, @constraint(model, d .<= γ)...)
-    push!(this.con, @constraint(model, v[180] == 0))
-    push!(this.con, @constraint(model, v[181] == 0))
-    push!(this.con, @constraint(model, v[171] == 0))
-    push!(this.con, @constraint(model, v[174] == 0))
-    push!(this.con, @constraint(model, v[175] == 0))
 
 return this end
 
@@ -271,8 +271,7 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.M[:γ]
-    push!(this.con, @constraint(model, C*u + G*q .<= H*(d̂ + γ*(ρ⁺-ρ⁻)) + h - B*w)...)
-
+    push!(this.con, @constraint(model, B*w + C*u + G*q + H*(d̂ + γ*(ρ⁺-ρ⁻)) .<= + h)...)
 return this end
 
 
@@ -383,7 +382,7 @@ mutable struct FSP <: Problem
         B = RobustOptim.B
         G = RobustOptim.G
         @info "Preparing constraints for the FSP model. "
-        @constraint(this.model, c1, C*u - v .<= H*d + h - B*w - G*q)
+        @constraint(this.model, c1, C*u - v  + H*d .<= + h - B*w - G*q)
     return end
 
 
@@ -564,7 +563,7 @@ function PrepareConstraints!(this::FMP)
     # new added demand feasibility constraints. 
     @constraint(
         model,
-        C*u - v .<= H*(d̂ + γ*ρ⁺ + γ*ρ⁻) + h - B*w - G*q, 
+        C*u - v + H*(d̂ + γ*ρ⁺ + γ*ρ⁻) .<= h - B*w - G*q, 
         base_name="constraint[$(k)][2]"
     )  
 
@@ -652,7 +651,7 @@ return this.M end
     Print out a debug report for the given Problem object. 
 """
 function DebugReport(this::Problem)
-    error("Not yet implemented for all Type{Problem} objects.")
+    error("Not yet implemented for $(typeof(this)) objects.")
 return end
 
 """

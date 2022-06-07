@@ -22,7 +22,7 @@ mutable struct ConstParameters
 
     function ConstParameters()
         this = new()
-        this.HORIZON = 2; 
+        this.HORIZON = 12; 
         this.Φ = 1e100; 
         this.RREGD = zeros(this.HORIZON)
         this.RREGU = zeros(this.HORIZON)
