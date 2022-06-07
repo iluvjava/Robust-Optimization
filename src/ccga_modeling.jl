@@ -151,7 +151,7 @@ function PrepareVariables!(this::MP)
     )
     this.u = PrepareVarieblesForTheModel!(model, :u)
     this.q = PrepareVarieblesForTheModel!(model, :q)
-    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=20)
+    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=50)
     this.v = @variable(model, v[1:size(RobustOptim.H, 1)], lower_bound=0)
     return this
 end
