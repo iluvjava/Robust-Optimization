@@ -1,7 +1,6 @@
 include("utilities.jl")
 include("matrix_construction_export.jl")
 using Logging
-using .RobustOptim
 
 ### ====================================================================================================================
 ### Important functions for variables constructions for JuMP models. 
@@ -29,7 +28,7 @@ return result[:] end
         instance of the coefficient holder. 
 """
 function IndicesList(
-    holder::VariableCoefficientHolder, 
+    holder::RobustOptim.VariableCoefficientHolder, 
     k::Union{Nothing, Int}=nothing
 )
     NdimList = [1:III for III in size(holder)]
@@ -42,7 +41,7 @@ return CartesianOutterProductList(NdimList...) end
 
 abstract type Problem
     # has a JuMP model in it. 
-    # MUST IMPLEMENT: GetModel Method. 
+    # MUST IMPLEMENT: GetModel(::Problem)
 end
 
 """
@@ -118,7 +117,7 @@ mutable struct MP <: Problem
         AddConstraint4!(this)
         AddConstraint5!(this)
         AddPrimalFeasibilityConstraints!(this)
-        AddObjective!(this)
+        MainProblemObjective!(this)
     return this end
 
     function MP(gamma_upper=1e4) return MP(Model(HiGHS.Optimizer), gamma_upper) end
@@ -151,7 +150,7 @@ function PrepareVariables!(this::MP)
     )
     this.u = PrepareVarieblesForTheModel!(model, :u)
     this.q = PrepareVarieblesForTheModel!(model, :q)
-    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=20)
+    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=0)
     this.v = @variable(model, v[1:size(RobustOptim.H, 1)], lower_bound=0)
     return this
 end
@@ -242,17 +241,18 @@ function AddPrimalFeasibilityConstraints!(this::MP)
     γ = this.gamma
     v = this.v
     push!(this.con, @constraint(model, B*w + C*u + G*q + H*d - v .<= h)...)
-    # push!(this.con, @constraint(model, d .<= γ)...)
-    # push!(this.con, @constraint(model, d .>= γ)...)
+    push!(this.con, @constraint(model, d .>= γ)...)
 
 return this end
 
 
 """
     Introduce feasibility cut for the master problem which comes from the CCGA results.  
+        * Delete all constraints established for the MainProblem. 
         * Continuous decision variable from FSP: u
         * Discrete decision variable from FMP: q
         * Adversarial demands from FMP: d
+        * introduce new objective for maximum demands intervals satisfactions. 
 """
 function IntroduceCut!(
     this::MP, 
@@ -278,14 +278,15 @@ return this end
 
 
 """
-    creates the objective value for it. 
+    Creates the main problem objectives: 
+        * Find a maximum lower bound for demands on all buses, all time. 
 """
-function AddObjective!(this::MP)
+function MainProblemObjective!(this::MP)
     m = this|>GetModel
     γ = m[:γ]
-    w = m[:w]
     v = this.v
-    @objective(m, Min, sum(v))
+    push!(this.con, @constraint(m, v .== 0)...)
+    @objective(m, Max, γ)
 return end
 
 
