@@ -101,7 +101,6 @@ mutable struct StorageSystem
         this = new()
         properties = CSV_STORAGE|>propertynames
         this.Efficiency = CSV_STORAGE[properties[2]]
-        # this.Distfactor = CSV_STORAGE[properties[3]]
         this.Capacity = CSV_STORAGE[properties[3]]
         this.CharingLim = CSV_STORAGE[properties[4]]
         this.DischargingLim = CSV_STORAGE[properties[5]]

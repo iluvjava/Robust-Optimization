@@ -149,21 +149,21 @@ function QuickStartConstraints()
         push!(rhs, 0)
     end
 
-    # for t = 1:T, m = 1:M
-    #     # (11)
-    #     x′[m, (t - sg.Tminu[m] + 1):t] .= 1
-    #     y′[m, t] = -1
-    #     G(x′, y′); G()
-    #     push!(rhs, 0)
-    # end
+    for t = 1:T, m = 1:M
+        # (11)
+        x′[m, (t - sg.Tminu[m] + 1):t] .= 1
+        y′[m, t] = -1
+        G(x′, y′); G()
+        push!(rhs, 0)
+    end
 
-    # for t = 1:T, m = 1:M
-    #     # (11)
-    #     z′[m, (t - sg.Tmind[m] + 1:t)] .= 1
-    #     y′[m, t] = 1
-    #     G(z′, y′); G()
-    #     push!(rhs, 1)
-    # end
+    for t = 1:T, m = 1:M
+        # (11)
+        z′[m, (t - sg.Tmind[m] + 1:t)] .= 1
+        y′[m, t] = 1
+        G(z′, y′); G()
+        push!(rhs, 1)
+    end
 
 return rhs end
 
@@ -188,26 +188,26 @@ function CapacityConstraints(
 )
     rhs = Vector{Number}()
 
-    # for t = 2:T, n = 1:(gen|>length)
-    #     # (13)
-    #     p[n, t] = 1
-    #     p[n, t - 1] = -1
-    #     y[n, t - 1] = -gen.RU[n]
-    #     x[n, t] = - gen.RU_bar[n]
-    #     C(p); C()
-    #     K(y, x); K()
-    #     push!(rhs, 0)
-    # end
-    # for t = 2:T, n = 1:(gen|>length)
-    #     # (14)
-    #     p[n, t - 1] = 1
-    #     p[n, t] = -1
-    #     y[n, t] = -gen.RD[n]
-    #     z[n, t] = - gen.RD_bar[n]
-    #     C(p); C()
-    #     K(y, z); K()
-    #     push!(rhs, 0)
-    # end
+    for t = 2:T, n = 1:(gen|>length)
+        # (13)
+        p[n, t] = 1
+        p[n, t - 1] = -1
+        y[n, t - 1] = -gen.RU[n]
+        x[n, t] = - gen.RU_bar[n]
+        C(p); C()
+        K(y, x); K()
+        push!(rhs, 0)
+    end
+    for t = 2:T, n = 1:(gen|>length)
+        # (14)
+        p[n, t - 1] = 1
+        p[n, t] = -1
+        y[n, t] = -gen.RD[n]
+        z[n, t] = - gen.RD_bar[n]
+        C(p); C()
+        K(y, z); K()
+        push!(rhs, 0)
+    end
     for t = 1:T, n = 1:(gen|>length)
         # (15)
         sr[n, t] = 1
@@ -215,18 +215,18 @@ function CapacityConstraints(
         C(sr); C(); K(y); K();
         push!(rhs, 0)
     end
-    # for t = 1:T, n = 1:(gen|>length)
-    #     # (16)
-    #     p[n, t] = 1; sr[n, t]=1; regu[n, t] = 1; y[n, t] = -gen.Pmax[n]
-    #     C(p, sr, regu); C(); K(y); K();
-    #     push!(rhs, 0)
-    # end
-    # for t = 1:T, n = 1:(gen|>length)
-    #     # (17) 
-    #     p[n, t] = -1; regd[n, t] = 1; y[n, t] = gen.Pmin[n]
-    #     C(p, regd); C(); K(y); K();
-    #     push!(rhs, 0)
-    # end
+    for t = 1:T, n = 1:(gen|>length)
+        # (16)
+        p[n, t] = 1; sr[n, t]=1; regu[n, t] = 1; y[n, t] = -gen.Pmax[n]
+        C(p, sr, regu); C(); K(y); K();
+        push!(rhs, 0)
+    end
+    for t = 1:T, n = 1:(gen|>length)
+        # (17) 
+        p[n, t] = -1; regd[n, t] = 1; y[n, t] = gen.Pmin[n]
+        C(p, regd); C(); K(y); K();
+        push!(rhs, 0)
+    end
     for t = 1:T, n = 1:(gen|>length)
         # (18)
         nsp[n, t] = 1; y[n, t] = gen.NSP[n]

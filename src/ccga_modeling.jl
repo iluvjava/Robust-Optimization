@@ -29,7 +29,7 @@ return result[:] end
         instance of the coefficient holder. 
 """
 function IndicesList(
-    holder::RobustOptim.VariableCoefficientHolder, 
+    holder::VariableCoefficientHolder, 
     k::Union{Nothing, Int}=nothing
 )
     NdimList = [1:III for III in size(holder)]
@@ -151,7 +151,7 @@ function PrepareVariables!(this::MP)
     )
     this.u = PrepareVarieblesForTheModel!(model, :u)
     this.q = PrepareVarieblesForTheModel!(model, :q)
-    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=50)
+    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=20)
     this.v = @variable(model, v[1:size(RobustOptim.H, 1)], lower_bound=0)
     return this
 end
@@ -170,6 +170,7 @@ return end
 
 function AddConstraint3!(this::MP)
     w = (this|>GetModel)[:w]
+    # Initial conditions for the x decision variables. 
     push!(
         this.con, 
         @constraint(this|>GetModel,
@@ -240,8 +241,9 @@ function AddPrimalFeasibilityConstraints!(this::MP)
     h = RobustOptim.h
     γ = this.gamma
     v = this.v
-    push!(this.con, @constraint(model, B*w + C*u + G*q - v  + H*d.<=  + h)...)
-    push!(this.con, @constraint(model, d .<= γ)...)
+    push!(this.con, @constraint(model, B*w + C*u + G*q + H*d - v .<= h)...)
+    # push!(this.con, @constraint(model, d .<= γ)...)
+    # push!(this.con, @constraint(model, d .>= γ)...)
 
 return this end
 
@@ -271,7 +273,7 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.M[:γ]
-    push!(this.con, @constraint(model, B*w + C*u + G*q + H*(d̂ + γ*(ρ⁺-ρ⁻)) .<= + h)...)
+    push!(this.con, @constraint(model, B*w + C*u + G*q + H*(d̂ + γ*(ρ⁺-ρ⁻)) .<= h)...)
 return this end
 
 
@@ -308,6 +310,9 @@ return Vec end
 function GetGamma(this::MP)
     model = GetModel(this)
 return model[:γ] end
+
+
+
 
 
 ### ====================================================================================================================
@@ -665,7 +670,7 @@ function DebugReport(this::MP, filename="MP_Debug_report")
         this.con.|>repr.|>(to_print) -> println(io, to_print)
     end
 
-return this end
+return this end;
 
 
 ### ====================================================================================================================
