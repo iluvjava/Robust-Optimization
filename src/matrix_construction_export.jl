@@ -3,7 +3,6 @@ module RobustOptim
     include("problem_parameters.jl")
     include("matrix_constructions.jl")
     h = RHS
-    
 end
 
 

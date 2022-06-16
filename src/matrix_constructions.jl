@@ -123,7 +123,7 @@ return rhs end
 
 """
     Adding the quick start binary constraints 
-    Constraints (9, ..., 12)
+    Constraints (9, ..., 12). 
 """
 function QuickStartConstraints()
     sg = SECONDARY_GENERATORS
@@ -136,8 +136,21 @@ function QuickStartConstraints()
         G()
         push!(rhs, 1)
     end
+    # Base case constraint, generator initially off. 
+    # Constraint #(10) Base case. 
+    for m = 1:M
+        x′[m, 1] = -1
+        y′[m, 1] = 1
+        z′[m, 1] = 1
+        push!(rhs, 0); G(x′, y′, z′); G()
+        x′[m, 1] = 1
+        y′[m, 1] = -1
+        z′[m, 1] = -1
+        push!(rhs, 0); G(x′, y′, z′); G()
+    end
 
-    for t = 2:T, m = 1:M  # note, t starts with 2. 
+    # note, t starts with 2. 
+    for t = 2:T, m = 1:M  
         # (10)
         y′[m, t] = 1; y′[m ,t - 1] = -1
         x′[m ,t] = -1; z′[m, t] = 1
@@ -193,7 +206,7 @@ function CapacityConstraints(
         p[n, t] = 1
         p[n, t - 1] = -1
         y[n, t - 1] = -gen.RU[n]
-        x[n, t] = - gen.RU_bar[n]
+        x[n, t] = -gen.RU_bar[n]
         C(p); C()
         K(y, x); K()
         push!(rhs, 0)
@@ -346,6 +359,7 @@ function DemandBalanceConstraints()
     μ = DISFACTORS.the_matrix
     σ = SIGMAS.the_matrix
     f = TRANSMISSION_SYSTEM.Limit
+
     # (39)
     for t = 1:T
         p[:, t] .= 1
@@ -372,25 +386,54 @@ function DemandBalanceConstraints()
     # currently each bus has one primary generator, and one secondary generator
     # currently all transmission line has the same storage system. 
 
-    for t=1:T, l=1:L
-        p[:, t] .= sum(σ[:, l])
-        p′[:, t] .= sum(σ[:, l])
+    # for t=1:T, l=1:L
+    #     p[:, t] .= sum(σ[:, l])
+    #     p′[:, t] .= sum(σ[:, l])
+    #     g_minus[:, t] .= μ[l]
+    #     g_plus[:, t] .= -μ[l]
+    #     d[:, t] = -σ[:, l]
+    #     C(p, p′, g_minus, g_plus); C();
+    #     F(d); F();
+    #     push!(rhs, f[l])
+    # end    
+    # (41)
+    for t = 1:T, l=1:L, b=1:B̄
+        for n in BUSES.primary[b]
+            p[n, t] += σ[b, l]
+        end
+        for m in BUSES.secondary[b]
+            p′[m, t] += σ[b, l]
+        end
         g_minus[:, t] .= μ[l]
         g_plus[:, t] .= -μ[l]
         d[:, t] = -σ[:, l]
         C(p, p′, g_minus, g_plus); C();
         F(d); F();
         push!(rhs, f[l])
-    end    
-
-    # (42)
-    for  t=1:T, l=1:L
-        p[:, t] .= -sum(σ[:, l])
-        p′[:, t] .= -sum(σ[:, l])
+    end
+    
+    # # (42)
+    # for  t=1:T, l=1:L
+    #     p[:, t] .= -sum(σ[:, l])
+    #     p′[:, t] .= -sum(σ[:, l])
+    #     g_minus[:, t] .= -μ[l]
+    #     g_plus[:, t] .=  μ[l]
+    #     d[:, t] = σ[:, l]
+    #     C(p, p′, g_minus, g_plus); C();
+    #     push!(rhs, f[l])
+    # end
+    for t = 1:T, l=1:L, b=1:B̄
+        for n in BUSES.primary[b]
+            p[n, t] += -σ[b, l]
+        end
+        for m in BUSES.secondary[b]
+            p′[m, t] += -σ[b, l]
+        end
         g_minus[:, t] .= -μ[l]
-        g_plus[:, t] .=  μ[l]
+        g_plus[:, t] .= μ[l]
         d[:, t] = σ[:, l]
         C(p, p′, g_minus, g_plus); C();
+        F(d); F();
         push!(rhs, f[l])
     end
 

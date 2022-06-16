@@ -149,14 +149,32 @@ function ConvertCSV(data::CSV.File)
     end
 return m end
 
+
 """
     Models a group of generators that are in the same busses. 
-    (currently not present yet)
+    It has primary/secondary generator in it, and it maps the buses to a set of 
+    indices for generators in that bus. 
+    * The array could be empty. 
+    * CURRENTLY NO DATA IS PREPARE FOR THIS YET, SO IT'S HARD CODED IN. 
 """
-mutable struct Busses
-    
+mutable struct Buses
+    primary::Dict{Int, Set{Int}}
+    secondary::Dict{Int, Set{Int}}
+    """
+        Generator info are HARD CODED IN! 
+    """
+    function Buses(num_of_busses=6, num_primary_gen=6, num_secondary_gen=1)
+        this = new()
+        this.primary = Dict()
+        this.secondary = Dict()
+        for II in 1:num_of_busses
+            this.primary[II] = Set{Int}()
+            push!(this.primary[II], II)
+            this.secondary[II] = Set{Int}()
+        end
+        push!(this.secondary[num_of_busses], 1)
+    return this end
 end
-
 
 CONST_PROBLEM_PARAMETERS = ConstParameters()
 PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
@@ -165,3 +183,5 @@ STORAGE_SYSTEM = StorageSystem()
 TRANSMISSION_SYSTEM = Transmission()
 SIGMAS = DataMatrix(CSV_POWERFLOW_BUS)
 DISFACTORS = DataMatrix(CSV_DISFACTOR)
+BUSES = Buses()
+

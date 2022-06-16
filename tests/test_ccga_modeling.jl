@@ -1,7 +1,6 @@
 include("../src/ccga_modeling.jl")
 
 
-
 ### Test the existence of any feasible configurations for the system. 
 mp = MP()
 Solve!(mp)
@@ -22,7 +21,6 @@ if !isnan(objective_value(mp))
 else
     println("Problem is Infeasible. ")
 end
-
 
 
 # """

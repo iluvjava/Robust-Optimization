@@ -197,12 +197,11 @@ $$
     \le 1
     \\[1.1em]
     (y')^{(1)}_m - (x')^{(1)}_m + (z')_m^{(1)} 
-    = 0
+    = 0 \quad \text{Base case}
     \\[1.1em]
     (y')^{(t)}_m - (y')^{(t - 1)}_m - (x')^{(t)}_m + (z')_m^{(t)} 
     = 0
     \\[1.1em]
-    
     \left(
         \sum_{\tau=t- T_{minu} + 1}^{t}
         (x')^{(\tau)}_m
@@ -334,29 +333,30 @@ $$
     &
     \le 0
     \\
-    \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
-    \left(
-        \sum_{n \in G^b}^{}
-            p_n^{(t)}
-        + 
-            \sum_{m \in (\mathcal G')^{b}}
-                (p')_m^{(t)}
-    \right) + 
-    \sum_{s \in \mathcal S}^{}\mu_s^{(l)}
+    \underbrace{
+        \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
         \left(
-            (g^-)_s^{(t)} - (g^+)_s^{(t)}
-        \right)}_{\text{for }C}
-    - 
+            \sum_{n \in \mathcal G^b}^{}
+                p_n^{(t)}
+            + 
+                \sum_{m \in \mathcal G'_{b}}
+                    (p')_m^{(t)}
+        \right) + 
+        \sum_{s \in \mathcal S}^{}\mu_s^{(l)}
+            \left(
+                (g^-)_s^{(t)} - (g^+)_s^{(t)}
+            \right)}_{\text{for }C}
+        - 
     \underbrace{\sum_{b\in \mathcal B}^{}\sigma_b^{(l)}d_b^{(t)}}_{\text{For }H}
     &\le F^{(l)}
     \\
     \underbrace{
         - \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
         \left(
-            \sum_{n \in G^b}^{}
+            \sum_{n \in \mathcal G^b}^{}
                 p_n^{(t)}
             + 
-                \sum_{m \in (\mathcal G')^{b}}
+                \sum_{m \in \mathcal G'_{b}}
                     (p')_m^{(t)}
         \right)
         - \sum_{s \in \mathcal S}^{}\mu_s^{(l)}
@@ -372,28 +372,30 @@ $$
 \tag{39, \dots, 44}
 $$
 
-The set $\mathcal G^b, (\mathcal G')^b$ are the primary and secondary generators on each of the busses. We can simplify it further and get: 
+The set $\mathcal G^b, (\mathcal G')^b$ are the primary and secondary generators on each of the busses. We can simplify it further and get:
 
 $$
 \begin{aligned}
+    \left(
+        \sum_{b\in \mathcal B}^{}
+        \sum_{n\in \mathcal G_b}^{}
+        \sigma_b^{(l)}p_n^{(t)}
+    \right)
+    +
+    \left(
+        \sum_{b\in \mathcal B}^{}
+        \sum_{n\in \mathcal G'_b}^{}
+        \sigma_b^{(l)}(p_n')^{(t)}
+    \right)
+    &= 
     \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
         \left(
-            \sum_{n \in G^b}^{}
+            \sum_{n \in \mathcal G_b}^{}
                 p_n^{(t)}
             + 
-                \sum_{m \in (\mathcal G')^{b}}
+                \sum_{m \in (\mathcal G')_{b}}
                     (p')_m^{(t)}
         \right)
-    &= 
-    \sum_{n\in \mathcal G^{b}}^{}
-        \left(
-            \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
-        \right)p_n^{(t)}
-        + 
-        \sum_{m\in (\mathcal G')^b}^{}
-            \left(
-                \sum_{b\in \mathcal B}^{}\sigma_b^{(l)}
-            \right)(p')_m^{(t)}
     \\
     \sum_{s \in \mathcal S}^{}\mu_s^{(l)}
         \left(
@@ -410,4 +412,4 @@ $$
 \end{aligned}
 $$
 
-Now the ceofficients are right next to the decision variables. 
+
