@@ -190,11 +190,14 @@ Quick Start Binary Constraints
 
 $$
 \begin{aligned}
-\text{For G}
+\forall m \in \mathcal G': 
+\text{for G}
 \begin{cases}
-    
     (x')^{(t)}_m + (z')^{(t)}_m
     \le 1
+    \\[1.1em]
+    (y')^{(1)}_m - (x')^{(1)}_m + (z')_m^{(1)} 
+    = 0
     \\[1.1em]
     (y')^{(t)}_m - (y')^{(t - 1)}_m - (x')^{(t)}_m + (z')_m^{(t)} 
     = 0

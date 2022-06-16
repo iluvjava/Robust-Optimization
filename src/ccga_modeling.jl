@@ -286,7 +286,8 @@ function MainProblemObjective!(this::MP)
     γ = m[:γ]
     v = this.v
     push!(this.con, @constraint(m, v .== 0)...)
-    @objective(m, Max, γ)
+    
+    @objective(m, Max, sum(this.d))
 return end
 
 

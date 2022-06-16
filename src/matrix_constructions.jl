@@ -18,9 +18,9 @@ y = VariableCoefficientHolder(:y, N, T)
 z = VariableCoefficientHolder(:z, N, T)
 
 # For matrix G
-x′ = VariableCoefficientHolder(:x′, N, T)
-y′ = VariableCoefficientHolder(:y′, N, T)
-z′ = VariableCoefficientHolder(:z′, N, T)
+x′ = VariableCoefficientHolder(:x′, M, T)
+y′ = VariableCoefficientHolder(:y′, M, T)
+z′ = VariableCoefficientHolder(:z′, M, T)
 
 # For Matrix C
 c = VariableCoefficientHolder(:c, N, T)
