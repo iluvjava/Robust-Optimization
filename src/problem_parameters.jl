@@ -172,7 +172,7 @@ mutable struct Buses
             push!(this.primary[II], II)
             this.secondary[II] = Set{Int}()
         end
-        push!(this.secondary[num_of_busses], 1)
+        push!(this.secondary[2], 1)
     return this end
 end
 

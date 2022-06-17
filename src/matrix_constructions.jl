@@ -131,8 +131,8 @@ function QuickStartConstraints()
     for t = 1:T, m = 1:M
         # (9)
         x′[m, t] = 1
-        y′[m, t] = 1
-        G(x′, y′)
+        z′[m, t] = 1
+        G(x′, z′)
         G()
         push!(rhs, 1)
     end
@@ -386,16 +386,6 @@ function DemandBalanceConstraints()
     # currently each bus has one primary generator, and one secondary generator
     # currently all transmission line has the same storage system. 
 
-    # for t=1:T, l=1:L
-    #     p[:, t] .= sum(σ[:, l])
-    #     p′[:, t] .= sum(σ[:, l])
-    #     g_minus[:, t] .= μ[l]
-    #     g_plus[:, t] .= -μ[l]
-    #     d[:, t] = -σ[:, l]
-    #     C(p, p′, g_minus, g_plus); C();
-    #     F(d); F();
-    #     push!(rhs, f[l])
-    # end    
     # (41)
     for t = 1:T, l=1:L, b=1:B̄
         for n in BUSES.primary[b]
@@ -411,17 +401,7 @@ function DemandBalanceConstraints()
         F(d); F();
         push!(rhs, f[l])
     end
-    
-    # # (42)
-    # for  t=1:T, l=1:L
-    #     p[:, t] .= -sum(σ[:, l])
-    #     p′[:, t] .= -sum(σ[:, l])
-    #     g_minus[:, t] .= -μ[l]
-    #     g_plus[:, t] .=  μ[l]
-    #     d[:, t] = σ[:, l]
-    #     C(p, p′, g_minus, g_plus); C();
-    #     push!(rhs, f[l])
-    # end
+
     for t = 1:T, l=1:L, b=1:B̄
         for n in BUSES.primary[b]
             p[n, t] += -σ[b, l]
@@ -515,5 +495,3 @@ w = [x, y, z]
 u = [c, c′, p, p′, regu, regu′, regd, regd′, sr, sr′, h, g_plus, g_minus, nsp, nsp′]
 q = [x′, y′, z′]
 # d is it's own vector. 
-
-

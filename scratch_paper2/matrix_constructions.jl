@@ -383,28 +383,28 @@ function DemandBalanceConstraints()
     # currently each bus has one primary generator, and one secondary generator
     # currently all transmission line has the same storage system. 
 
-    for l=1:L, t=1:T
-        p[:, t] .= sum(σ[:, l])
-        p′[:, t] .= sum(σ[:, l])
-        g_minus[:, t] .= sum(μ[:])
-        g_plus[:, t] .= - sum(μ[:])
-        d[:, t] = -σ[:, l]
-        C(p, p′, g_minus, g_plus); C();
-        F(d); F();
-        push!(rhs, f[l])
-    end    
+    # for l=1:L, t=1:T
+    #     p[:, t] .= sum(σ[:, l])
+    #     p′[:, t] .= sum(σ[:, l])
+    #     g_minus[:, t] .= sum(μ[:])
+    #     g_plus[:, t] .= - sum(μ[:])
+    #     d[:, t] = -σ[:, l]
+    #     C(p, p′, g_minus, g_plus); C();
+    #     F(d); F();
+    #     push!(rhs, f[l])
+    # end    
 
-    # (42)
-    for l=1:L, t=1:T
-        p[:, t] .= - sum(σ[:, l])
-        p′[:, t] .= - sum(σ[:, l])
-        g_minus[:, t] .= - sum(μ[:])
-        g_plus[:, t] .=  sum(μ[:])
-        d[:, t] = σ[:, l]
-        C(p, p′, g_minus, g_plus); C();
-        F(d); F();
-        push!(rhs, f[l])
-    end
+    # # (42)
+    # for l=1:L, t=1:T
+    #     p[:, t] .= - sum(σ[:, l])
+    #     p′[:, t] .= - sum(σ[:, l])
+    #     g_minus[:, t] .= - sum(μ[:])
+    #     g_plus[:, t] .=  sum(μ[:])
+    #     d[:, t] = σ[:, l]
+    #     C(p, p′, g_minus, g_plus); C();
+    #     F(d); F();
+    #     push!(rhs, f[l])
+    # end
 
 return rhs end
 
