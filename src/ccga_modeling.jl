@@ -266,7 +266,7 @@ function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
         fix(d[I], demand[I]; force=true)
     end
     Solve!(this)
-return !objective_value(this)|>isnan end
+return !(this |>objective_value|>isnan) end
 
 
 """
@@ -335,8 +335,6 @@ return Vec end
 function GetGamma(this::MP)
     model = GetModel(this)
 return model[:γ] end
-
-
 
 
 
