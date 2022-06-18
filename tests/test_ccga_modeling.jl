@@ -23,6 +23,8 @@ else
 end
 
 
+
+
 # """
 #     First iteration of the CCGA establish the following: 
 #     * Using a random q for FMP, which is definitely infeasible. 

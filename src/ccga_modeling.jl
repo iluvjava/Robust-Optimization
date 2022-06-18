@@ -109,15 +109,7 @@ mutable struct MP <: Problem
         "time horizon"
         this.gamma_upper = gamma_upper
         this.con = Vector()
-        PrepareVariables!(this)
-
-        # -- copy of global variables: 
-        AddConstraint2!(this)
-        AddConstraint3!(this)
-        AddConstraint4!(this)
-        AddConstraint5!(this)
-        AddPrimalFeasibilityConstraints!(this)
-        MainProblemObjective!(this)
+        EstablishMainProblem!(this)
     return this end
 
     function MP(gamma_upper=1e4) return MP(Model(HiGHS.Optimizer), gamma_upper) end
@@ -126,13 +118,24 @@ end
 
 """
     Introduce variables to the model: 
-        * primary generator discrete decision variables: w
-        * the demand interval constraint variable: γ
         * Secondary continuous decision variables: u
         * Secondary discrete decision variables: q
         * demands variables: d
 """
-function PrepareVariables!(this::MP)
+function IntroduceVariables!(this::MP)
+    model = this |> GetModel
+    this.u = PrepareVarieblesForTheModel!(model, :u)
+    this.q = PrepareVarieblesForTheModel!(model, :q)
+    this.d = @variable(model, d[1:size(RobustOptim.H, 2)] >= 0)
+    this.v = @variable(model, v[1:size(RobustOptim.H, 1)] >= 0)
+return this end
+
+"""
+    Introduce the binary decision variable w for the primary generator. 
+        * w 
+        * γ
+"""
+function IntroduceMasterProblemVariables!(this::MP)
     model = this |> GetModel
     this.w = @variable(
         model,
@@ -148,47 +151,42 @@ function PrepareVariables!(this::MP)
         γ,
         lower_bound=0, upper_bound=this.gamma_upper
     )
-    this.u = PrepareVarieblesForTheModel!(model, :u)
-    this.q = PrepareVarieblesForTheModel!(model, :q)
-    this.d = @variable(model, d[1:size(RobustOptim.H, 2)], lower_bound=0)
-    this.v = @variable(model, v[1:size(RobustOptim.H, 1)], lower_bound=0)
-    return this
-end
+return this end
 
-function AddConstraint2!(this::MP)
-    w = (this|>GetModel)[:w]
-    for n in 1: this.G, t in 1: this.T
-        push!(
-            this.con, 
-            @constraint(
-                this|>GetModel, w[:x, n, t] + w[:z, n, t] <= 1
-            )
-        )
-    end
-return end
 
-function AddConstraint3!(this::MP)
-    w = (this|>GetModel)[:w]
-    # Initial conditions for the x decision variables. 
+
+"""
+    Prepare the constraints for the primary generator, the system Aw <= b
+"""
+function PreppareConstraintsPrimary!(this::MP)
+    model = this|>GetModel
+    w = (model)[:w]
+
+    push!(
+        this.con, 
+        @constraint(
+            this|>GetModel, w[:x, :, :] + w[:z, :, :] .<= 1
+        )...
+    )
+    
+    
     push!(
         this.con, 
         @constraint(this|>GetModel,
             w[:y, :, 1] .== w[:x, :, 1] - w[:z, :, 1]
         )...
     )
-    for n in 1: this.G, t in 2: this.T
+
+    for t in 2: this.T
         push!(
             this.con, 
             @constraint(
                 this|>GetModel,
-                w[:y, n, t] - w[:y, n, t - 1] == w[:x, n, t] - w[:z, n, t]
-            )
+                w[:y, :, t] - w[:y, :, t - 1] .== w[:x, :, t] - w[:z, :, t]
+            )...
         ) 
     end
-return end
 
-function AddConstraint4!(this::MP)
-    w = (this|>GetModel)[:w]
     for n in 1:this.G, t in this.Tminu[n]: this.T
         push!(
             this.con, 
@@ -202,10 +200,7 @@ function AddConstraint4!(this::MP)
             )
         )
     end
-return end
 
-function AddConstraint5!(this::MP)
-    w = (this|>GetModel)[:w]
     for n in 1:this.G, t in this.Tmind[n]: this.T
         push!(
             this.con, 
@@ -214,20 +209,20 @@ function AddConstraint5!(this::MP)
                 sum(
                     w[:z, n, tau] for tau in t - this.Tmind[n] + 1: t
                 ) 
-                <= 
+                <=
                 1 - w[:y, n, t]
             )
         )
     end
-return end
 
+return this end
 
 
 """
     Craete a constraints to check whether there exists an initial feasiblity solutions to the system. 
 
 """
-function AddPrimalFeasibilityConstraints!(this::MP)
+function AddMainProblemConstraints!(this::MP)
     model = this|>GetModel
     w = Getw(this)
     u = this.u
@@ -242,8 +237,36 @@ function AddPrimalFeasibilityConstraints!(this::MP)
     v = this.v
     push!(this.con, @constraint(model, B*w + C*u + G*q + H*d - v .<= h)...)
     push!(this.con, @constraint(model, d .>= γ)...)
-
 return this end
+
+"""
+    Establish the main problem, and then solving it will provide some suggestions for the 
+    best average demands for the system.  
+    * The constraints
+    * The objective
+    * The variables as well. 
+"""
+function EstablishMainProblem!(this::MP)
+    # Prepre Variables for the main problem. 
+    IntroduceMasterProblemVariables!(this)
+    IntroduceVariables!(this)
+    # Prepare constraints for the Main Problem. 
+    PreppareConstraintsPrimary!(this)
+    AddMainProblemConstraints!(this)
+    MainProblemObjective!(this)
+return this end
+
+"""
+    Test if a given demand vector is feasible for the main problem. 
+    * Create slack. 
+"""
+function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
+    d = this.d
+    for I in 1:length(d)
+        fix(d[I], demand[I]; force=true)
+    end
+    Solve!(this)
+return !objective_value(this)|>isnan end
 
 
 """
@@ -286,8 +309,8 @@ function MainProblemObjective!(this::MP)
     γ = m[:γ]
     v = this.v
     d = this.d
-    push!(this.con, @constraint(m, v .== 0)...)
-    @objective(m, Max, sum(d))
+    @objective(m, Max, γ)
+    fix.(v, 0; force=true)
 return end
 
 
@@ -357,7 +380,7 @@ mutable struct FSP <: Problem
         this.gamma = gamma
         this.w = w
         this.d_star = d_star
-        this|>PrepareVariables!
+        this|>IntroduceVariables!
         this|>AddConstraints!
         @objective(this.model, Min, sum(this.v))
     return this end
@@ -370,7 +393,7 @@ mutable struct FSP <: Problem
         As a list of flattened JuMP variable refs, it will store the flatten 
         variables to the field of this struct. 
     """
-    function PrepareVariables!(this::FSP)
+    function IntroduceVariables!(this::FSP)
         this.u = PrepareVarieblesForTheModel!(this|>GetModel, :u)
         this.q = PrepareVarieblesForTheModel!(this|>GetModel, :q)
         this.v = @variable(this.model, v[1:length(RobustOptim.h)], lower_bound=0)
@@ -456,7 +479,7 @@ mutable struct FMP<:Problem
         this.k = 1
         this.model = Model(HiGHS.Optimizer)
         this.d_hat = d_hat
-        PrepareVariables!(this)
+        IntroduceVariables!(this)
         PrepareConstraints!(this)
         PrepareObjective!(this)
     return this end    
@@ -471,7 +494,7 @@ end
         * u[k] will be a compositive decision variables for all the modeling decision variables in the original problem.
     * v, λ follows a similar token. 
 """
-function PrepareVariables!(this::FMP, q_given::Union{Nothing, Vector{JuMP.VariableRef}})
+function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{JuMP.VariableRef}})
     k = this.k
     # Prepare variable u for the model. 
     push!(this.u, PrepareVarieblesForTheModel!(this|>GetModel, :u, k))
@@ -503,10 +526,10 @@ return this end
 """
     Prepare the variables for the r=k th iterations of the CCGA algorithm. 
 """
-function PrepareVariables!(this::FMP)
+function IntroduceVariables!(this::FMP)
     @assert this.k == 1 "This function can only be called for the first creation of the FMP problem, where initial "*
     "q is not given. "
-    PrepareVariables!(this, nothing)
+    IntroduceVariables!(this, nothing)
 return this end
 
 
@@ -605,12 +628,12 @@ return this.rho_minus[end].|>value end
 
 
 """
-    Introduce a new secondary binary decision variable as a fixed variable for te system. 
+    Introduce a new secondary binary decision variable as a fixed variable for the system. 
 """
 function Introduce!(this::FMP, q::Vector{JuMP.VariableRef})
     this.k += 1
     @assert length(q) == size(RobustOptim.G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
-    PrepareVariables!(this, q)
+    IntroduceVariables!(this, q)
     PrepareConstraints!(this)
 return this end
 
