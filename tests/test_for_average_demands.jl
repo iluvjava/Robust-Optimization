@@ -10,26 +10,30 @@ using ProgressMeter
     Try to perturbed a given demand with a given model by constructing a hypercube with the demand being the center
     and sample randomly and count the percentage of feasible demands for the system. 
     Sample region: 
-        -1ϵ + d̂ + 1ϵ
+        max(-1ϵ, 0) + d̂ + 1ϵ
          
 """
 function DemandPerturbations(
     this::MP, 
     demand::Vector{N}, 
     epsilon::M=10, 
-    max_iter::Int=1000
+    max_iter::Int=5000
 ) where {M<: Number, N<:Number}
 
     FeasibleCount = 0
     @showprogress for __ in 1: max_iter
-        TestDemand = demand + (rand(length(demand)).- 0.5)*2*epsilon
-        TestDemand = max.(TestDemand, 0)
+        # TestDemand = demand + (rand(length(demand)) .- 0.5)*2*epsilon
+        # TestDemand = max.(TestDemand, 0)
+        TestDemand = demand + rand(0:1, length(demand))*epsilon
         if DemandFeasible(this, TestDemand)
             FeasibleCount += 1
+        else
+            "Demand perturbation with ϵ=$(epsilon) failed before reaching $(max_iter) iterations. " |> println
+            return false
         end
     end
-    "Demand perturbation, with ϵ=$(epsilon), feasibility percent: $(FeasibleCount/max_iter)" |> println
-return FeasibleCount/max_iter end
+    "Demand perturbation with ϵ=$(epsilon) successfully passed $(max_iter) iterations. " |> println
+return true end
 
 
 """
@@ -39,14 +43,23 @@ return FeasibleCount/max_iter end
 function DemandsBestIntervalSearch(
     mp::MP, 
     demand::Vector; 
-    epsilon=100, 
+    epsilon=0, 
     delta=100, 
-    max_iter::Int=20
+    max_iter::Int=20,
+    tol=2^(-5)
 )
     Itr = 0
-    while delta > 1
-        Percent = DemandPerturbations(mp, demand, epsilon)
-        if Percent == 1
+    HistoricRecords = Dict{Float64, Bool}()
+    while delta > tol
+        
+        if epsilon in keys(HistoricRecords)
+            DemandPassed = HistoricRecords[round(epsilon, digits=10)]
+        else
+            DemandPassed = DemandPerturbations(mp, demand, epsilon)
+            HistoricRecords[round(epsilon, digits=10)] = DemandPassed
+        end
+        
+        if DemandPassed
             if Itr == max_iter
                 break 
             end
@@ -75,7 +88,7 @@ function DemandRandomObjectiveAverage(mp::MP, N=1000)
         push!(v, mp.d.|>value)
     end
 
-return mean(hcat(v...), dims = 2)  end
+return mean(hcat(v...), dims=2)  end
 
 
 function RunThis()
@@ -83,19 +96,18 @@ function RunThis()
         optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
     )
     
-    
     mp = MP(model)
     Solve!(mp)
     @info "Computing average demand from random objective. "
     
-    d̂ = 30*ones(length(mp.d)) # 
+    d̂ = 70*ones(length(mp.d))  
     #d̂ = DemandRandomObjectiveAverage(mp)
     @info "Suggusted Average Demands: "
     
     d̂ |> display
     @info "Performing Demand best interval search on above suggusted demand vector."
     
-    BestDemandInterval = DemandsBestIntervalSearch(mp, d̂[:]; epsilon=30, delta=30)
+    BestDemandInterval = DemandsBestIntervalSearch(mp, d̂[:]; epsilon=0, delta=30)
     @info "The best demand interval seems to be $(BestDemandInterval)"
 return end
 
