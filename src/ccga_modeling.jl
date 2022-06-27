@@ -72,12 +72,13 @@ return nothing end
 
 
 ### ====================================================================================================================
-### Master Problem/Main Problem: 
+### Main Problem: 
 ###   * Search for primary feasible solution given branch cut and bounds. 
 ###   * Is able to perform a feasibility search for all the involved variables in the model. Both primary and secondary
 ###     variables. 
 ###     * Is able to produce report. 
 ### ====================================================================================================================
+
 mutable struct MP <: Problem
     M::Model
     w::Array{VariableRef, 3}
@@ -130,12 +131,160 @@ function IntroduceVariables!(this::MP)
     this.v = @variable(model, v[1:size(RobustOptim.H, 1)] >= 0)
 return this end
 
+
+
+
+"""
+    Craete a constraints to check whether there exists an initial feasiblity solutions to the system. 
+
+"""
+function AddMainProblemConstraints!(this::MP)
+    model = this|>GetModel
+    w = Getw(this)
+    u = this.u
+    q = this.q
+    d = this.d
+    B = RobustOptim.B
+    C = RobustOptim.C
+    G = RobustOptim.G
+    H = RobustOptim.H
+    h = RobustOptim.h
+    γ = this.gamma
+    v = this.v
+    push!(this.con, @constraint(model, B*w + C*u + G*q + H*d - v .<= h)...)
+    push!(this.con, @constraint(model, d .>= γ)...)
+return this end
+
+
+"""
+    Test if a given demand vector is feasible for the main problem. 
+    * Create slack. 
+"""
+function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
+    d = this.d
+    for I in 1:length(d)
+        fix(d[I], demand[I]; force=true)
+    end
+    Solve!(this)
+    ToReturn = !(this |>objective_value|>isnan)
+    unfix.(d)
+return ToReturn end
+
+
+
+"""
+    Creates the main problem objectives: 
+        * Find a maximum lower bound for demands on all buses, all time. 
+"""
+function MainProblemObjective!(this::MP)
+    m = this|>GetModel
+    γ = m[:γ]
+    v = this.v
+    d = this.d
+    @objective(m, Max, γ)
+    fix.(v, 0; force=true)
+return end
+
+
+
+"""
+    Establish the main problem, and then solving it will provide some suggestions for the 
+    best average demands for the system.  
+    * The constraints
+    * The objective
+    * The variables as well. 
+"""
+function EstablishMainProblem!(this::MP)
+    # Prepre Variables for the main problem. 
+    IntroduceMasterProblemVariables!(this)
+    IntroduceVariables!(this)
+    
+    # Prepare constraints for the Main Problem. 
+    PreppareConstraintsPrimary!(this)
+    AddMainProblemConstraints!(this)
+    MainProblemObjective!(this)
+return this end
+
+
+
+
+"""
+    Get the primary discrete decision variable as a vector of numbers for 
+        the CCGA algorithm. 
+    * It returns vector as decision variable
+    * The vector is w flattend into x, y, z, column major flattening. 
+    * The returned type is Vector{VariableRef}
+"""
+function Getw(this::MP)
+    Vec = Vector{JuMP.VariableRef}()
+    push!(Vec, this.w[1, :, :][:]...)
+    push!(Vec, this.w[2, :, :][:]...)
+    push!(Vec, this.w[3, :, :][:]...)
+return Vec end
+
+
+"""
+    Get the gamma, the objective of the LP function. 
+"""
+function GetGamma(this::MP)
+    model = GetModel(this)
+return model[:γ] end
+
+
+
+
+### ====================================================================================================================
+#   Master Problem: 
+#       * Determine primary decision variables only. 
+#       * Similar format compare to the Main Problem. 
+### ====================================================================================================================
+
+mutable struct MSP <: Problem
+    M::Model
+    w::Array{VariableRef, 3}
+    gamma::VariableRef
+    gamma_upper::Number         # an upper bound for the gamma variable. 
+    con::Vector                 # constraints list in the ordere being added. 
+    G::Int64; T::Int64          # Given number of generators and time horizon for the problem. 
+    Tmind::Array{Int}           # Min up down for primary generators 
+    Tminu::Array{Int}           # Min up time for primary generators
+
+    function MSP(model::Model, gamma_upper=400)
+        this = new()
+        this.M = model
+        this.gamma_upper = gamma_upper
+        this.G = RobustOptim.PRIMARY_GENERATORS.generator_count
+        this.T = RobustOptim.CONST_PROBLEM_PARAMETERS.HORIZON
+        this.Tmind = RobustOptim.PRIMARY_GENERATORS.Tmind
+        @assert any(this.T .> this.Tmind) "Tmind: Minimum down time has to be less than "*
+        "time horizon"
+        this.Tminu = RobustOptim.PRIMARY_GENERATORS.Tminu
+        @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
+        "time horizon"
+        this.gamma_upper = gamma_upper
+        this.con = Vector()
+
+        IntroduceMasterProblemVariables!(this)
+
+    return this end
+
+
+end
+
+function MasterProblemObjective(this::MSP)
+    
+return this end
+
+
+# METHOD SHARING WITH OTHER TYPES --------------------------------------------------------------------------------------
+
+
 """
     Introduce the binary decision variable w for the primary generator. 
         * w 
         * γ
 """
-function IntroduceMasterProblemVariables!(this::MP)
+function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
     model = this |> GetModel
     this.w = @variable(
         model,
@@ -145,6 +294,7 @@ function IntroduceMasterProblemVariables!(this::MP)
             1:this.T
         ], Bin
     )
+    
     # Scaler Continuous variables for demand interval. 
     this.gamma = @variable(
         model,
@@ -158,7 +308,7 @@ return this end
 """
     Prepare the constraints for the primary generator, the system Aw <= b
 """
-function PreppareConstraintsPrimary!(this::MP)
+function PreppareConstraintsPrimary!(this::Union{MP, MSP})
     model = this|>GetModel
     w = (model)[:w]
 
@@ -217,60 +367,6 @@ function PreppareConstraintsPrimary!(this::MP)
 
 return this end
 
-
-"""
-    Craete a constraints to check whether there exists an initial feasiblity solutions to the system. 
-
-"""
-function AddMainProblemConstraints!(this::MP)
-    model = this|>GetModel
-    w = Getw(this)
-    u = this.u
-    q = this.q
-    d = this.d
-    B = RobustOptim.B
-    C = RobustOptim.C
-    G = RobustOptim.G
-    H = RobustOptim.H
-    h = RobustOptim.h
-    γ = this.gamma
-    v = this.v
-    push!(this.con, @constraint(model, B*w + C*u + G*q + H*d - v .<= h)...)
-    push!(this.con, @constraint(model, d .>= γ)...)
-return this end
-
-"""
-    Establish the main problem, and then solving it will provide some suggestions for the 
-    best average demands for the system.  
-    * The constraints
-    * The objective
-    * The variables as well. 
-"""
-function EstablishMainProblem!(this::MP)
-    # Prepre Variables for the main problem. 
-    IntroduceMasterProblemVariables!(this)
-    IntroduceVariables!(this)
-    # Prepare constraints for the Main Problem. 
-    PreppareConstraintsPrimary!(this)
-    AddMainProblemConstraints!(this)
-    MainProblemObjective!(this)
-return this end
-
-"""
-    Test if a given demand vector is feasible for the main problem. 
-    * Create slack. 
-"""
-function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
-    d = this.d
-    for I in 1:length(d)
-        fix(d[I], demand[I]; force=true)
-    end
-    Solve!(this)
-    ToReturn = !(this |>objective_value|>isnan)
-    unfix.(d)
-return ToReturn end
-
-
 """
     Introduce feasibility cut for the master problem which comes from the CCGA results.  
         * Delete all constraints established for the MainProblem. 
@@ -280,7 +376,7 @@ return ToReturn end
         * introduce new objective for maximum demands intervals satisfactions. 
 """
 function IntroduceCut!(
-    this::MP, 
+    this::MSP, 
     u::Vector{Float64},
     q::Vector{Float64}, 
     d_hat::Vector{Float64}, 
@@ -301,42 +397,6 @@ function IntroduceCut!(
     push!(this.con, @constraint(model, B*w + C*u + G*q + H*(d̂ + γ*(ρ⁺-ρ⁻)) .<= h)...)
 return this end
 
-
-"""
-    Creates the main problem objectives: 
-        * Find a maximum lower bound for demands on all buses, all time. 
-"""
-function MainProblemObjective!(this::MP)
-    m = this|>GetModel
-    γ = m[:γ]
-    v = this.v
-    d = this.d
-    @objective(m, Max, γ)
-    fix.(v, 0; force=true)
-return end
-
-
-"""
-    Get the primary discrete decision variable as a vector of numbers for 
-        the CCGA algorithm. 
-    * It returns vector as decision variable
-    * The vector is w flattend into x, y, z, column major flattening. 
-    * The returned type is Vector{VariableRef}
-"""
-function Getw(this::MP)
-    Vec = Vector{JuMP.VariableRef}()
-    push!(Vec, this.w[1, :, :][:]...)
-    push!(Vec, this.w[2, :, :][:]...)
-    push!(Vec, this.w[3, :, :][:]...)
-return Vec end
-
-
-"""
-    Get the gamma, the objective of the LP function. 
-"""
-function GetGamma(this::MP)
-    model = GetModel(this)
-return model[:γ] end
 
 
 
@@ -457,7 +517,7 @@ mutable struct FMP<:Problem
     lambda::Vector{Vector{JuMP.VariableRef}}      # the dual decision variables. 
     rho_plus::Vector{Vector{JuMP.VariableRef}}    # binary decision variables for the bilinear demands
     rho_minus::Vector{Vector{JuMP.VariableRef}}   # binary decision variables for the bilinear demands
-    d_hat::Vector{Float64}                        # the average testing demands vector.                (GIVEN CONSTAINT)
+    d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
 
     model::JuMP.Model                             # The JuMP model for a certain instance. 
 
@@ -674,7 +734,10 @@ return optimize!(this|>GetModel) end
 function GetModel(this::Problem) 
 return this.model end
 
-function GetModel(this::MP)
+"""
+    Get the JuMP instance for: MainProblem(MP), MasterProblem(MSP). 
+"""
+function GetModel(this::Union{MP, MSP})
 return this.M end
 
 """

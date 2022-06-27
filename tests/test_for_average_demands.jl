@@ -188,7 +188,7 @@ function VisualizeAll(this::Reporter)
         fig, 
         infeasible_demands,
         linewidth=0.2, 
-        markershape=:+, 
+        markershape=:x, 
         color=:red
     )
     plot!(
@@ -200,7 +200,8 @@ function VisualizeAll(this::Reporter)
     )
     fig |> display
 
-return end
+return fig end
+
 
 function DescriptiveStatisticsForDemandsSum(this::Reporter)
     FeasibleDemandsSum = sum(hcat(this.feasible_demands...), dims=1)[:]
@@ -228,6 +229,7 @@ return end
 
 
 
+
 # Reporter Structs END =================================================================================================
 
 function RunThis1()
@@ -245,7 +247,7 @@ function RunThis1()
     BestDemandInterval = DemandsBestIntervalSearch(mp, d̂[:]; epsilon=10, delta=30)
     @info "The best demand interval seems to be $(BestDemandInterval)"
 
-    reporter = Reporter(mp, BestDemandInterval + 20, d̂[:])
+    reporter = Reporter(mp, BestDemandInterval + 40, d̂[:])
     reporter |> Generate!
     reporter |> VisualizeAll
     reporter |> DescriptiveStatisticsForDemandsSum
@@ -260,7 +262,7 @@ function RunThis2()
     mp = MP(model)
     Solve!(mp)
     @info "Computing average demand from random objective. "
-    d̂ = DemandRandomObjectiveAverage(mp)
+    d̂ = DemandRandomObjectiveAverage(mp)./2
     @info "Suggusted Average Demands: "
     d̂ |> display
     @info "Performing Demand best interval search on above suggusted demand vector."
@@ -274,6 +276,27 @@ function RunThis2()
 
 return end
 
+
+function RunThis3()
+    model = Model(
+        optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
+    )
+    mp = MP(model)
+    Solve!(mp)
+    @info "Computing average demand from random objective. "
+    d̂ = 40*ones(length(mp.d)) + rand(length(mp.d))*20
+    @info "Suggusted Average Demands: "
+    d̂ |> display
+    @info "Performing Demand best interval search on above suggusted demand vector."
+    BestDemandInterval = DemandsBestIntervalSearch(mp, d̂[:]; epsilon=10, delta=30)
+    @info "The best demand interval seems to be $(BestDemandInterval)"
+
+    reporter = Reporter(mp, BestDemandInterval + 5, d̂[:])
+    reporter |> Generate!
+    reporter |> VisualizeAll
+    reporter |> DescriptiveStatisticsForDemandsSum
+
+return end
 
 
 reporter = RunThis1()
