@@ -495,3 +495,5 @@ w = [x, y, z]
 u = [c, c′, p, p′, regu, regu′, regd, regd′, sr, sr′, h, g_plus, g_minus, nsp, nsp′]
 q = [x′, y′, z′]
 # d is it's own vector. 
+
+@info "Matrices for robust oprimizations successfully constructed. "
