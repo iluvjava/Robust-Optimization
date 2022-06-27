@@ -266,7 +266,9 @@ function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
         fix(d[I], demand[I]; force=true)
     end
     Solve!(this)
-return !(this |>objective_value|>isnan) end
+    ToReturn = !(this |>objective_value|>isnan)
+    unfix.(d)
+return ToReturn end
 
 
 """

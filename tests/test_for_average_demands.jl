@@ -2,6 +2,7 @@ include("../src/ccga_modeling.jl")
 import MathOptInterface as MOI
 using Statistics
 using ProgressMeter
+using Plots
 
 
 """
@@ -30,7 +31,7 @@ function DemandPerturbations(
     
     "Sampling from vertices of the hypercube: max(-1ϵ, 0) + d̂ + 1ϵ" |> println
     @showprogress for __ in 1: max_iter
-        TestDemand = demand + rand([0, 1], length(demand))*epsilon
+        TestDemand = demand + rand([-1, 1], length(demand))*epsilon
         TestDemand = max.(TestDemand, 0)
         if DemandFeasible(this, TestDemand)
             FeasibleCount += 1
@@ -111,7 +112,7 @@ mutable struct Reporter
     feasible_demands::Vector{Vector{N}} where N <: Number
     infeasible_demands::Vector{Vector{N}} where N <: Number
 
-    function Reporter(mp::MP, epsilon::Number, average_demand::Vector{Number})
+    function Reporter(mp::MP, epsilon::T1, average_demand::Vector{T2}) where {T1, T2 <: Number}
         this = new()
         this.mp = mp
         this.d_hat = average_demand
@@ -128,42 +129,154 @@ end
         * sample from the vertices of the hypercube. 
         * sample from the interior of the hypercube. 
 """
-function Generate(this::Reporter)
+function Generate!(this::Reporter)
     this.feasible_demands = Vector{Vector{Float64}}()
     this.infeasible_demands = Vector{Vector{Float64}}()
     feasible = this.feasible_demands
     infeasible = this.infeasible_demands
-    # Phase I, testing extreme demand value. 
     mp = this.mp
-    
+    d̂ = this.d_hat
+    ϵ = this.epsilon
+    function DemandClassify(d)
+        if DemandFeasible(mp, d) 
+            push!(feasible, d)
+        else
+            push!(infeasible, d)
+        end
+    return end
+
+    # Phase I: classify extreeme demands. 
+    DemandClassify(d̂ .+ ϵ)
+    DemandClassify(max.(d̂ .- ϵ, 0))
 
     
+    # Phase II: Classify vertices. 
+    for __ in 1:30
+        DemandClassify(
+            max.(
+                d̂ + rand([-1, 1], length(d̂))*ϵ, 0
+            )
+        )
+    end
+
+    # Phase II: Classify demands in the interior of the hypercube. 
+    l = @. max(d̂ - ϵ, 0) 
+    u = d̂ .+ ϵ
+    for __ in 1:30
+        DemandClassify(l + rand(length(d̂)).*(u - l))
+    end
+    
+return end
+
+
+"""
+    Visualize the feasible and infeasible demands. 
+"""
+function VisualizeAll(this::Reporter)
+    feasible_demands = hcat(this.feasible_demands...)
+    infeasible_demands = hcat(this.infeasible_demands...)
+    fig = plot(
+        feasible_demands,
+        linewidth=0, 
+        markershape=:hline, 
+        dpi=200, 
+        legend=nothing, 
+        color=:blue, 
+        title="Feasible and Infeasible Demands"
+    )
+    plot!(
+        fig, 
+        infeasible_demands,
+        linewidth=0.2, 
+        markershape=:+, 
+        color=:red
+    )
+    plot!(
+        fig, 
+        this.d_hat, 
+        linewidth=0, 
+        markershape=:circle, 
+        color=:black
+    )
+    fig |> display
+
+return end
+
+function DescriptiveStatisticsForDemandsSum(this::Reporter)
+    FeasibleDemandsSum = sum(hcat(this.feasible_demands...), dims=1)[:]
+    InFeasibleDemandsSum = sum(hcat(this.infeasible_demands...), dims=1)[:]
+    "Feasible Demands sum(d) for all:" |> println
+    "   Avg: $(mean(FeasibleDemandsSum))" |> println
+    "   std: $(std(FeasibleDemandsSum))" |> println
+    "   75% Quantile: $(quantile(FeasibleDemandsSum, 0.75))" |> println
+    "   25% Quantile: $(quantile(FeasibleDemandsSum, 0.25))" |> println
+    "   Min: $(minimum(FeasibleDemandsSum))" |> println
+    "   Max: $(maximum(FeasibleDemandsSum))" |> println
+    "   Instance count: $(FeasibleDemandsSum |> length)" |> println
+
+    println()
+    "Infeasible Demands sum(d) for all:" |> println
+    "   Avg: $(mean(InFeasibleDemandsSum))" |> println
+    "   std: $(std(InFeasibleDemandsSum))" |> println
+    "   75% Quantile: $(quantile(InFeasibleDemandsSum, 0.75))" |> println
+    "   25% Quantile: $(quantile(InFeasibleDemandsSum, 0.25))" |> println
+    "   Min: $(minimum(InFeasibleDemandsSum))" |> println
+    "   Max: $(maximum(InFeasibleDemandsSum))" |> println
+    "   Instance count: $(InFeasibleDemandsSum |> length)" |> println
+
 return end
 
 
 
 # Reporter Structs END =================================================================================================
 
-function RunThis()
+function RunThis1()
+
     model = Model(
         optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
     )
-    
     mp = MP(model)
-    Solve!(mp)
+
     @info "Computing average demand from random objective. "
-    
-    d̂ = 40*ones(length(mp.d))  
+    d̂ = 40*ones(length(mp.d))
     @info "Suggusted Average Demands: "
-    
     d̂ |> display
     @info "Performing Demand best interval search on above suggusted demand vector."
-    
     BestDemandInterval = DemandsBestIntervalSearch(mp, d̂[:]; epsilon=10, delta=30)
     @info "The best demand interval seems to be $(BestDemandInterval)"
 
+    reporter = Reporter(mp, BestDemandInterval + 20, d̂[:])
+    reporter |> Generate!
+    reporter |> VisualizeAll
+    reporter |> DescriptiveStatisticsForDemandsSum
+
+return reporter end
+
+
+function RunThis2()
+    model = Model(
+        optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
+    )
+    mp = MP(model)
+    Solve!(mp)
+    @info "Computing average demand from random objective. "
+    d̂ = DemandRandomObjectiveAverage(mp)
+    @info "Suggusted Average Demands: "
+    d̂ |> display
+    @info "Performing Demand best interval search on above suggusted demand vector."
+    BestDemandInterval = DemandsBestIntervalSearch(mp, d̂[:]; epsilon=10, delta=30)
+    @info "The best demand interval seems to be $(BestDemandInterval)"
+
+    reporter = Reporter(mp, BestDemandInterval + 20, d̂[:])
+    reporter |> Generate!
+    reporter |> VisualizeAll
+    reporter |> DescriptiveStatisticsForDemandsSum
 
 return end
 
-RunThis()
+
+
+reporter = RunThis1()
+reporter = RunThis2()
+
 
