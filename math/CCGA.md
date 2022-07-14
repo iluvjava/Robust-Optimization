@@ -58,11 +58,16 @@
     * Use FSP: 
       * Give: $\bar w, (d^{(k)})^*$
       * Get lower bound $L$. 
-    * If $U - L \le \epsilon$
+    * If $L \ge 0$
       * Use MP
         * Introduce Cut using: $(u^{(k)}), (q^{(k)}), (\rho^+)^{(k)}, (\rho^-)^{(k)}$
         * Update $\bar w, \bar \gamma$
-      * Breaks
+        * Breaks
+    * elseif $U = 0$ OR $L = 0, U \le \epsilon$
+      * Return (Terminates Everything)
+    * Else: 
+      * We don't know. 
+  * Change the $\bar \gamma, \bar w$ in the FMP. 
 
 **Remarks**
 
