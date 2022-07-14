@@ -216,9 +216,6 @@ return this end
 
 
 
-
-
-
 ### ====================================================================================================================
 #   Master Problem: 
 #       * Determine primary decision variables only. 
@@ -374,6 +371,8 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
 
 return this end
 
+
+
 """
     Introduce feasibility cut for the master problem which comes from the CCGA results.  
         * Delete all constraints established for the MainProblem. 
@@ -431,7 +430,7 @@ return model[:γ] end
 
 ### ====================================================================================================================
 # FSP: Lower bound searcher! 
-#   * Takes in a demands and it tries to satisfies it by choosing the secondary
+#   * Takes in a demands and it tries to satisfies it by choosing the secondary.
 #   * discrete and contiuous variables. 
 ### ====================================================================================================================
 """
@@ -524,7 +523,7 @@ return this.v end
 
 # ======================================================================================================================
 # FMP, the Upper bound locator. 
-#   * Obtains a lower bound by giving a demands that can break the feasibility for all discrete secondary 
+#   * Obtains a upper bound by giving a demands that can break the feasibility for all discrete secondary 
 #     decision variables. 
 # ======================================================================================================================
 
