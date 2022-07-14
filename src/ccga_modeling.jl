@@ -385,7 +385,7 @@ function IntroduceCut!(
     this::MSP, 
     u::Vector{Float64},
     q::Vector{Float64}, 
-    d_hat::Vector{Float64}, 
+    d_hat::Vector{Float64},   #DEBUG: we don't actually need this parameter. 
     rho_plus::Vector{Float64}, 
     rho_minus::Vector{Float64}
 )

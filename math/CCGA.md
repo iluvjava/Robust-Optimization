@@ -16,66 +16,52 @@
 > * Controls $w, \gamma$
 > * Maximizes $\gamma$
 > * Supports: 
->   * Feasibility cut given: $u, q, d, \rho^+, \rho^-$ from FMP.
+>   * Feasibility cut given: $u, q, \rho^+, \rho^-$ from FMP.
 >   * Producing $\bar w, \bar \gamma$ as candicates primary decision variable and bounds around the average demands. 
 
 
-**FSP: Feasible Search Problem**
-> * Given a demand $(d^{(k)})^*$ that we wish to satisfy. 
-> * It Controls the secondary variables, it tries to satisfies all the demands configurations. Secondary variables: $u, v, q$
-> * Objective: Minimizes the feasibility slacks variables, across all demands configurations. Searches for the lower bound for the feasibility slacks. 
-> * Supports: 
->   * Produces the $q^{(k)}, u^{(k)}$ for the secondary decision variables. 
-
-
 **FMP: Upper Bound Searcher**
-> * Given: $\hat d, w, q$
-> * Controls over the secondary continuous and discrete variables: $u, v$ for all the demands profiles, and the demands itself for all profiles. 
+> * Given: $\hat d, \bar w, \bar \gamma$, and a $q$ that is arbitrary at the first time, later on it needs to be something be from FSP, previus iteration. 
+> * Controls: $u, v$ for all the demands profiles, and the demands itself for all profiles. 
 > * It needs $q^{(k)}$ as an input for the the $k$ iteration of the CCGA. 
 > * Objective: It tries to maximize the feasibility slack to locate a potential upper bound. 
 > * Supports:
->   * Produces: $v^{(k)}, u^{(k)}, (\rho^+)^{(k)}, (\rho^-)^{(k)}$
+>   * Produces: $u^{(k)}, q^{(k)}, (\rho^+)^{(k)}, (\rho^-)^{(k)}$ for MP cut ONLY. 
+>   * Produces: $(d^{(k)})^*$
 >   * Accepts a fixed $q^{(k)}$, a specific secondary configurations. 
 
 
-
----
-### **The Algorithm**
-MSP: Identify candiate $\bar{w}, \bar{\gamma}$. 
-
-**For** Any $q^{(k)}\in Q$ construct FMP:
-  * FMP: Finds demand $(d^{(k + 1)})^*$ by maximizing slack variable $v$ for the secondary constraints. Demand and slack $v$ is a decision variable for the FMP. 
-    * Update Upper bound: $UB$, upon first initialization, choose some random $Q$ regardless. 
-  * FSP: Minimize the slacks variable for the secondary constraints and try to make it feasible given the demands $(d^{(k + 1)})^*$ found by the FMP. 
-    * Update the Lower bound: $LB$
-    * Obtain feasible secondary decision variables: $(u^{(k)})^*, (v^{(k)})^*, (q^{(k)})^*$. 
-  * If $UB - LB \le \epsilon$, **terminates** CCGA. 
-  * Create new decision variable: $u^{(k + 1)}, v^{(k + 1)}, \lambda^{(k + 1)}$ and add some constraints to the FMP. 
-  * $k:= k + 1$
-  * If, $UB - LB \approx 0$, then candidate $\bar{w}, \bar{\gamma}$ is feasible. else it has to be that $UB - LB > 0$, Perform feasibility cut to MP, and REPEAT the whole process, but keep the $q^{(k)}$ for the FMP, FSP in the CCGA. 
-
-
+**FSP: Feasible Search Problem**
+> * Given a demand $(d^{(k)})^*$ from FMP and a $\bar w$ from MP. 
+> * It Controls: $u, v, q$. 
+> * Objective: Minimizes the feasibility slacks variables, across all demands configurations. Searches for the lower bound for the feasibility slacks. 
+> * Supports: 
+>   * Produces the $(q^{(k)})^*, (u^{(k)})^*$ for the secondary decision variables. 
+ 
 
 ---
 ### **The Algorithm**
 
-* Use MSP to identify a feasible system of variables: $q, u, w, \hat d$. 
+* Use MSP to identify a feasible system of variables: $q, u, w, \hat d$.
 * Use FMP: 
   * Give: $M, \hat d$.  
-  * Get: $\bar w, \bar \gamma$. 
+  * Get: $\bar w, \bar \gamma$.
 * Initiate $\epsilon$
 * $k:=1$
-* $q^{(k)} := q$
-* Use FSP: 
-  * Give: $\bar w, \hat d$
-  * Get $(d^{(k)})^*$
-  * Get lower bound $L$. 
+* Initialize $q^{(0)}$ as random binary vector. 
 * For Looping over some fixed amount of times: 
-  * For $k$ incrementing one by one:  
-    * Give $q^{(k)}$ to FMP
+  * For $k$ incrementing one by one to a certain limit:  
+    * use FMP
+      * Give $q^{(k - 1)}, \bar w$ to FMP
       * Get $U$ the upper feasibility bound. 
-      * Get $(v^{(k)})^*, (u^{(k)})^*, (\rho^+)^{(k)}, (\rho^-)^{(k)}$
+      * Get $(\rho^+)^{(k)}, (\rho^-)^{(k)}, (d^{(k)})^*$
+    * Use FSP: 
+      * Give: $\bar w, (d^{(k)})^*$
+      * Get lower bound $L$. 
     * If $U - L \le \epsilon$
+      * Use MP
+        * Introduce Cut using: $(u^{(k)}), (q^{(k)}), (\rho^+)^{(k)}, (\rho^-)^{(k)}$
+        * Update $\bar w, \bar \gamma$
       * Breaks
 
 **Remarks**
