@@ -48,7 +48,11 @@ end
     Given a JuMP model, prepare the q, u variable for that model. 
         * Returns the variable u/q packed into Vector{JuMP.VariableRef}. 
 """
-function PrepareVarieblesForTheModel!(model::Model, variable::Symbol, ccga_itr::Union{Nothing, Int}=0)
+function PrepareVarieblesForTheModel!(
+    model::Model, 
+    variable::Symbol, 
+    ccga_itr::Union{Nothing, Int}=0
+)
     ccga_itr = ccga_itr == 0 ? "" : "[$(ccga_itr)]"
     if variable == :u
         u = Vector{JuMP.VariableRef}()
@@ -158,7 +162,10 @@ return this end
 
 """
     Test if a given demand vector is feasible for the main problem. 
-    * Create slack. 
+        * Set the demands
+        * Solve
+        * Get results 
+        * Unfix the demends vector. 
 """
 function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
     d = this.d
@@ -175,12 +182,13 @@ return ToReturn end
 """
     Creates the main problem objectives: 
         * Find a maximum lower bound for demands on all buses, all time. 
+        * Fix the slack variable to be zero. 
 """
 function MainProblemObjective!(this::MP)
     m = this|>GetModel
     γ = m[:γ]
     v = this.v
-    d = this.d
+    # d = this.d
     @objective(m, Max, γ)
     fix.(v, 0; force=true)
 return end
@@ -208,28 +216,6 @@ return this end
 
 
 
-"""
-    Get the primary discrete decision variable as a vector of numbers for 
-        the CCGA algorithm. 
-    * It returns vector as decision variable
-    * The vector is w flattend into x, y, z, column major flattening. 
-    * The returned type is Vector{VariableRef}
-"""
-function Getw(this::MP)
-    Vec = Vector{JuMP.VariableRef}()
-    push!(Vec, this.w[1, :, :][:]...)
-    push!(Vec, this.w[2, :, :][:]...)
-    push!(Vec, this.w[3, :, :][:]...)
-return Vec end
-
-
-"""
-    Get the gamma, the objective of the LP function. 
-"""
-function GetGamma(this::MP)
-    model = GetModel(this)
-return model[:γ] end
-
 
 
 
@@ -242,6 +228,7 @@ return model[:γ] end
 mutable struct MSP <: Problem
     M::Model
     w::Array{VariableRef, 3}
+    d_hat::Array{N where N<:AbstractFloat}
     gamma::VariableRef
     gamma_upper::Number         # an upper bound for the gamma variable. 
     con::Vector                 # constraints list in the ordere being added. 
@@ -249,7 +236,7 @@ mutable struct MSP <: Problem
     Tmind::Array{Int}           # Min up down for primary generators 
     Tminu::Array{Int}           # Min up time for primary generators
 
-    function MSP(model::Model, gamma_upper=400)
+    function MSP(model::Model, d_hat::Vector{T}, gamma_upper) where {T<:AbstractFloat}
         this = new()
         this.M = model
         this.gamma_upper = gamma_upper
@@ -263,16 +250,36 @@ mutable struct MSP <: Problem
         "time horizon"
         this.gamma_upper = gamma_upper
         this.con = Vector()
+        this.d_hat = d_hat
 
         IntroduceMasterProblemVariables!(this)
+        PreppareConstraintsPrimary!(this)
+        MasterProblemObjective!(this)
 
     return this end
+
+    function MSP(d_hat::Vector{T}, gamma_upper=50) where {T<:AbstractFloat}
+    return MSP(Model(HiGHS.Optimizer), d_hat, gamma_upper) end
 
 
 end
 
-function MasterProblemObjective(this::MSP)
-    
+"""
+    Create the upper bound for demands for the master problem. 
+        * Adds the demands bounds constraints 
+        * Adds the objective bounds maximizations objectives for the model. 
+"""
+function MasterProblemObjective!(this::MSP)
+    model = GetModel(this)
+    d̂ = this.d_hat
+    γ = this.gamma
+    push!(this.con, 
+        @constraint(model, γ .>= d̂)...
+    )
+    push!(this.con, 
+        @constraint(model, -γ .<= d̂)...
+    )
+    @objective(model, Max, γ)
 return this end
 
 
@@ -397,6 +404,28 @@ function IntroduceCut!(
     push!(this.con, @constraint(model, B*w + C*u + G*q + H*(d̂ + γ*(ρ⁺-ρ⁻)) .<= h)...)
 return this end
 
+
+"""
+    Get the primary discrete decision variable as a vector of numbers for 
+        the CCGA algorithm. 
+    * It returns vector as decision variable
+    * The vector is w flattend into x, y, z, column major flattening. 
+    * The returned type is Vector{VariableRef}
+"""
+function Getw(this::Union{MP, MSP})
+    Vec = Vector{JuMP.VariableRef}()
+    push!(Vec, this.w[1, :, :][:]...)
+    push!(Vec, this.w[2, :, :][:]...)
+    push!(Vec, this.w[3, :, :][:]...)
+return Vec end
+
+
+"""
+    Get the gamma, the objective of the LP function. 
+"""
+function GetGamma(this::Union{MP, MSP})
+    model = GetModel(this)
+return model[:γ] end 
 
 
 
