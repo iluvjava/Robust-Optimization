@@ -70,9 +70,16 @@ MSP: Identify candiate $\bar{w}, \bar{\gamma}$.
   * Give: $\bar w, \hat d$
   * Get $(d^{(k)})^*$
   * Get lower bound $L$. 
-* For $k$ incrementing:  
-  * Give $q^{(k)}$ to FMP
-    * Get $U$ the upper feasibility bound. 
-    * Get $(v^{(k)})^*, (u^{(k)})^*, (\rho^+)^{(k)}, (\rho^-)^{(k)}$
-  * 
+* For Looping over some fixed amount of times: 
+  * For $k$ incrementing one by one:  
+    * Give $q^{(k)}$ to FMP
+      * Get $U$ the upper feasibility bound. 
+      * Get $(v^{(k)})^*, (u^{(k)})^*, (\rho^+)^{(k)}, (\rho^-)^{(k)}$
+    * If $U - L \le \epsilon$
+      * Breaks
+
+**Remarks**
+
+All the CCGA entities are kept when the algorithm is running over. They maintain the changes throughout the algorithm.  
+
 
