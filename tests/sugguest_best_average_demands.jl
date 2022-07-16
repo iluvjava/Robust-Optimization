@@ -129,7 +129,7 @@ end
         * sample from the vertices of the hypercube. 
         * sample from the interior of the hypercube. 
 """
-function Generate!(this::Reporter)
+function Generate!(this::Reporter, sample_count=30)
     this.feasible_demands = Vector{Vector{Float64}}()
     this.infeasible_demands = Vector{Vector{Float64}}()
     feasible = this.feasible_demands
@@ -151,7 +151,7 @@ function Generate!(this::Reporter)
 
     
     # Phase II: Classify vertices. 
-    for __ in 1:30
+    for __ in 1:sample_count
         DemandClassify(
             max.(
                 d̂ + rand([-1, 1], length(d̂))*ϵ, 0
@@ -162,7 +162,7 @@ function Generate!(this::Reporter)
     # Phase II: Classify demands in the interior of the hypercube. 
     l = @. max(d̂ - ϵ, 0) 
     u = d̂ .+ ϵ
-    for __ in 1:30
+    for __ in 1:sample_count
         DemandClassify(l + rand(length(d̂)).*(u - l))
     end
     
@@ -170,7 +170,8 @@ return end
 
 
 """
-    Visualize the feasible and infeasible demands. 
+    Visualize the feasible and infeasible demands and print it to the 
+    through IO in the current project. 
 """
 function VisualizeAll(this::Reporter)
     feasible_demands = hcat(this.feasible_demands...)
@@ -203,36 +204,42 @@ function VisualizeAll(this::Reporter)
 return fig end
 
 
+"""
+    Print out the summary statistics for the current list of 
+    feasible demands and infeasible demands. 
+"""
 function DescriptiveStatisticsForDemandsSum(this::Reporter)
     FeasibleDemandsSum = sum(hcat(this.feasible_demands...), dims=1)[:]
     InFeasibleDemandsSum = sum(hcat(this.infeasible_demands...), dims=1)[:]
-    "Feasible Demands sum(d) for all:" |> println
-    "   Avg: $(mean(FeasibleDemandsSum))" |> println
-    "   std: $(std(FeasibleDemandsSum))" |> println
-    "   75% Quantile: $(quantile(FeasibleDemandsSum, 0.75))" |> println
-    "   25% Quantile: $(quantile(FeasibleDemandsSum, 0.25))" |> println
-    "   Min: $(minimum(FeasibleDemandsSum))" |> println
-    "   Max: $(maximum(FeasibleDemandsSum))" |> println
-    "   Instance count: $(FeasibleDemandsSum |> length)" |> println
+    s = ""
+    s *= "Feasible Demands sum(d) for all:\n" 
+    s *= "   Avg: $(mean(FeasibleDemandsSum))\n" 
+    s *= "   std: $(std(FeasibleDemandsSum))\n" 
+    s *= "   75% Quantile: $(quantile(FeasibleDemandsSum, 0.75))\n" 
+    s *= "   25% Quantile: $(quantile(FeasibleDemandsSum, 0.25))\n" 
+    s *= "   Min: $(minimum(FeasibleDemandsSum))\n" 
+    s *= "   Max: $(maximum(FeasibleDemandsSum))\n" 
+    s *= "   Instance count: $(FeasibleDemandsSum |> length)\n" 
+    s *= "\nInfeasible Demands sum(d) for all:\n" 
+    s *= "   Avg: $(mean(InFeasibleDemandsSum))\n" 
+    s *= "   std: $(std(InFeasibleDemandsSum))\n" 
+    s *= "   75% Quantile: $(quantile(InFeasibleDemandsSum, 0.75))\n" 
+    s *= "   25% Quantile: $(quantile(InFeasibleDemandsSum, 0.25))\n" 
+    s *= "   Min: $(minimum(InFeasibleDemandsSum))\n" 
+    s *= "   Max: $(maximum(InFeasibleDemandsSum))\n" 
+    s *= "   Instance count: $(InFeasibleDemandsSum |> length)\n" 
 
-    println()
-    "Infeasible Demands sum(d) for all:" |> println
-    "   Avg: $(mean(InFeasibleDemandsSum))" |> println
-    "   std: $(std(InFeasibleDemandsSum))" |> println
-    "   75% Quantile: $(quantile(InFeasibleDemandsSum, 0.75))" |> println
-    "   25% Quantile: $(quantile(InFeasibleDemandsSum, 0.25))" |> println
-    "   Min: $(minimum(InFeasibleDemandsSum))" |> println
-    "   Max: $(maximum(InFeasibleDemandsSum))" |> println
-    "   Instance count: $(InFeasibleDemandsSum |> length)" |> println
+return s end
 
+
+function SaveResults(this::Reporter, filename::String)
+    
 return end
-
-
 
 
 # Reporter Structs END =================================================================================================
 
-function RunThis1()
+function DemandProfile1()
 
     model = Model(
         optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
@@ -250,12 +257,12 @@ function RunThis1()
     reporter = Reporter(mp, BestDemandInterval + 40, d̂[:])
     reporter |> Generate!
     reporter |> VisualizeAll
-    reporter |> DescriptiveStatisticsForDemandsSum
+    reporter |> DescriptiveStatisticsForDemandsSum |> print
 
 return reporter end
 
 
-function RunThis2()
+function DemandProfile2()
     model = Model(
         optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
     )
@@ -272,12 +279,12 @@ function RunThis2()
     reporter = Reporter(mp, BestDemandInterval + 20, d̂[:])
     reporter |> Generate!
     reporter |> VisualizeAll
-    reporter |> DescriptiveStatisticsForDemandsSum
+    reporter |> DescriptiveStatisticsForDemandsSum |> print
 
 return end
 
 
-function RunThis3()
+function DemandProfile3()
     model = Model(
         optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
     )
@@ -294,12 +301,13 @@ function RunThis3()
     reporter = Reporter(mp, BestDemandInterval + 5, d̂[:])
     reporter |> Generate!
     reporter |> VisualizeAll
-    reporter |> DescriptiveStatisticsForDemandsSum
+    reporter |> DescriptiveStatisticsForDemandsSum |> print
 
 return end
 
 
-reporter = RunThis1()
-reporter = RunThis2()
+reporter = DemandProfile1()
+reporter = DemandProfile2()
+
 
 
