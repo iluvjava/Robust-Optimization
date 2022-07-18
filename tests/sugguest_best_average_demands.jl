@@ -174,13 +174,17 @@ return end
     through IO in the current project. 
 """
 function VisualizeAll(this::Reporter)
+    if !isdefined(this, :feasible_demands)
+        this |> Generate!
+    end
     feasible_demands = hcat(this.feasible_demands...)
     infeasible_demands = hcat(this.infeasible_demands...)
     fig = plot(
         feasible_demands,
         linewidth=0, 
         markershape=:hline, 
-        dpi=200, 
+        # dpi=200, 
+        # size=(800, 600),
         legend=nothing, 
         color=:blue, 
         title="Feasible and Infeasible Demands"
@@ -199,7 +203,6 @@ function VisualizeAll(this::Reporter)
         markershape=:circle, 
         color=:black
     )
-    fig |> display
 
 return fig end
 
@@ -231,15 +234,24 @@ function DescriptiveStatisticsForDemandsSum(this::Reporter)
 
 return s end
 
+"""
+    Save the reported results for all the demands for the system. 
+"""
+function SaveResults(this::Reporter, filename::String="")
+    p = mkpath("average_demands_reports")
+    fig = this |> VisualizeAll
+    stats = this |> DescriptiveStatisticsForDemandsSum
+    savefig(fig, joinpath(p, "$(filename)(Plots).png"))
+    open("$(filename)(stats).txt", "w") do io
+        print(io, stats)
+    end
 
-function SaveResults(this::Reporter, filename::String)
-    
-return end
+return this end
 
 
 # Reporter Structs END =================================================================================================
 
-function DemandProfile1()
+function DemandProfile1(testname::String="1")
 
     model = Model(
         optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
@@ -255,9 +267,7 @@ function DemandProfile1()
     @info "The best demand interval seems to be $(BestDemandInterval)"
 
     reporter = Reporter(mp, BestDemandInterval + 40, d̂[:])
-    reporter |> Generate!
-    reporter |> VisualizeAll
-    reporter |> DescriptiveStatisticsForDemandsSum |> print
+    SaveResults(reporter, testname)
 
 return reporter end
 
@@ -307,7 +317,7 @@ return end
 
 
 reporter = DemandProfile1()
-reporter = DemandProfile2()
+
 
 
 
