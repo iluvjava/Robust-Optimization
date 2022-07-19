@@ -241,8 +241,8 @@ function SaveResults(this::Reporter, filename::String="")
     p = mkpath("average_demands_reports")
     fig = this |> VisualizeAll
     stats = this |> DescriptiveStatisticsForDemandsSum
-    savefig(fig, joinpath(p, "$(filename)(Plots).png"))
-    open(joinpath(p, "$(filename)(stats).txt", "w")) do io
+    savefig(fig, joinpath(p, "$(filename)_Plots.png"))
+    open(joinpath(p, "$(filename)_stats.txt"), "w") do io
         print(io, stats)
     end
 
@@ -251,7 +251,7 @@ return this end
 
 # Reporter Structs END =================================================================================================
 
-function DemandProfile1(testname::String="1")
+function DemandProfile1(testname::String="")
 
     model = Model(
         optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
@@ -267,7 +267,7 @@ function DemandProfile1(testname::String="1")
     @info "The best demand interval seems to be $(BestDemandInterval)"
 
     reporter = Reporter(mp, BestDemandInterval + 40, d̂[:])
-    # SaveResults(reporter, testname)
+    SaveResults(reporter, testname)
 
 return reporter end
 
