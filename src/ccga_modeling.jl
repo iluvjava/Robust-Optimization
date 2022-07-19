@@ -44,7 +44,7 @@ end
 
 """
     Given a JuMP model, prepare the q, u variable for that model.
-        * Returns the variable u/q packed into Vector{JuMP.VariableRef}.
+        * Returns the variable 'u' or 'q' packed into Vector{JuMP.VariableRef}.
 """
 function PrepareVarieblesForTheModel!(
     model::Model,
@@ -138,7 +138,6 @@ return this end
 
 """
     Craete a constraints to check whether there exists an initial feasiblity solutions to the system.
-
 """
 function AddMainProblemConstraints!(this::MP)
     model = this|>GetModel
@@ -214,6 +213,7 @@ return this end
 
 
 
+
 ### ====================================================================================================================
 #   Master Problem:
 #       * Determine primary decision variables only.
@@ -231,6 +231,8 @@ mutable struct MSP <: Problem
     Tmind::Array{Int}           # Min up down for primary generators
     Tminu::Array{Int}           # Min up time for primary generators
 
+    cut_count::Int
+
     function MSP(model::Model, d_hat::Vector{T}, gamma_upper) where {T<:AbstractFloat}
         this = new()
         this.M = model
@@ -246,7 +248,7 @@ mutable struct MSP <: Problem
         this.gamma_upper = gamma_upper
         this.con = Vector()
         this.d_hat = d_hat
-
+        this.cut_count = 0
         IntroduceMasterProblemVariables!(this)
         PreppareConstraintsPrimary!(this)
         MasterProblemObjective!(this)
@@ -384,22 +386,29 @@ function IntroduceCut!(
     this::MSP,
     u::Vector{Float64},
     q::Vector{Float64},
-    d_hat::Vector{Float64},   #DEBUG: we don't actually need this parameter.
     rho_plus::Vector{Float64},
     rho_minus::Vector{Float64}
 )
     model = this|>GetModel
-    w = Getw(this)
+    w = this |> Flattenw
     B = MatrixConstruct.B
     h = MatrixConstruct.h
     G = MatrixConstruct.G
     C = MatrixConstruct.C
     H = MatrixConstruct.H
-    d̂ = d_hat
+    d̂ = this.d_hat
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
-    γ = this.M[:γ]
-    push!(this.con, @constraint(model, B*w + C*u + G*q + H*(d̂ + γ*(ρ⁺-ρ⁻)) .<= h)...)
+    γ = this.gamma
+    this.cut_count += 1
+    push!(
+        this.con, 
+        @constraint(
+            model, 
+            B*w + C*u + G*q + H*(d̂ + γ*(ρ⁺-ρ⁻)) .<= h, 
+            base_name="Cut:$(this.cut_count)"
+        )...
+    )
 return this end
 
 
@@ -409,10 +418,12 @@ return this end
     * It returns vector as decision variable
     * The vector is w flattend into x, y, z, column major flattening.
     * The returned type is Vector{VariableRef}
-    #XXX: is this the correct ordering for decisition variable w??!!
 
 """
 function Getw(this::Union{MP, MSP})
+return this|>Flattenw.|>value end
+
+function Flattenw(this::Union{MP, MSP})
     Vec = Vector{JuMP.VariableRef}()
     push!(Vec, this.w[1, :, :][:]...)
     push!(Vec, this.w[2, :, :][:]...)
@@ -425,7 +436,7 @@ return Vec end
 """
 function GetGamma(this::Union{MP, MSP})
     model = GetModel(this)
-return model[:γ] end
+return model[:γ]|>value end
 
 
 
@@ -462,10 +473,9 @@ mutable struct FSP <: Problem
         Constrct the FSP, given the parameters setting the primary
         variables, and then the adversarial demands vector.
     """
-    function FSP(w, gamma, d_star, model::Model=Model(HiGHS.Optimizer))
+    function FSP(w::Vector{Float64}, gamma::Number, d_star::Vector{Float64}, model::Model=Model(HiGHS.Optimizer))
         this = new()
         this.model = model
-        this.d_star = d_star
         this.gamma = gamma
         this.w = w
         this.d_star = d_star
@@ -486,7 +496,6 @@ mutable struct FSP <: Problem
         this.u = PrepareVarieblesForTheModel!(this|>GetModel, :u)
         this.q = PrepareVarieblesForTheModel!(this|>GetModel, :q)
         this.v = @variable(this.model, v[1:length(MatrixConstruct.h)], lower_bound=0)
-
     return end
 
     function AddConstraints!(this::FSP)
@@ -501,7 +510,7 @@ mutable struct FSP <: Problem
         B = MatrixConstruct.B
         G = MatrixConstruct.G
         @info "Preparing constraints for the FSP model. "
-        @constraint(this.model, c1, C*u - v  + H*d .<= + h - B*w - G*q)
+        @constraint(this.model, c1, C*u - v  + H*d .<= h - B*w - G*q)
     return end
 
 
@@ -513,10 +522,10 @@ end
 ### FSP methods clusters -----------------------------------------------------------------------------------------------
 
 function Getq(this::FSP)
-return this.q end
+return this.q.|>value end
 
 function Getu(this::FSP)
-return this.u end
+return this.u.|>value end
 
 function Getv(this::FSP)
 return this.v end
@@ -586,11 +595,13 @@ end
 
 """
     Prepare a new set of decision variables for the given instance of the problem.
-    * u[k]::The continuous decision variable, for the kth iterations of the CCGA Algorithm.
-        * u[k] will be a compositive decision variables for all the modeling decision variables in the original problem.
-    * v, λ follows a similar token.
+        * u[k]::The continuous decision variable, for the kth iterations of the CCGA Algorithm.
+            * u[k] will be a compositive decision variables for all the modeling decision variables in the original problem.
+        * v, λ follows a similar token.
+    NOTE:
+        ALWAYS, run PrepareConstraints After a new constant "q[k]" is introduced to the system. 
 """
-function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{JuMP.VariableRef}})
+function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}})
     k = this.k
     # Prepare variable u for the model.
     push!(this.u, PrepareVarieblesForTheModel!(this|>GetModel, :u, k))
@@ -598,14 +609,17 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{JuMP.Vari
     if q_given === nothing
         Decisionvariables = Vector()
         q = MatrixConstruct.q
-        push!(Decisionvariables, rand((0, 1), size(q[1])...)...)
-        push!(Decisionvariables, rand((0, 1), size(q[2])...)...)
-        push!(Decisionvariables, rand((0, 1), size(q[3])...)...)
+        # push!(Decisionvariables, rand((0, 1), size(q[1])...)...)
+        # push!(Decisionvariables, rand((0, 1), size(q[2])...)...)
+        # push!(Decisionvariables, rand((0, 1), size(q[3])...)...)
+        push!(Decisionvariables, zeros(Int, size(q[1])...)...)
+        push!(Decisionvariables, zeros(Int, size(q[2])...)...)
+        push!(Decisionvariables, zeros(Int, size(q[3])...)...)
         push!(this.q, Decisionvariables)
-        this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)])[:]
-        this.eta = @variable(this.model, η)
+        this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)] >= 0)[:]
+        this.eta = @variable(this.model, η >= 0)
     else
-        push!(this.q, (q_given.|>value)[:])
+        push!(this.q, q_given)
     end
 
     # Prepare for variable v, the slack.
@@ -680,6 +694,7 @@ function PrepareConstraints!(this::FMP)
         @constraint(model, ξ⁻[(j, b)] <= λ[j] + (1 - ρ⁻[b]))
     end
     @constraint(model, [b=1:B̄], ρ⁺[b] + ρ⁻[b] == 1, base_name="constraint[$(k)][6]")
+    
     # Binlinear constraints
     @constraint(
         model,
@@ -688,6 +703,7 @@ function PrepareConstraints!(this::FMP)
         dot(λ,h - B*w - G*q) == sum(v),
         base_name="constraint[$(k)][7]"
     )
+    
     # new added demand feasibility constraints.
     @constraint(
         model,
@@ -704,9 +720,9 @@ return this end
         * Returns the decision variable from the model, explicit conversion to value vectors is needed.
 """
 function GetDemandVertex(this::FMP)
-    ρ⁺ = this.rho_plus[end]
-    ρ⁻ = this.rho_minus[end]
-    γ = this.gamma
+    ρ⁺ = this.rho_plus[end].|>value 
+    ρ⁻ = this.rho_minus[end].|>value
+    γ = this.gamma.|>value
     d̂ = this.d_hat
 return d̂ + γ*ρ⁺ - γ*ρ⁻ end
 
@@ -727,6 +743,9 @@ return this.rho_minus[end].|>value end
 
 """
     Introduce a new secondary binary decision variable as a fixed variable for the system.
+        * Introduces variable q[k] as a new configurations profile for the system. 
+        * It will automatically assign the index, make the variables, and add the constraints for thsi specific secondary
+        generator decision variables. 
 """
 function Introduce!(this::FMP, q::Vector{JuMP.VariableRef})
     this.k += 1
@@ -795,6 +814,14 @@ function DebugReport(this::MP, filename="MP_Debug_report")
     open("$(filename).txt", "w") do io
         this.con.|>repr.|>(to_print) -> println(io, to_print)
     end
+return this end
+
+"""
+    Port out an variable for the user to write a functional to access a specific variable. 
+
+"""
+function PortOutVariable!(port_out::Function, this::Problem, variable::Symbol)
+
 return this end
 
 
