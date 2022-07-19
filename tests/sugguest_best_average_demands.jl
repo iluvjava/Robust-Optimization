@@ -182,7 +182,7 @@ function VisualizeAll(this::Reporter)
     fig = plot(
         feasible_demands,
         linewidth=0, 
-        markershape=:hline, 
+        markershape=:hline,
         dpi=200, 
         size=(800, 600),
         legend=nothing, 
@@ -198,7 +198,7 @@ function VisualizeAll(this::Reporter)
     )
     plot!(
         fig, 
-        this.d_hat, 
+        this.d_hat,
         linewidth=0, 
         markershape=:circle, 
         color=:black
@@ -307,7 +307,7 @@ function DemandProfile3(testname::String="")
     @info "The best demand interval seems to be $(BestDemandInterval)"
 
     reporter = Reporter(mp, BestDemandInterval + 5, d̂[:])
-    reporter |>SaveResults(reporter, testname)
+    SaveResults(reporter, testname)
 
 return reporter end
 
