@@ -183,8 +183,8 @@ function VisualizeAll(this::Reporter)
         feasible_demands,
         linewidth=0, 
         markershape=:hline, 
-        # dpi=200, 
-        # size=(800, 600),
+        dpi=200, 
+        size=(800, 600),
         legend=nothing, 
         color=:blue, 
         title="Feasible and Infeasible Demands"
@@ -242,7 +242,7 @@ function SaveResults(this::Reporter, filename::String="")
     fig = this |> VisualizeAll
     stats = this |> DescriptiveStatisticsForDemandsSum
     savefig(fig, joinpath(p, "$(filename)(Plots).png"))
-    open("$(filename)(stats).txt", "w") do io
+    open(joinpath(p, "$(filename)(stats).txt", "w")) do io
         print(io, stats)
     end
 
@@ -267,7 +267,7 @@ function DemandProfile1(testname::String="1")
     @info "The best demand interval seems to be $(BestDemandInterval)"
 
     reporter = Reporter(mp, BestDemandInterval + 40, d̂[:])
-    SaveResults(reporter, testname)
+    # SaveResults(reporter, testname)
 
 return reporter end
 
