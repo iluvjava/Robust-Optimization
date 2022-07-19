@@ -161,7 +161,7 @@ mutable struct Buses
     primary::Dict{Int, Set{Int}}
     secondary::Dict{Int, Set{Int}}
     """
-        Generator info are HARD CODED IN! 
+        Generator info are HARD CODED IN!!! 
     """
     function Buses(num_of_busses=6, num_primary_gen=6, num_secondary_gen=1)
         this = new()

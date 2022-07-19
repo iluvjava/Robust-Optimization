@@ -1,6 +1,4 @@
-include("utilities.jl")
-include("matrix_construction_export.jl")
-using Logging
+
 
 ### ====================================================================================================================
 ### Important functions for variables constructions for JuMP models.
@@ -28,7 +26,7 @@ return result[:] end
         instance of the coefficient holder.
 """
 function IndicesList(
-    holder::RobustOptim.VariableCoefficientHolder,
+    holder::MatrixConstruct.VariableCoefficientHolder,
     k::Union{Nothing, Int}=nothing
 )
     NdimList = [1:III for III in size(holder)]
@@ -56,7 +54,7 @@ function PrepareVarieblesForTheModel!(
     ccga_itr = ccga_itr == 0 ? "" : "[$(ccga_itr)]"
     if variable == :u
         u = Vector{JuMP.VariableRef}()
-        for v in RobustOptim.u
+        for v in MatrixConstruct.u
             push!(u, @variable(model, [IndicesList(v)], base_name="$(v.v)$(ccga_itr)", lower_bound=0)...)
 
         end
@@ -64,7 +62,7 @@ function PrepareVarieblesForTheModel!(
     end
     if variable == :q
         q = Vector{JuMP.VariableRef}()
-        for v in RobustOptim.q
+        for v in MatrixConstruct.q
             push!(q, @variable(model, [IndicesList(v)], Bin, base_name="$(v.v)$(ccga_itr)")...)
 
         end
@@ -104,12 +102,12 @@ mutable struct MP <: Problem
 
     function MP(M::Model, gamma_upper=1e4)
         this = new(M)
-        this.G = RobustOptim.PRIMARY_GENERATORS.generator_count
-        this.T = RobustOptim.CONST_PROBLEM_PARAMETERS.HORIZON
-        this.Tmind = RobustOptim.PRIMARY_GENERATORS.Tmind
+        this.G = MatrixConstruct.PRIMARY_GENERATORS.generator_count
+        this.T = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
+        this.Tmind = MatrixConstruct.PRIMARY_GENERATORS.Tmind
         @assert any(this.T .> this.Tmind) "Tmind: Minimum down time has to be less than "*
         "time horizon"
-        this.Tminu = RobustOptim.PRIMARY_GENERATORS.Tminu
+        this.Tminu = MatrixConstruct.PRIMARY_GENERATORS.Tminu
         @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
         this.gamma_upper = gamma_upper
@@ -131,8 +129,8 @@ function IntroduceVariables!(this::MP)
     model = this |> GetModel
     this.u = PrepareVarieblesForTheModel!(model, :u)
     this.q = PrepareVarieblesForTheModel!(model, :q)
-    this.d = @variable(model, d[1:size(RobustOptim.H, 2)] >= 0)
-    this.v = @variable(model, v[1:size(RobustOptim.H, 1)] >= 0)
+    this.d = @variable(model, d[1:size(MatrixConstruct.H, 2)] >= 0)
+    this.v = @variable(model, v[1:size(MatrixConstruct.H, 1)] >= 0)
 return this end
 
 
@@ -148,11 +146,11 @@ function AddMainProblemConstraints!(this::MP)
     u = this.u
     q = this.q
     d = this.d
-    B = RobustOptim.B
-    C = RobustOptim.C
-    G = RobustOptim.G
-    H = RobustOptim.H
-    h = RobustOptim.h
+    B = MatrixConstruct.B
+    C = MatrixConstruct.C
+    G = MatrixConstruct.G
+    H = MatrixConstruct.H
+    h = MatrixConstruct.h
     γ = this.gamma
     v = this.v
     push!(this.con, @constraint(model, B*w + C*u + G*q + H*d - v .<= h)...)
@@ -237,12 +235,12 @@ mutable struct MSP <: Problem
         this = new()
         this.M = model
         this.gamma_upper = gamma_upper
-        this.G = RobustOptim.PRIMARY_GENERATORS.generator_count
-        this.T = RobustOptim.CONST_PROBLEM_PARAMETERS.HORIZON
-        this.Tmind = RobustOptim.PRIMARY_GENERATORS.Tmind
+        this.G = MatrixConstruct.PRIMARY_GENERATORS.generator_count
+        this.T = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
+        this.Tmind = MatrixConstruct.PRIMARY_GENERATORS.Tmind
         @assert any(this.T .> this.Tmind) "Tmind: Minimum down time has to be less than "*
         "time horizon"
-        this.Tminu = RobustOptim.PRIMARY_GENERATORS.Tminu
+        this.Tminu = MatrixConstruct.PRIMARY_GENERATORS.Tminu
         @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
         this.gamma_upper = gamma_upper
@@ -392,11 +390,11 @@ function IntroduceCut!(
 )
     model = this|>GetModel
     w = Getw(this)
-    B = RobustOptim.B
-    h = RobustOptim.h
-    G = RobustOptim.G
-    C = RobustOptim.C
-    H = RobustOptim.H
+    B = MatrixConstruct.B
+    h = MatrixConstruct.h
+    G = MatrixConstruct.G
+    C = MatrixConstruct.C
+    H = MatrixConstruct.H
     d̂ = d_hat
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
@@ -411,6 +409,8 @@ return this end
     * It returns vector as decision variable
     * The vector is w flattend into x, y, z, column major flattening.
     * The returned type is Vector{VariableRef}
+    #XXX: is this the correct ordering for decisition variable w??!!
+
 """
 function Getw(this::Union{MP, MSP})
     Vec = Vector{JuMP.VariableRef}()
@@ -452,9 +452,9 @@ mutable struct FSP <: Problem
     function FSP()
         @warn("This construction only exists for testing purposes!")
         return FSP(
-            zeros(size(RobustOptim.B, 2)),
+            zeros(size(MatrixConstruct.B, 2)),
             10,
-            ones(RobustOptim.d|>length)
+            ones(MatrixConstruct.d|>length)
         )
     end
 
@@ -462,9 +462,9 @@ mutable struct FSP <: Problem
         Constrct the FSP, given the parameters setting the primary
         variables, and then the adversarial demands vector.
     """
-    function FSP(w, gamma, d_star)
+    function FSP(w, gamma, d_star, model::Model=Model(HiGHS.Optimizer))
         this = new()
-        this.model = Model(HiGHS.Optimizer)
+        this.model = model
         this.d_star = d_star
         this.gamma = gamma
         this.w = w
@@ -485,7 +485,7 @@ mutable struct FSP <: Problem
     function IntroduceVariables!(this::FSP)
         this.u = PrepareVarieblesForTheModel!(this|>GetModel, :u)
         this.q = PrepareVarieblesForTheModel!(this|>GetModel, :q)
-        this.v = @variable(this.model, v[1:length(RobustOptim.h)], lower_bound=0)
+        this.v = @variable(this.model, v[1:length(MatrixConstruct.h)], lower_bound=0)
 
     return end
 
@@ -493,13 +493,13 @@ mutable struct FSP <: Problem
         u = this.u
         v = this.v
         q = this.q
-        h = RobustOptim.h
+        h = MatrixConstruct.h
         d = this.d_star
         w = this.w
-        C = RobustOptim.C
-        H = RobustOptim.H
-        B = RobustOptim.B
-        G = RobustOptim.G
+        C = MatrixConstruct.C
+        H = MatrixConstruct.H
+        B = MatrixConstruct.B
+        G = MatrixConstruct.G
         @info "Preparing constraints for the FSP model. "
         @constraint(this.model, c1, C*u - v  + H*d .<= + h - B*w - G*q)
     return end
@@ -554,8 +554,8 @@ mutable struct FMP<:Problem
 
     function FMP()
         @warn("Construction shouldn't be called except for debugging purposes. ")
-        d̂ = 100.0*ones(size(RobustOptim.H, 2))
-    return FMP(zeros(size(RobustOptim.B, 2)), 10.0, d̂) end
+        d̂ = 100.0*ones(size(MatrixConstruct.H, 2))
+    return FMP(zeros(size(MatrixConstruct.B, 2)), 10.0, d̂) end
 
     function FMP(
         w::Vector,
@@ -597,23 +597,23 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{JuMP.Vari
     # Prepare for variable q, which is going to be a constant.
     if q_given === nothing
         Decisionvariables = Vector()
-        q = RobustOptim.q
+        q = MatrixConstruct.q
         push!(Decisionvariables, rand((0, 1), size(q[1])...)...)
         push!(Decisionvariables, rand((0, 1), size(q[2])...)...)
         push!(Decisionvariables, rand((0, 1), size(q[3])...)...)
         push!(this.q, Decisionvariables)
-        this.d = @variable(this.model, d[1:size(RobustOptim.H, 2)])[:]
+        this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)])[:]
         this.eta = @variable(this.model, η)
     else
         push!(this.q, (q_given.|>value)[:])
     end
 
     # Prepare for variable v, the slack.
-    v = @variable(this.model, [1:length(RobustOptim.h)], lower_bound=0, base_name="v[$(k)]")
+    v = @variable(this.model, [1:length(MatrixConstruct.h)], lower_bound=0, base_name="v[$(k)]")
     push!(this.v, v[:])
 
     # Parepare the variable lambda, the dual decision variables.
-    λ = @variable(this.model, [1:length(RobustOptim.h)], lower_bound=-1, upper_bound=0, base_name="λ[$(k)]")
+    λ = @variable(this.model, [1:length(MatrixConstruct.h)], lower_bound=-1, upper_bound=0, base_name="λ[$(k)]")
     push!(this.lambda, λ[:])
 
 return this end
@@ -641,11 +641,11 @@ function PrepareConstraints!(this::FMP)
     u = this.u[k]
     v = this.v[k]
     w = this.w
-    H = RobustOptim.H
-    B = RobustOptim.B
-    G = RobustOptim.G
-    C = RobustOptim.C
-    h = RobustOptim.h
+    H = MatrixConstruct.H
+    B = MatrixConstruct.B
+    G = MatrixConstruct.G
+    C = MatrixConstruct.C
+    h = MatrixConstruct.h
     λ = this.lambda[k]
     d = this.d
     d̂ = this.d_hat
@@ -730,7 +730,7 @@ return this.rho_minus[end].|>value end
 """
 function Introduce!(this::FMP, q::Vector{JuMP.VariableRef})
     this.k += 1
-    @assert length(q) == size(RobustOptim.G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
+    @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
     IntroduceVariables!(this, q)
     PrepareConstraints!(this)
 return this end
