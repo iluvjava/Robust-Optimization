@@ -272,7 +272,7 @@ function DemandProfile1(testname::String="")
 return reporter end
 
 
-function DemandProfile2()
+function DemandProfile2(testname::String="")
     model = Model(
         optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
     )
@@ -287,14 +287,12 @@ function DemandProfile2()
     @info "The best demand interval seems to be $(BestDemandInterval)"
 
     reporter = Reporter(mp, BestDemandInterval + 20, d̂[:])
-    reporter |> Generate!
-    reporter |> VisualizeAll
-    reporter |> DescriptiveStatisticsForDemandsSum |> print
+    SaveResults(reporter, testname)
 
-return end
+return reporter end
 
 
-function DemandProfile3()
+function DemandProfile3(testname::String="")
     model = Model(
         optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false),
     )
@@ -309,14 +307,15 @@ function DemandProfile3()
     @info "The best demand interval seems to be $(BestDemandInterval)"
 
     reporter = Reporter(mp, BestDemandInterval + 5, d̂[:])
-    reporter |> Generate!
-    reporter |> VisualizeAll
-    reporter |> DescriptiveStatisticsForDemandsSum |> print
+    reporter |>SaveResults(reporter, testname)
 
-return end
+return reporter end
 
 
-reporter = DemandProfile1()
+reporter = DemandProfile1("test1")
+reporter = DemandProfile1("test2")
+reporter =DemandProfile3("test3")
+
 
 
 
