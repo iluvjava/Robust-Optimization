@@ -1,6 +1,6 @@
-### This file focuses on the constructions of matrices. 
+### This file focuses on the constructions of matrices.
 
-# Enumeration set Cardinality. 
+# Enumeration set Cardinality.
 T = CONST_PROBLEM_PARAMETERS.HORIZON
 N = PRIMARY_GENERATORS|>length
 M = SECONDARY_GENERATORS|>length
@@ -10,7 +10,7 @@ L = (SIGMAS|>size)[2]
 
 # ==============================================================================
 # set up all decisions variables and their dimensions using the enumeration sets
-# cardinality. 
+# cardinality.
 # ==============================================================================
 # For matrix B
 x = VariableCoefficientHolder(:x, N, T)
@@ -49,20 +49,20 @@ function MakeCoefMatrices()
     F = CoefficientMatrix()
     B(x, y, z)
     C(
-        c, 
-        c′, 
-        p, 
-        p′, 
-        regu, 
-        regu′, 
-        regd, 
-        regd′, 
-        sr, 
-        sr′, 
-        h, 
-        g_plus, 
-        g_minus, 
-        nsp, 
+        c,
+        c′,
+        p,
+        p′,
+        regu,
+        regu′,
+        regd,
+        regd′,
+        sr,
+        sr′,
+        h,
+        g_plus,
+        g_minus,
+        nsp,
         nsp′
     )
     F(d)
@@ -70,7 +70,7 @@ function MakeCoefMatrices()
 return B, C, G, F end
 
 
-# All global variables, let's not worry about the bad programming for now, 
+# All global variables, let's not worry about the bad programming for now,
 # improve them later.
 
 # ==============================================================================
@@ -78,8 +78,8 @@ return B, C, G, F end
 # ==============================================================================
 
 """
-    Adding the first row, the fuel constraints. RHS is returned by the function, as 
-    a vector. 
+    Adding the first row, the fuel constraints. RHS is returned by the function, as
+    a vector.
     constraints (6, 7, 8)
 """
 function FuelConstraints()
@@ -99,7 +99,7 @@ function FuelConstraints()
     G(x′, z′); G()
     C(c′, c); C()
     B(x, z); B()
-    
+
     push!(rhs, CONST_PROBLEM_PARAMETERS.Φ)
 
     for n in 1:N, t in 1:T, k in 1:(size(pg.alphas, 2))
@@ -110,7 +110,7 @@ function FuelConstraints()
         C(); B()
         push!(rhs, 0)
     end
-    SyncRow(C, B, G) 
+    SyncRow(C, B, G)
     for m in 1:M, t in 1:T, k in 1:(size(pg.alphas, 2))
         p′[m, t] = sg.alphas[m, k]
         y′[m, t] = sg.betas[m, k]
@@ -122,8 +122,8 @@ function FuelConstraints()
 return rhs end
 
 """
-    Adding the quick start binary constraints 
-    Constraints (9, ..., 12). 
+    Adding the quick start binary constraints
+    Constraints (9, ..., 12).
 """
 function QuickStartConstraints()
     sg = SECONDARY_GENERATORS
@@ -136,8 +136,8 @@ function QuickStartConstraints()
         G()
         push!(rhs, 1)
     end
-    # Base case constraint, generator initially off. 
-    # Constraint #(10) Base case. 
+    # Base case constraint, generator initially off.
+    # Constraint #(10) Base case.
     for m = 1:M
         x′[m, 1] = -1
         y′[m, 1] = 1
@@ -149,8 +149,8 @@ function QuickStartConstraints()
         push!(rhs, 0); G(x′, y′, z′); G()
     end
 
-    # note, t starts with 2. 
-    for t = 2:T, m = 1:M  
+    # note, t starts with 2.
+    for t = 2:T, m = 1:M
         # (10)
         y′[m, t] = 1; y′[m ,t - 1] = -1
         x′[m ,t] = -1; z′[m, t] = 1
@@ -182,20 +182,20 @@ return rhs end
 
 
 """
-    The capacity constraints of the first stage generator. 
+    The capacity constraints of the first stage generator.
     constraints (13, ..., 20)
-    * Pass in the generator instance, matrix C, or Matrix G to specify 
-    whether these sets of constraints are for primary, or secondary generators. 
+    * Pass in the generator instance, matrix C, or Matrix G to specify
+    whether these sets of constraints are for primary, or secondary generators.
 """
 function CapacityConstraints(
-    gen::Generators, 
+    gen::Generators,
     K::CoefficientMatrix,
-    p::VariableCoefficientHolder, 
-    x::VariableCoefficientHolder, 
-    y::VariableCoefficientHolder, 
+    p::VariableCoefficientHolder,
+    x::VariableCoefficientHolder,
+    y::VariableCoefficientHolder,
     z::VariableCoefficientHolder,
-    sr::VariableCoefficientHolder, 
-    regd::VariableCoefficientHolder, 
+    sr::VariableCoefficientHolder,
+    regd::VariableCoefficientHolder,
     regu::VariableCoefficientHolder,
     nsp::VariableCoefficientHolder
 )
@@ -235,7 +235,7 @@ function CapacityConstraints(
         push!(rhs, 0)
     end
     for t = 1:T, n = 1:(gen|>length)
-        # (17) 
+        # (17)
         p[n, t] = -1; regd[n, t] = 1; y[n, t] = gen.Pmin[n]
         C(p, regd); C(); K(y); K();
         push!(rhs, 0)
@@ -258,35 +258,35 @@ function CapacityConstraints(
         C(regd); C(); K(y); K();
         push!(rhs, 0)
     end
-    
+
 return rhs end
 
 """
-    Constraints 30 to 33. 
-    
+    Constraints 30 to 33.
+
 """
 function MinimumRequirement()
     rhs = Vector{Number}()
     glb = CONST_PROBLEM_PARAMETERS
     for t = 1: T
         for n = 1:N
-            regu[n, t] = -1 
+            regu[n, t] = -1
         end
         for m = 1:M
             regu′[m, t] = -1
         end
         C(regu, regu′); C();
-        push!(rhs, -glb.RREGU[t])  
+        push!(rhs, -glb.RREGU[t])
     end
     for t = 1: T
         for n = 1:N
-            regd[n, t] = -1 
+            regd[n, t] = -1
         end
         for m = 1:M
             regd′[m, t]  = -1
         end
         C(regd, regd′); C();
-        push!(rhs, -glb.RREGD[t]) 
+        push!(rhs, -glb.RREGD[t])
     end
     for t = 1:T
         for n = 1:N
@@ -384,7 +384,7 @@ function DemandBalanceConstraints()
     end
     # (41)
     # currently each bus has one primary generator, and one secondary generator
-    # currently all transmission line has the same storage system. 
+    # currently all transmission line has the same storage system.
 
     # (41)
     for t = 1:T, l=1:L, b=1:B̄
@@ -422,8 +422,8 @@ return rhs end
 
 
 # ------------------------------------------------------------------------------
-# CALL these construction functions in the correct oder 
-# Visualize the matrices for debugging purpose. 
+# CALL these construction functions in the correct oder
+# Visualize the matrices for debugging purpose.
 
 
 B, C, G, F = MakeCoefMatrices()
@@ -438,7 +438,7 @@ SyncRow(B, C, G, F)
 
 
 RHS = vcat( # Capacity constraints primary
-    RHS, 
+    RHS,
     CapacityConstraints(
         PRIMARY_GENERATORS,
         B,
@@ -456,7 +456,7 @@ SyncRow(B, C, G, F)
 
 
 RHS = vcat( # Capacity constraints secondary
-    RHS, 
+    RHS,
     CapacityConstraints(
         SECONDARY_GENERATORS,
         G,
@@ -477,23 +477,23 @@ RHS = vcat(RHS, MinimumRequirement()) # minimum requirement constraints
 SyncRow(B, C, G, F)
 
 
-RHS = vcat(RHS, BatteryConstraints()) # battery constraints 
+RHS = vcat(RHS, BatteryConstraints()) # battery constraints
 SyncRow(B, C, G, F)
 
 
 RHS = vcat(RHS, DemandBalanceConstraints()) # demand balance
 SyncRow(B, C, G, F)
 
-B = B|>GetMatrix
-C = C|>GetMatrix
-G = G|>GetMatrix
-H = F|>GetMatrix
+B = (B|>GetMatrix)
+C = (C|>GetMatrix)
+G = (G|>GetMatrix)
+H = (F|>GetMatrix)
 
 ## Start grouping the cofficient holder for each of the groupped decision variables
 
 w = [x, y, z]
 u = [c, c′, p, p′, regu, regu′, regd, regd′, sr, sr′, h, g_plus, g_minus, nsp, nsp′]
 q = [x′, y′, z′]
-# d is it's own vector. 
+# d is it's own vector.
 
 @info "Matrices for robust oprimizations successfully constructed. "

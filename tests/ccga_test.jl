@@ -6,23 +6,29 @@ include("../src/ccga_modeling.jl")
 
 M = 30
 d̂ = 40*(size(MatrixConstruct.H, 2)|>ones)
-model_mp =  Model(
+
+# model_mp =  Model(
+#     optimizer_with_attributes(
+#             HiGHS.Optimizer, 
+#             "output_flag" =>true, 
+#             "mip_feasibility_tolerance"=>1e-8, 
+#             "ipm_optimality_tolerance" => 1e-6, 
+#             "dual_feasibility_tolerance" => 1e-8, 
+#             "primal_feasibility_tolerance" => 1e-8, 
+#             "mip_rel_gap" => 0.0001,
+#             "mip_abs_gap" => 1e-04
+#         ) 
+#     )
+
+model_mp = Model(
     optimizer_with_attributes(
-            HiGHS.Optimizer, 
-            "output_flag" =>true, 
-            "mip_feasibility_tolerance"=>1e-10, 
-            "ipm_optimality_tolerance" => 1e12, 
-            "dual_feasibility_tolerance" => 1e-10, 
-            "primal_feasibility_tolerance" => 1e-10, 
-            "mip_rel_gap" => 0.01,
-            "mip_abs_gap" => 1e-02
-        ) 
+       Gurobi.Optimizer, "BarConvTol" => 0
     )
+)
+
 mp = MP(model_mp, 30)
 PortOutVariable!(mp, :d) do d
-    for I in 1:length(d)
-        fix(d[I], d̂[I]; force=true)
-    end
+    fix.(d, d̂; force=true)
 end
 Solve!(mp)
 u = Getu(mp)
@@ -30,7 +36,8 @@ q = Getq(mp)
 ρ⁺ = ones(d̂ |> length)
 ρ⁻ = zeros(d̂ |> length)
 
-model_msp =  Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" =>true))
+# model_msp =  Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" =>true))
+model_msp = Model(Gurobi.Optimizer)
 msp = MSP(model_msp, d̂, M)
 IntroduceCut!(msp, u, q, ρ⁺, ρ⁻)
 
