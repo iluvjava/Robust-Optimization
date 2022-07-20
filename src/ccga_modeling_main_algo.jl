@@ -1,9 +1,7 @@
 ### Package the CCGA Structs into a new module. 
 
-
 include("utilities.jl")
 include("matrix_construction_export.jl")
-# using Logging
 include("ccga_modeling.jl")
 
 # Read the reports generated from the average demand suggest file.
@@ -12,7 +10,7 @@ include("ccga_modeling.jl")
 
 ϵ = 0.1
 M = 30
-d̂ = 5*(size(MatrixConstruct.H, 2)|>ones)
+d̂ = 40*(size(MatrixConstruct.H, 2)|>ones)
 
 for II in 1:1
     
@@ -24,7 +22,7 @@ for II in 1:1
 
         global msp = MSP(
             model_msp, 
-            d̂, 
+            d̂,
             M
         )
     end
@@ -59,7 +57,7 @@ for II in 1:1
         model_fsp =  Model(
             optimizer_with_attributes(HiGHS.Optimizer, "output_flag"=>false)
         )
-        fsp = FSP(w̄, γ̄, d, model_fsp)
+        global fsp = FSP(w̄, γ̄, d, model_fsp)
         Solve!(fsp)
         L = objective_value(fsp)
         u = Getu(fsp)

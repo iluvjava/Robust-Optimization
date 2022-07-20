@@ -141,7 +141,7 @@ return this end
 """
 function AddMainProblemConstraints!(this::MP)
     model = this|>GetModel
-    w = Getw(this)
+    w = Flattenw(this)
     u = this.u
     q = this.q
     d = this.d
@@ -269,14 +269,7 @@ end
 """
 function MasterProblemObjective!(this::MSP)
     model = GetModel(this)
-    d̂ = this.d_hat
     γ = this.gamma
-    push!(this.con,
-        @constraint(model, γ .>= d̂)...
-    )
-    push!(this.con,
-        @constraint(model, -γ .<= d̂)...
-    )
     @objective(model, Max, γ)
 return this end
 
@@ -405,7 +398,7 @@ function IntroduceCut!(
         this.con, 
         @constraint(
             model, 
-            B*w + C*u + G*q + H*(d̂ + γ*(ρ⁺-ρ⁻)) .<= h, 
+            B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺-ρ⁻) .<= h .+ 0.5, 
             base_name="Cut:$(this.cut_count)"
         )...
     )
@@ -423,6 +416,9 @@ return this end
 function Getw(this::Union{MP, MSP})
 return this|>Flattenw.|>value end
 
+"""
+    Fletten the w decision variable. 
+"""
 function Flattenw(this::Union{MP, MSP})
     Vec = Vector{JuMP.VariableRef}()
     push!(Vec, this.w[1, :, :][:]...)
@@ -519,16 +515,16 @@ mutable struct FSP <: Problem
 
 end
 
-### FSP methods clusters -----------------------------------------------------------------------------------------------
+### FSP methods clusters, shared with other types. ---------------------------------------------------------------------
 
-function Getq(this::FSP)
-return this.q.|>value end
+function Getq(this::Union{FSP, MP})
+return this.q.|>value.|>(x) -> round(x, digits=1)  end
 
-function Getu(this::FSP)
-return this.u.|>value end
+function Getu(this::Union{FSP, MP})
+return this.u.|>value.|>(x) -> round(x, digits=1) end
 
-function Getv(this::FSP)
-return this.v end
+function Getv(this::Union{FSP, MP})
+return this.v.|>value end
 
 
 # ======================================================================================================================
@@ -818,11 +814,14 @@ return this end
 
 """
     Port out an variable for the user to write a functional to access a specific variable. 
-
+        * Port out the decision variable from the model, if you give it the
+            * Problem 
+            * The symbol for the field for the problem. 
+            
 """
 function PortOutVariable!(port_out::Function, this::Problem, variable::Symbol)
+return port_out(getfield(this, variable)) end
 
-return this end
 
 
 ### ====================================================================================================================
