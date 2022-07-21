@@ -2,23 +2,13 @@ include("../src/utilities.jl")
 include("../src/matrix_construction_export.jl")
 include("../src/ccga_modeling.jl")
 
-# using Logging
+# ======================================================================================================================
+# A basic cut performed by using the main problem. 
+# ======================================================================================================================
 
-M = 30
+M = 10
 d̂ = 40*(size(MatrixConstruct.H, 2)|>ones)
 
-# model_mp =  Model(
-#     optimizer_with_attributes(
-#             HiGHS.Optimizer, 
-#             "output_flag" =>true, 
-#             "mip_feasibility_tolerance"=>1e-8, 
-#             "ipm_optimality_tolerance" => 1e-6, 
-#             "dual_feasibility_tolerance" => 1e-8, 
-#             "primal_feasibility_tolerance" => 1e-8, 
-#             "mip_rel_gap" => 0.0001,
-#             "mip_abs_gap" => 1e-04
-#         ) 
-#     )
 
 model_mp = Model(
     optimizer_with_attributes(
@@ -26,21 +16,21 @@ model_mp = Model(
     )
 )
 
-mp = MP(model_mp, 30)
+mp = MP(model_mp, M)
 PortOutVariable!(mp, :d) do d
     fix.(d, d̂; force=true)
 end
+
 Solve!(mp)
 u = Getu(mp)
 q = Getq(mp)
 ρ⁺ = ones(d̂ |> length)
 ρ⁻ = zeros(d̂ |> length)
+v = Getv(fsp)
 
-# model_msp =  Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" =>true))
 model_msp = Model(Gurobi.Optimizer)
 msp = MSP(model_msp, d̂, M)
-IntroduceCut!(msp, u, q, ρ⁺, ρ⁻)
-
+IntroduceCut!(msp, u, q, ρ⁺, ρ⁻, v)
 
 function TestConstraints()
     B = MatrixConstruct.B
@@ -57,3 +47,15 @@ function TestConstraints()
 return res end
 
 res = TestConstraints()
+
+# ======================================================================================================================
+# All zeros cut. 
+# ======================================================================================================================
+model_msp = Model(Gurobi.Optimizer)
+msp = MSP(model_msp, d̂, M)
+IntroduceCut!(msp, 
+    zeros(size(MatrixConstruct.C, 2)), 
+    zeros(size(MatrixConstruct.G, 2)), 
+    zeros(size(MatrixConstruct.H, 2)), 
+    zeros(size(MatrixConstruct.H, 2))
+)

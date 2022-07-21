@@ -1,5 +1,3 @@
-
-
 ### ====================================================================================================================
 ### Important functions for variables constructions for JuMP models.
 ### ====================================================================================================================
@@ -60,6 +58,7 @@ function PrepareVarieblesForTheModel!(
         end
         return u
     end
+    
     if variable == :q
         q = Vector{JuMP.VariableRef}()
         for v in MatrixConstruct.q
@@ -371,8 +370,8 @@ return this end
     Introduce feasibility cut for the master problem which comes from the CCGA results.
         * Delete all constraints established for the MainProblem.
         * Continuous decision variable from FSP: u
-        * Discrete decision variable from FMP: q
-        * Adversarial demands from FMP: d
+        * Discrete decision variable from FSP: q
+        * Adversarial demands from FMP: ρ⁺, ρ⁻
         * introduce new objective for maximum demands intervals satisfactions.
 """
 function IntroduceCut!(
@@ -380,7 +379,8 @@ function IntroduceCut!(
     u::Vector{Float64},
     q::Vector{Float64},
     rho_plus::Vector{Float64},
-    rho_minus::Vector{Float64}
+    rho_minus::Vector{Float64}, 
+    v::Union{Vector{Float64}, Nothing}=nothing
 )
     model = this|>GetModel
     w = this |> Flattenw
@@ -394,15 +394,23 @@ function IntroduceCut!(
     ρ⁻ = rho_minus
     γ = this.gamma
     this.cut_count += 1
+    if v === nothing
+        v = zeros(size(h))
+    else
+        v.+= 0
+    end
+    CutConstraints = @constraint(
+        model, 
+        B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺-ρ⁻) - v .<= h, 
+        base_name="Cut $(this.cut_count)"
+    )
     push!(
         this.con, 
-        @constraint(
-            model, 
-            B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺-ρ⁻) .<= h .+ 0.5, 
-            base_name="Cut:$(this.cut_count)"
-        )...
+        CutConstraints...   
     )
-return this end
+
+return CutConstraints end
+
 
 
 """
@@ -455,6 +463,7 @@ mutable struct FSP <: Problem
     w::Vector{Float64}
     d_star::Vector{Float64}
     gamma::Number
+    con::Vector{JuMP.ConstraintRef}
 
     function FSP()
         @warn("This construction only exists for testing purposes!")
@@ -469,12 +478,18 @@ mutable struct FSP <: Problem
         Constrct the FSP, given the parameters setting the primary
         variables, and then the adversarial demands vector.
     """
-    function FSP(w::Vector{Float64}, gamma::Number, d_star::Vector{Float64}, model::Model=Model(HiGHS.Optimizer))
+    function FSP(
+        w::Vector{Float64}, 
+        gamma::Number, 
+        d_star::Vector{Float64}, 
+        model::Model=Model(HiGHS.Optimizer)
+    )
         this = new()
         this.model = model
         this.gamma = gamma
         this.w = w
         this.d_star = d_star
+        this.con = Vector{JuMP.ConstraintRef}()
         this|>IntroduceVariables!
         this|>AddConstraints!
         @objective(this.model, Min, sum(this.v))
@@ -494,6 +509,7 @@ mutable struct FSP <: Problem
         this.v = @variable(this.model, v[1:length(MatrixConstruct.h)], lower_bound=0)
     return end
 
+
     function AddConstraints!(this::FSP)
         u = this.u
         v = this.v
@@ -506,7 +522,10 @@ mutable struct FSP <: Problem
         B = MatrixConstruct.B
         G = MatrixConstruct.G
         @info "Preparing constraints for the FSP model. "
-        @constraint(this.model, c1, C*u - v  + H*d .<= h - B*w - G*q)
+        push!(
+            this.con, 
+            @constraint(this.model, C*u + H*d + B*w + G*q - v .<= h)...
+        )
     return end
 
 
@@ -514,17 +533,6 @@ mutable struct FSP <: Problem
     return this.model[index] end
 
 end
-
-### FSP methods clusters, shared with other types. ---------------------------------------------------------------------
-
-function Getq(this::Union{FSP, MP})
-return this.q.|>value.|>(x) -> round(x, digits=1)  end
-
-function Getu(this::Union{FSP, MP})
-return this.u.|>value.|>(x) -> round(x, digits=1) end
-
-function Getv(this::Union{FSP, MP})
-return this.v.|>value end
 
 
 # ======================================================================================================================
@@ -601,7 +609,7 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}
     k = this.k
     # Prepare variable u for the model.
     push!(this.u, PrepareVarieblesForTheModel!(this|>GetModel, :u, k))
-    # Prepare for variable q, which is going to be a constant.
+    # Prepare for variable q, depending on whether a `q_given` is defined. 
     if q_given === nothing
         Decisionvariables = Vector()
         q = MatrixConstruct.q
@@ -694,16 +702,14 @@ function PrepareConstraints!(this::FMP)
     # Binlinear constraints
     @constraint(
         model,
-        dot(λ, H*d̂) +
-        γ*dot(H[H.!=0], ξ⁺[:] .- ξ⁻[:]) +
-        dot(λ,h - B*w - G*q) == sum(v),
+        dot(λ, H*d̂) + γ*dot(H[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ,h - B*w - G*q) == sum(v),
         base_name="constraint[$(k)][7]"
     )
     
     # new added demand feasibility constraints.
     @constraint(
         model,
-        C*u - v + H*(d̂ + γ*ρ⁺ + γ*ρ⁻) .<= h - B*w - G*q,
+        B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ + γ*ρ⁻) - v .<= h,
         base_name="constraint[$(k)][2]"
     )
 
@@ -750,7 +756,9 @@ function Introduce!(this::FMP, q::Vector{JuMP.VariableRef})
     PrepareConstraints!(this)
 return this end
 
-
+"""
+    Prepare the objective for the FMP problem, it's the sum of all v for all system configurations. 
+"""
 function PrepareObjective!(this::FMP)
     @objective(this.model, Max, this.eta)
 return this end
@@ -758,7 +766,7 @@ return this end
 
 
 ### ====================================================================================================================
-### GENETRIC FUNCTIONS FOR ALL ABOVE TYPES.
+### GENETRIC FUNCTIONS FOR ALL ABOVE TYPES and Subsets of These types. 
 ###     - Generics Functions for abstract type of problems that contain a JuMP inner model, specific overrides too.
 ### ====================================================================================================================
 
@@ -806,22 +814,47 @@ return end
         * Print out the constraints for the model.
         * Print out the objective for the model.
 """
-function DebugReport(this::MP, filename="MP_Debug_report")
+function DebugReport(this::Union{MP, MSP}, filename="MP_Debug_report")
     open("$(filename).txt", "w") do io
         this.con.|>repr.|>(to_print) -> println(io, to_print)
     end
 return this end
+
+function PrintConstraintsGroup(con::Vector{JuMP.ConstraintRef}, filename::String="Constraints_report")
+    open("$(filename).txt", "w") do io
+        con.|>repr.|>(to_print) -> println(io, to_print)
+    end
+return end
 
 """
     Port out an variable for the user to write a functional to access a specific variable. 
         * Port out the decision variable from the model, if you give it the
             * Problem 
             * The symbol for the field for the problem. 
-            
+    User's Functional Should: 
+        * Accept on parameters of type `JuMP.VariableRef`, and perform the wanted modificatons 
+        for the decision variable. 
 """
 function PortOutVariable!(port_out::Function, this::Problem, variable::Symbol)
 return port_out(getfield(this, variable)) end
 
+"""
+    Get the value of the decision variable q, it's suitable for the type: Union{FSP, MP, FMP}. 
+"""
+function Getq(this::Union{FSP, MP, FMP})
+return this.q.|>value.|>(x) -> round(x, digits=1)  end
+
+function Getu(this::Union{FSP, MP, FMP})
+return this.u.|>value.|>(x) -> round(x, digits=1) end
+
+function Getv(this::Union{FSP, MP})
+return this.v.|>value end
+
+"""
+    If the instance is an FMP, then it returns the variable v that is the most recent. 
+"""
+function Getv(this::FMP)
+return this.v[end].|>value end
 
 
 ### ====================================================================================================================

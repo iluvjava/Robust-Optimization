@@ -78,3 +78,55 @@
 All the CCGA entities are kept when the algorithm is running over. They maintain the changes throughout the algorithm.  
 
 
+---
+### **The Problem of Performing Cut on the Master Problem**
+
+Originally cut perform for the master problem involves $\rho^\pm, u, q, \hat{d}$. The solution from FSP is the simply the following:  
+
+$$
+\begin{aligned}
+	Cu^* + H(d^{(k + 1)})^* - v^*
+\end{aligned}
+$$
+
+
+---
+### **The Feasibility Problem**
+
+To test whether there exists a feasible solution for the polytope $Ax \le b$, we consider the objective of the following optimization problem: 
+
+$$
+\begin{aligned}
+	\min_{v\ge 0}\{ v:Ax - v\mathbf{1} \le b\}
+\end{aligned}
+$$
+
+Where, we are only optimizing $v$ which si a scalar, and if it's possible to set $v$ into $0$. Here, $v$ doesn't need to be a vector. But when I implemented the CCGA, the main problem, for FMP, FSP are all treating $v$ as a vector. It's still possible to minimize wrt to a vector $v$ that has the same dimension as the constraints
+
+
+---
+### **Another Unatural Things That I Found Out**
+
+Suppose that $\gamma = 0, (d^{(k + 1)})^* = (u^{(k + 1)})^* = \mathbf 0$, then the cut we introduced in the original paper(with $-H$ here being the $H$ in the original paper): 
+
+$$
+	C(u^{k+1})^*
+		+ 
+	G(q^{k+1})^*
+		+ 
+	H\big(\hat{d}+(\rho_*^+)^{k+1}\gamma\bm{1} - (\rho_*^-)^{k+1}\gamma\bm{1}\big)
+		+ 
+	Bw
+		\leq
+	h
+$$
+
+Should simplify into: 
+
+$$
+Bw  + H\hat d\le h
+$$
+
+And intuitively for this particular case, I would expect that there is a solution using just the Primary Generator such that it can satisifes the average demands. However, when I experimented with such a cut, the system seems to be infeasible, which is very weird. 
+
+
