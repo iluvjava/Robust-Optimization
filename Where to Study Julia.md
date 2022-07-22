@@ -9,7 +9,7 @@ Resources for Julia Ingeneral:
 
 
 ---
-### **Resources For Speicific Topics**
+### **Full Julia Tutorials**
 
 * [MIT Intro to Scientific Computing](https://computationalthinking.mit.edu/Spring21/)
   * They uses Julia to introduce scientific computing. 
