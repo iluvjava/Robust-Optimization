@@ -7,8 +7,10 @@ include("ccga_modeling.jl")
 ϵ = 0.1
 M = 30
 d̂ = 30*(size(MatrixConstruct.H, 2)|>ones)
+
 model_mp = Model(HiGHS.Optimizer)
 mp = MP(model_mp, M)
+
 PortOutVariable!(mp, :d) do d
     fix.(d, d̂, force=true)
 end
@@ -49,8 +51,7 @@ w0 = Getw(mp)
     let q = u = ρ⁺ = ρ⁻ = d = nothing; for III in 1:1
         
         if III != 1
-            IntroduceVariables!(fmp, q)
-            PrepareConstraints!(fmp)
+            Introduce!(fmp, q)
         end
         
         Solve!(fmp)

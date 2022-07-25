@@ -82,15 +82,16 @@ return nothing end
 
 mutable struct MP <: Problem
     M::Model
+    
     w::Array{VariableRef, 3}
     gamma::VariableRef
     gamma_upper::Number         # an upper bound for the gamma variable.
     u::Vector{VariableRef}      # secondary continuous decision variables.
     q::Vector{VariableRef}      # secondary discrete decision variables.
     d::Vector{VariableRef}      # the demand variables, continuous in the case of master problem.
-    con::Vector                 # constraints list in the ordere being added.
     v::Vector{VariableRef}      # The slack decision variable.
-
+    con::Vector                 # constraints list in the ordere being added.
+    
     G::Int64; T::Int64          # Given number of generators and time horizon for the problem.
     Tmind::Array{Int}           # Min up down for primary generators
     Tminu::Array{Int}           # Min up time for primary generators
@@ -117,6 +118,7 @@ mutable struct MP <: Problem
     function MP(gamma_upper=1e4) return MP(Model(HiGHS.Optimizer), gamma_upper) end
 
 end
+
 
 """
     Introduce variables to the model:
@@ -248,6 +250,7 @@ mutable struct MSP <: Problem
         this.con = Vector()
         this.d_hat = d_hat
         this.cut_count = 0
+        
         IntroduceMasterProblemVariables!(this)
         PreppareConstraintsPrimary!(this)
         MasterProblemObjective!(this)
@@ -463,7 +466,7 @@ mutable struct FSP <: Problem
     w::Vector{Float64}
     d_star::Vector{Float64}
     gamma::Number
-    con::Vector{JuMP.ConstraintRef}
+    con::Vector{JuMP.ConstraintRef} # TODO: Remembers to Add constraints for debugg purposes. 
 
     function FSP()
         @warn("This construction only exists for testing purposes!")

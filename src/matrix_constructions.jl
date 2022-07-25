@@ -119,6 +119,7 @@ function FuelConstraints()
         C(); G()
         push!(rhs, 0)
     end
+    
 return rhs end
 
 """
