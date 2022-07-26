@@ -78,10 +78,10 @@ return nothing end
         * Mutates the variables for the model. 
 """
 function FixThev!(v::Vector{VariableRef}, demand_groups="Demand Balance")
-    starting, ending = MatrixConstruct.RHS_Groups[demand_groups]
-    for II in setdiff(Set(1:size(MatrixConstruct.H, 1)), Set(starting:ending))
-        fix(v[II], 0, force=true)
-    end
+    # starting, ending = MatrixConstruct.RHS_Groups[demand_groups]
+    # for II in setdiff(Set(1:size(MatrixConstruct.H, 1)), Set(starting:ending))
+    #     fix(v[II], 0, force=true)
+    # end
 return nothing end
 
 
@@ -245,6 +245,7 @@ mutable struct MSP <: Problem
     G::Int64; T::Int64          # Given number of generators and time horizon for the problem.
     Tmind::Array{Int}           # Min up down for primary generators
     Tminu::Array{Int}           # Min up time for primary generators
+    s::Vector{VariableRef}      # A slack on the cut for debugging. 
 
     cut_count::Int
 
@@ -320,7 +321,8 @@ return this end
 
 
 """
-    Prepare the constraints for the primary generator, the system Aw <= b
+    Prepare the constraints for the primary generator, the system
+        * Aw <= b
 """
 function PreppareConstraintsPrimary!(this::Union{MP, MSP})
     model = this|>GetModel
@@ -411,21 +413,23 @@ function IntroduceCut!(
     ρ⁻ = rho_minus
     γ = this.gamma
     this.cut_count += 1
+    
     if v === nothing
         v = zeros(length(h))
     end
     # FIXING soem weird weird floating point problem introduced by the cut. 
     δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
     δv[end - 63:end] .= 0
+    this.s = @variable(model, s[1:length(h)], lower_bound=0)
 
     CutConstraints = @constraint(
         model, 
-        B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺ - ρ⁻) - v + δv .<= h, 
+        B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺ - ρ⁻) - v + δv - s .<= h, 
         base_name="Cut $(this.cut_count)"
     )
     
     push!(
-        this.con, 
+        this.con,
         CutConstraints...   
     )
 

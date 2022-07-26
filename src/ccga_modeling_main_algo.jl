@@ -88,6 +88,7 @@ for II in 1:1
         # end
         
         Constraints = IntroduceCut!(msp, u, q, ρ⁺, ρ⁻)
+        @objective(msp.M, Min, sum(msp.s))
         DebugReport(msp, "msp_after_first_cut")
         DebugReport(mp, "main_problem_referece")
     end
