@@ -26,7 +26,7 @@ u = Getu(mp)
 q = Getq(mp)
 ρ⁺ = ones(d̂ |> length)
 ρ⁻ = zeros(d̂ |> length)
-v = Getv(fsp)
+v = Getv(mp)
 
 model_msp = Model(Gurobi.Optimizer)
 msp = MSP(model_msp, d̂, M)

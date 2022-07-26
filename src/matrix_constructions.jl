@@ -361,7 +361,7 @@ function DemandBalanceConstraints()
     σ = SIGMAS.the_matrix
     f = TRANSMISSION_SYSTEM.Limit
 
-    # (39)
+    # (39.a)
     for t = 1:T
         p[:, t] .= 1
         p′[:, t] .= 1
@@ -372,7 +372,7 @@ function DemandBalanceConstraints()
         C();F();
         push!(rhs, 0)
     end
-    # (40)
+    # (39.b)
     for t = 1:T
         p[:, t] .= -1
         p′[:, t] .= -1
@@ -387,13 +387,15 @@ function DemandBalanceConstraints()
     # currently each bus has one primary generator, and one secondary generator
     # currently all transmission line has the same storage system.
 
-    # (41)
-    for t = 1:T, l=1:L, b=1:B̄
-        for n in BUSES.primary[b]
-            p[n, t] += σ[b, l]
-        end
-        for m in BUSES.secondary[b]
-            p′[m, t] += σ[b, l]
+    # (40)
+    for t = 1:T, l=1:L
+        for b=1:B̄
+            for n in BUSES.primary[b]
+                p[n, t] += σ[b, l]
+            end
+            for m in BUSES.secondary[b]
+                p′[m, t] += σ[b, l]
+            end
         end
         g_minus[:, t] .= μ[l]
         g_plus[:, t] .= -μ[l]
@@ -402,13 +404,15 @@ function DemandBalanceConstraints()
         F(d); F();
         push!(rhs, f[l])
     end
-
-    for t = 1:T, l=1:L, b=1:B̄
-        for n in BUSES.primary[b]
-            p[n, t] += -σ[b, l]
-        end
-        for m in BUSES.secondary[b]
-            p′[m, t] += -σ[b, l]
+    # (41)
+    for t = 1:T, l=1:L
+        for b=1:B̄
+            for n in BUSES.primary[b]
+                p[n, t] += -σ[b, l]
+            end
+            for m in BUSES.secondary[b]
+                p′[m, t] += -σ[b, l]
+            end
         end
         g_minus[:, t] .= -μ[l]
         g_plus[:, t] .= μ[l]
@@ -430,7 +434,7 @@ return rhs end
 B, C, G, F = MakeCoefMatrices()
 
 
-RHS = Vector{Float64}()
+RHS_Groups = Dict{String, Tuple}()
 RHS = FuelConstraints() # Fuel Constraints
 SyncRow(B, C, G, F)
 
@@ -481,9 +485,10 @@ SyncRow(B, C, G, F)
 RHS = vcat(RHS, BatteryConstraints()) # battery constraints
 SyncRow(B, C, G, F)
 
-
+DemandGroupStart = length(RHS) + 1
 RHS = vcat(RHS, DemandBalanceConstraints()) # demand balance
 SyncRow(B, C, G, F)
+RHS_Groups["Demand Balance"] = (DemandGroupStart, length(RHS))
 
 B = (B|>GetMatrix)
 C = (C|>GetMatrix)

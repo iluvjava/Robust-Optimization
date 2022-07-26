@@ -71,6 +71,20 @@ function PrepareVarieblesForTheModel!(
 return nothing end
 
 
+"""
+    Fix the v slack variables for all constraints that are not related to the system demands. So that the feasibility 
+    problem is only testing on whether the demands can be satisfies given some non-negative slacks. 
+        * This will be used for the MP, FSP, and FMP. 
+        * Mutates the variables for the model. 
+"""
+function FixThev!(v::Vector{VariableRef}, demand_groups="Demand Balance")
+    starting, ending = MatrixConstruct.RHS_Groups[demand_groups]
+    for II in setdiff(Set(1:size(MatrixConstruct.H, 1)), Set(starting:ending))
+        fix(v[II], 0, force=true)
+    end
+return nothing end
+
+
 
 ### ====================================================================================================================
 ### Main Problem:
@@ -224,7 +238,7 @@ return this end
 mutable struct MSP <: Problem
     M::Model
     w::Array{VariableRef, 3}
-    d_hat::Array{N where N<:AbstractFloat}
+    d_hat::Array{Float64}
     gamma::VariableRef
     gamma_upper::Number         # an upper bound for the gamma variable.
     con::Vector                 # constraints list in the ordere being added.
@@ -398,15 +412,18 @@ function IntroduceCut!(
     γ = this.gamma
     this.cut_count += 1
     if v === nothing
-        v = zeros(size(h))
-    else
-        v.+= 0
+        v = zeros(length(h))
     end
+    # FIXING soem weird weird floating point problem introduced by the cut. 
+    δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
+    δv[end - 63:end] .= 0
+
     CutConstraints = @constraint(
         model, 
-        B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺-ρ⁻) - v .<= h, 
+        B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺ - ρ⁻) - v + δv .<= h, 
         base_name="Cut $(this.cut_count)"
     )
+    
     push!(
         this.con, 
         CutConstraints...   
@@ -529,6 +546,7 @@ mutable struct FSP <: Problem
             this.con, 
             @constraint(this.model, C*u + H*d + B*w + G*q - v .<= h)...
         )
+        FixThev!(v)
     return end
 
 
@@ -536,6 +554,8 @@ mutable struct FSP <: Problem
     return this.model[index] end
 
 end
+
+
 
 
 # ======================================================================================================================
@@ -715,7 +735,7 @@ function PrepareConstraints!(this::FMP)
         B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ + γ*ρ⁻) - v .<= h,
         base_name="constraint[$(k)][2]"
     )
-
+    FixThev!(v)
 return this end
 
 """

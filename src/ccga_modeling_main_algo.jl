@@ -5,7 +5,7 @@ include("matrix_construction_export.jl")
 include("ccga_modeling.jl")
 
 ϵ = 0.1
-M = 30
+M = 25
 d̂ = 30*(size(MatrixConstruct.H, 2)|>ones)
 
 model_mp = Model(HiGHS.Optimizer)
@@ -19,7 +19,7 @@ Solve!(mp)
 q0 = Getq(mp)
 w0 = Getw(mp)
 
-# for II in 1:1
+for II in 1:1
     # MSP Initialize Primary Decision Variables
     if II == 1
         model_msp = Model(
@@ -37,8 +37,8 @@ w0 = Getw(mp)
     if isnan(objective_value(msp))
         error("Master Problem Infeasible. ") 
     end
-    w̄ = Getw(msp)
-    γ̄ = GetGamma(msp)
+    global w̄ = Getw(msp)
+    global γ̄ = GetGamma(msp)
 
     @info "MSP, γ̄, w̄, created for the primary system. " 
     
@@ -48,7 +48,8 @@ w0 = Getw(mp)
     
     @info "FMP, instance is initialized. "
     
-    let q = u = ρ⁺ = ρ⁻ = d = nothing; for III in 1:1
+    
+    for III in 1:1
         
         if III != 1
             Introduce!(fmp, q)
@@ -56,9 +57,12 @@ w0 = Getw(mp)
         
         Solve!(fmp)
         U = objective_value(fmp)
-        ρ⁺ = GetRhoPlus(fmp)
-        ρ⁻ = GetRhoMinus(fmp)
-        d = GetDemandVertex(fmp)
+        if isnan(U)
+            @warn "FMP is not feasible."
+        end
+        global ρ⁺ = GetRhoPlus(fmp)
+        global ρ⁻ = GetRhoMinus(fmp)
+        global d = GetDemandVertex(fmp)
         
         model_fsp =  Model(
             optimizer_with_attributes(HiGHS.Optimizer, "output_flag"=>false)
@@ -67,9 +71,9 @@ w0 = Getw(mp)
         global fsp = FSP(w̄, γ̄, d, model_fsp)
         Solve!(fsp)
         L = objective_value(fsp)
-        u = Getu(fsp)
-        q = Getq(fsp)
-        v = Getv(fsp)
+        global u = Getu(fsp)
+        global q = Getq(fsp)
+        global v = Getv(fsp)
         @info "Upper Bound U: $U, Lower Bound L: $L" 
         
         # Analyze L, U; and Make decisions 
@@ -82,10 +86,10 @@ w0 = Getw(mp)
         # else
         #     # Nothing, it's here just for logical closure. 
         # end
+        
         Constraints = IntroduceCut!(msp, u, q, ρ⁺, ρ⁻)
-        DebugReport(msp, "msp_all_constraints")
-        DebugReport(mp, "main_problem_constraints_sets")
+        DebugReport(msp, "msp_after_first_cut")
+        DebugReport(mp, "main_problem_referece")
+    end
 
-    end end
-
-# end
+end
