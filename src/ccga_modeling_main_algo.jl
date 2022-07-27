@@ -9,10 +9,9 @@ include("ccga_modeling.jl")
 ϵ = 0.1
 M = 40
 d̂ = 40*(size(MatrixConstruct.H, 2)|>ones)
-
 model_mp = Model(HiGHS.Optimizer)
-mp = MP(model_mp, M)
 
+mp = MP(model_mp, M)
 PortOutVariable!(mp, :d) do d
     fix.(d, d̂, force=true)
 end

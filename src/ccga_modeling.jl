@@ -562,17 +562,22 @@ mutable struct FMP<:Problem
     w::Vector{Float64}                            # Primary Generator decision variables.               (GIVEN CONSTANT)
     gamma::Float64                                # the bound for the demands.                          (GIVEN CONSTANT)
     q::Vector{Vector{Int}}                        # the secondary discrete decision variables           (GIVEN CONSTANT)
+    d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
+
     v::Vector{Vector{JuMP.VariableRef}}           # The slack decision variables for each of the previous demands.
     u::Vector{Vector{JuMP.VariableRef}}           # The secondary continuous decision variables.
-    k::Int                                        # The iteration number from the ccga.
     d::Vector{JuMP.VariableRef}                   # The demand decision variable, as a giant vector.
     eta::JuMP.VariableRef                         # The eta lower bound for all feasibility.
     lambda::Vector{Vector{JuMP.VariableRef}}      # the dual decision variables.
     rho_plus::Vector{Vector{JuMP.VariableRef}}    # binary decision variables for the bilinear demands
     rho_minus::Vector{Vector{JuMP.VariableRef}}   # binary decision variables for the bilinear demands
-    d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
+    xi_plus::Vector{Vector{JuMP.VariableRef}}     # The binary decision variable for the extreme demands, vertices of the demands cube. 
+    xi_minus::Vector{Vector{JuMP.VariableRef}}    # The binary decision variable for the extreme demands. 
+    
 
     model::JuMP.Model                             # The JuMP model for a certain instance.
+    k::Int                                        # The iteration number from the ccga.
+    con::Vector{JuMP.ConstraintRef}
 
     function FMP()
         @warn("Construction shouldn't be called except for debugging purposes. ")
@@ -597,6 +602,9 @@ mutable struct FMP<:Problem
         this.k = 1
         this.model = model
         this.d_hat = d_hat
+        this.xi_plus = Vector{Vector}()
+        this.xi_minus = Vector{Vector}()
+        this.con = Vector{Vector}()
         IntroduceVariables!(this)
         PrepareConstraints!(this)
         PrepareObjective!(this)
@@ -642,6 +650,7 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}
         lower_bound=0, 
         base_name="v[$(k)]"
     )
+    
     push!(this.v, v[:])
 
     # Parepare the variable lambda, the dual decision variables.
@@ -652,6 +661,7 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}
         upper_bound=0, 
         base_name="λ[$(k)]"
     )
+    
     push!(this.lambda, λ[:])
 
 return this end
@@ -674,6 +684,10 @@ return this end
         * The class instance it keeping track of the interations count.
 """
 function PrepareConstraints!(this::FMP)
+
+    function addConstraints!(cons::JuMP.ConstraintRef)
+        push!(this.con, cons)
+    end
     k = this.k
     η = this.eta
     u = this.u[k]
@@ -691,10 +705,10 @@ function PrepareConstraints!(this::FMP)
     q = this.q[k]
     model = this.model
 
-    @constraint(model, η <= sum(v), base_name="constraint[$(k)][1]")
-    @constraint(model, λ'*C .<= 0, base_name="constraint[$(k)][3]")
-    @constraint(model, d .<= d̂ .+ γ, base_name="constraint[$(k)][4]")
-    @constraint(model, d .>= d̂ .- γ, base_name="constraint[$(k)][5]")
+    @constraint(model, η <= sum(v), base_name="constraint[$(k)][1]").|>addConstraints!
+    @constraint(model, λ'*C .<= 0, base_name="constraint[$(k)][3]").|>addConstraints!
+    @constraint(model, d .<= d̂ .+ γ, base_name="constraint[$(k)][4]").|>addConstraints!
+    @constraint(model, d .>= d̂ .- γ, base_name="constraint[$(k)][5]").|>addConstraints!
 
     # Sparse bilinear constraints setup:
     B̄ = size(H, 2)
@@ -706,32 +720,33 @@ function PrepareConstraints!(this::FMP)
     IdxTuples = findall(!=(0), H).|>Tuple
     ξ⁺ = @variable(model, [IdxTuples], base_name="ξ⁺[$(k)]")
     ξ⁻ = @variable(model, [IdxTuples], base_name="ξ⁻[$(k)]")
+    push!(this.xi_plus, ξ⁺); push!(this.xi_minus, ξ⁻)
 
     for (j, b) in IdxTuples
-        @constraint(model, -ρ⁺[b] <= ξ⁺[(j, b)])
-        @constraint(model, ξ⁺[(j, b)] <= ρ⁺[b])
-        @constraint(model, λ[j] - (1 - ρ⁺[b])<=ξ⁺[(j, b)])
-        @constraint(model, ξ⁺[(j, b)] <= λ[j] + (1 - ρ⁺[b]))
-        @constraint(model, -ρ⁻[b] <= ξ⁻[(j, b)])
-        @constraint(model, ξ⁻[(j, b)] <= ρ⁻[b])
-        @constraint(model, λ[j] - (1 - ρ⁻[b]) <= ξ⁻[(j, b)])
-        @constraint(model, ξ⁻[(j, b)] <= λ[j] + (1 - ρ⁻[b]))
+        @constraint(model, -ρ⁺[b] <= ξ⁺[(j, b)])|>addConstraints!
+        @constraint(model, ξ⁺[(j, b)] <= ρ⁺[b])|>addConstraints!
+        @constraint(model, λ[j] - (1 - ρ⁺[b])<=ξ⁺[(j, b)])|>addConstraints!
+        @constraint(model, ξ⁺[(j, b)] <= λ[j] + (1 - ρ⁺[b]))|>addConstraints!
+        @constraint(model, -ρ⁻[b] <= ξ⁻[(j, b)])|>addConstraints!
+        @constraint(model, ξ⁻[(j, b)] <= ρ⁻[b])|>addConstraints!
+        @constraint(model, λ[j] - (1 - ρ⁻[b]) <= ξ⁻[(j, b)])|>addConstraints!
+        @constraint(model, ξ⁻[(j, b)] <= λ[j] + (1 - ρ⁻[b]))|>addConstraints!
     end
-    @constraint(model, [b=1:B̄], ρ⁺[b] + ρ⁻[b] == 1, base_name="constraint[$(k)][6]")
+    @constraint(model, [b=1:B̄], ρ⁺[b] + ρ⁻[b] == 1, base_name="constraint[$(k)][6]").|>addConstraints!
     
     # Binlinear constraints
     @constraint(
         model,
         dot(λ, H*d̂) + γ*dot(H[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ,h - B*w - G*q) == sum(v),
         base_name="constraint[$(k)][7]"
-    )
+    ).|>addConstraints!
     
     # new added demand feasibility constraints.
     @constraint(
         model,
         B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ + γ*ρ⁻) - v .<= h,
         base_name="constraint[$(k)][2]"
-    )
+    ).|>addConstraints!
 return this end
 
 """
@@ -788,17 +803,7 @@ return this end
 ###     - Generics Functions for abstract type of problems that contain a JuMP inner model, specific overrides too.
 ### ====================================================================================================================
 
-"""
-    * NaN is returned if there is no solution to the problem, which means it's either infeasible
-    or unbounded.
-"""
-function objective_value(this::Problem)
-    model = GetModel(this)
-    status = primal_status(model)
-    if status == NO_SOLUTION
-        return NaN
-    end
-return JuMP.objective_value(model) end
+
 
 """
     Solve the inner JuMP optimization problem by directly invoking `optimize!` in JuMP on the model.
@@ -887,9 +892,29 @@ function Getv(this::FMP)
 return this.v[end].|>value end
 
 
+
+
 ### ====================================================================================================================
-### Trying to experiment with the FSP, FMP instance.
+### Methods Shared with JuMP.jl Model type
 ### ====================================================================================================================
+ 
+
+"""
+    * NaN is returned if there is no solution to the problem, which means it's either infeasible
+    or unbounded.
+"""
+function objective_value(this::Problem)
+    model = GetModel(this)
+    status = primal_status(model)
+    if status == NO_SOLUTION
+        return NaN
+    end
+return JuMP.objective_value(model) end
+
+
+function Base.getindex(this::Problem, param::Any)
+return GetModel(this)[param] end
+
 
 @info "CCGA Modeling tools has been loaded. "
 
