@@ -1,12 +1,14 @@
 ### READ CCGA.md For more info. 
+### Something is wrong with the CCGA mail algo, and we are still testing with things. 
+
 
 include("utilities.jl")
 include("matrix_construction_export.jl")
 include("ccga_modeling.jl")
 
 ϵ = 0.1
-M = 25
-d̂ = 30*(size(MatrixConstruct.H, 2)|>ones)
+M = 40
+d̂ = 40*(size(MatrixConstruct.H, 2)|>ones)
 
 model_mp = Model(HiGHS.Optimizer)
 mp = MP(model_mp, M)
@@ -88,7 +90,6 @@ for II in 1:1
         # end
         
         Constraints = IntroduceCut!(msp, u, q, ρ⁺, ρ⁻)
-        @objective(msp.M, Min, sum(msp.s))
         DebugReport(msp, "msp_after_first_cut")
         DebugReport(mp, "main_problem_referece")
     end

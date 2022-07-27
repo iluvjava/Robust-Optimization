@@ -71,20 +71,6 @@ function PrepareVarieblesForTheModel!(
 return nothing end
 
 
-"""
-    Fix the v slack variables for all constraints that are not related to the system demands. So that the feasibility 
-    problem is only testing on whether the demands can be satisfies given some non-negative slacks. 
-        * This will be used for the MP, FSP, and FMP. 
-        * Mutates the variables for the model. 
-"""
-function FixThev!(v::Vector{VariableRef}, demand_groups="Demand Balance")
-    # starting, ending = MatrixConstruct.RHS_Groups[demand_groups]
-    # for II in setdiff(Set(1:size(MatrixConstruct.H, 1)), Set(starting:ending))
-    #     fix(v[II], 0, force=true)
-    # end
-return nothing end
-
-
 
 ### ====================================================================================================================
 ### Main Problem:
@@ -147,7 +133,6 @@ function IntroduceVariables!(this::MP)
     this.d = @variable(model, d[1:size(MatrixConstruct.H, 2)] >= 0)
     this.v = @variable(model, v[1:size(MatrixConstruct.H, 1)] >= 0)
 return this end
-
 
 
 
@@ -245,7 +230,6 @@ mutable struct MSP <: Problem
     G::Int64; T::Int64          # Given number of generators and time horizon for the problem.
     Tmind::Array{Int}           # Min up down for primary generators
     Tminu::Array{Int}           # Min up time for primary generators
-    s::Vector{VariableRef}      # A slack on the cut for debugging. 
 
     cut_count::Int
 
@@ -335,7 +319,6 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
         )...
     )
 
-
     push!(
         this.con,
         @constraint(this|>GetModel,
@@ -417,14 +400,14 @@ function IntroduceCut!(
     if v === nothing
         v = zeros(length(h))
     end
+
     # FIXING soem weird weird floating point problem introduced by the cut. 
     δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
     δv[end - 63:end] .= 0
-    this.s = @variable(model, s[1:length(h)], lower_bound=0)
 
     CutConstraints = @constraint(
         model, 
-        B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺ - ρ⁻) - v + δv - s .<= h, 
+        B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺ - ρ⁻) - v + δv.<= h, 
         base_name="Cut $(this.cut_count)"
     )
     
@@ -550,7 +533,6 @@ mutable struct FSP <: Problem
             this.con, 
             @constraint(this.model, C*u + H*d + B*w + G*q - v .<= h)...
         )
-        FixThev!(v)
     return end
 
 
@@ -654,11 +636,22 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}
     end
 
     # Prepare for variable v, the slack.
-    v = @variable(this.model, [1:length(MatrixConstruct.h)], lower_bound=0, base_name="v[$(k)]")
+    v = @variable(
+        this.model, 
+        [1:length(MatrixConstruct.h)], 
+        lower_bound=0, 
+        base_name="v[$(k)]"
+    )
     push!(this.v, v[:])
 
     # Parepare the variable lambda, the dual decision variables.
-    λ = @variable(this.model, [1:length(MatrixConstruct.h)], lower_bound=-1, upper_bound=0, base_name="λ[$(k)]")
+    λ = @variable(
+        this.model, 
+        [1:length(MatrixConstruct.h)], 
+        lower_bound=-1,
+        upper_bound=0, 
+        base_name="λ[$(k)]"
+    )
     push!(this.lambda, λ[:])
 
 return this end
@@ -739,7 +732,6 @@ function PrepareConstraints!(this::FMP)
         B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ + γ*ρ⁻) - v .<= h,
         base_name="constraint[$(k)][2]"
     )
-    FixThev!(v)
 return this end
 
 """
@@ -789,7 +781,6 @@ return this end
 function PrepareObjective!(this::FMP)
     @objective(this.model, Max, this.eta)
 return this end
-
 
 
 ### ====================================================================================================================
@@ -864,6 +855,18 @@ return end
 """
 function PortOutVariable!(port_out::Function, this::Problem, variable::Symbol)
 return port_out(getfield(this, variable)) end
+
+
+"""
+    * Port out the model of the system as the first parameters of the context function. 
+    * Port out the field of the instance as a dictionary of symbols ->  Field references as the second 
+    parameters for the function. 
+"""
+function PortOutEverything!(port_out::Function, this::Problem)
+    FieldDict = Dict([field => getfield(this, field) for field in fieldnames(this)])
+return port_out(GetModel(this), FieldDict) end
+
+
 
 """
     Get the value of the decision variable q, it's suitable for the type: Union{FSP, MP, FMP}. 
