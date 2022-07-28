@@ -404,10 +404,17 @@ function IntroduceCut!(
     # FIXING soem weird weird floating point problem introduced by the cut. 
     δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
     δv[end - 63:end] .= 0
+    model[:s] = s = @variable(
+        model, 
+        [1:length(h)], 
+        lower_bound=0, 
+        base_name="s"
+    )
+
 
     CutConstraints = @constraint(
         model, 
-        B*w + C*u + G*q + H*d̂ + γ*H*(ρ⁺ - ρ⁻) - v + δv.<= h, 
+        B*w + C*u + G*q + H*d̂ + H*(γ*ρ⁺ - γ*ρ⁻) - v + δv - s .<= h, 
         base_name="Cut $(this.cut_count)"
     )
     
@@ -866,7 +873,11 @@ return end
         for the decision variable. 
 """
 function PortOutVariable!(port_out::Function, this::Problem, variable::Symbol)
-return port_out(getfield(this, variable)) end
+    if variable in this|>typeof|>fieldnames
+        return port_out(getfield(this, variable))
+    end
+    return (this |> GetModel)[variable]
+return end
 
 
 """
@@ -886,18 +897,22 @@ return port_out(GetModel(this), FieldDict) end
 function Getq(this::Union{FSP, MP, FMP})
 return this.q.|>value.|>(x) -> round(x, digits=1)  end
 
+"""
+    Get the value of the u decision variables. 
+"""
 function Getu(this::Union{FSP, MP, FMP})
 return this.u.|>value.|>(x) -> round(x, digits=1) end
 
+
 function Getv(this::Union{FSP, MP})
 return this.v.|>value end
+
 
 """
     If the instance is an FMP, then it returns the variable v that is the most recent. 
 """
 function Getv(this::FMP)
 return this.v[end].|>value end
-
 
 
 
@@ -918,11 +933,13 @@ function objective_value(this::Problem)
     end
 return JuMP.objective_value(model) end
 
+
 """
     List out the variable references for all the decision variables that are in the problem's model
 
 """
 function all_variables(this::Problem) return this|>GetModel|>JuMP.all_variables end
+
 
 """
     Inherit the same indexer from the JuMP.Model. 

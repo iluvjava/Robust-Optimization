@@ -22,6 +22,7 @@ return nothing end
 
 
 """
+    Problem: Why does making v sparse causes FMP to be infeasible? 
     Repeatible Experiment 1: 
         1. Set up the default master problem and obtain inigial γ̄, w̄. 
         2. Set up the FMP problem and solve for a specific: d̂, ϵ, M. 
@@ -51,9 +52,94 @@ let
         SparsifyVee!(v[end])
     end
 
+    PortOutVariable!(fmp, :lambda) do λ
+        vcat(λ... .|> delete_lower_bound)
+    end
+
     Solve!(fmp)
     if objective_value(fmp) |> isnan
         @warn "FMP is infeasible. γ̄ = $(γ̄)"
     end
 end
+
+
+"""
+Problem 2: 
+    Why is the master problem infeasible after introducing the cut to it? 
+What to do: 
+    * Change it to a feasibility check problem with slacks
+    * Deleting the constraints and testing when the problem suddenly becomes feasible. 
+What to keep: 
+    Keep the sparse v, so the conflict is not from all the constant constraints from the cut. 
+"""
+
+
+let
+
+    ϵ = 0.1
+    M = 30
+    d̂ = 40*(size(MatrixConstruct.H, 2)|>ones)
+
+    model_mp = Model(HiGHS.Optimizer)
+    global mp = MP(model_mp, M)
+    PortOutVariable!(mp, :d) do d
+        fix.(d, d̂, force=true)
+    end
+    Solve!(mp)
+    model_msp = Model(
+        optimizer_with_attributes(HiGHS.Optimizer, "output_flag" =>true),
+    )
+    global msp = MSP(
+        model_msp, 
+        d̂,
+        M
+    )
+    
+    Solve!(msp)
+    w̄ = Getw(msp)
+    γ̄ = GetGamma(msp)
+
+    model_fmp = Model(Gurobi.Optimizer)
+    global fmp = FMP(w̄, γ̄, d̂, model_fmp)
+    
+    PortOutVariable!(fmp, :v) do v 
+        SparsifyVee!(v[end])
+    end
+
+    Solve!(fmp)
+
+    U = objective_value(fmp)
+    global ρ⁺ = GetRhoPlus(fmp)
+    global ρ⁻ = GetRhoMinus(fmp)
+    global d = GetDemandVertex(fmp)
+    model_fsp =  Model(
+        optimizer_with_attributes(HiGHS.Optimizer, "output_flag"=>false)
+    )
+    
+    global fsp = FSP(w̄, γ̄, d, model_fsp)
+    PortOutVariable!(fsp, :v) do v
+        SparsifyVee!(v)
+    end
+    Solve!(fsp)
+
+    L = objective_value(fsp)
+    global u = Getu(fsp)
+    global q = Getq(fsp)
+    global v = Getv(fsp)
+    
+    @info "Upper Bound U: $U, Lower Bound L: $L" 
+    IntroduceCut!(msp, u, q, ρ⁺, ρ⁻)
+    @objective(msp|>GetModel, Min, sum(msp[:s]))
+
+
+    Solve!(msp)
+
+    if msp |> objective_value |> isnan
+        @warn "The master problem is infeasible"
+    end
+
+    DebugReport(msp, "msp_after_first_cut")
+    DebugReport(mp, "main_problem_referece")
+end
+
 

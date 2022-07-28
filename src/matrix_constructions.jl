@@ -441,8 +441,8 @@ SyncRow(B, C, G, F)
 RHS = vcat(RHS, QuickStartConstraints()) # Quick start Constraints
 SyncRow(B, C, G, F)
 
-
-RHS = vcat( # Capacity constraints primary
+# Capacity constraints primary
+RHS = vcat( 
     RHS,
     CapacityConstraints(
         PRIMARY_GENERATORS,
