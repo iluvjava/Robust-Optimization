@@ -824,12 +824,12 @@ return this.model end
 function GetModel(this::Union{MP, MSP})
 return this.M end
 
-"""
-    Print out a debug report for the given Problem object.
-"""
-function DebugReport(this::Problem)
-    error("Not yet implemented for $(typeof(this)) objects.")
-return end
+# """
+#     Print out a debug report for the given Problem object.
+# """
+# function DebugReport(this::Problem)
+#     error("Not yet implemented for $(typeof(this)) objects.")
+# return end
 
 """
     Produce a report for the MP (master problem), which also checks feasibility of the original problem and stuff.
@@ -837,11 +837,18 @@ return end
         * Print out the constraints for the model.
         * Print out the objective for the model.
 """
-function DebugReport(this::Union{MP, MSP}, filename="MP_Debug_report")
+function DebugReport(this::Problem, filename="MP_Debug_report")
     open("$(filename).txt", "w") do io
-        this.con.|>repr.|>(to_print) -> println(io, to_print)
+        write(io, this|>GetModel|>repr)
+        if this|>objective_value|>isnan
+            # unsolved or infeasible system. 
+            return this 
+        end
+        this.con.|>(to_print) -> println(io, to_print)
+        ["$(t[1]) = $(t[2])" for t in zip(this|>all_variables, this|>all_variables.|>value)].|>(to_print) -> println(io, to_print)
     end
 return this end
+
 
 function PrintConstraintsGroup(con::Vector{JuMP.ConstraintRef}, filename::String="Constraints_report")
     open("$(filename).txt", "w") do io
@@ -911,9 +918,19 @@ function objective_value(this::Problem)
     end
 return JuMP.objective_value(model) end
 
+"""
+    List out the variable references for all the decision variables that are in the problem's model
 
+"""
+function all_variables(this::Problem) return this|>GetModel|>JuMP.all_variables end
+
+"""
+    Inherit the same indexer from the JuMP.Model. 
+"""
 function Base.getindex(this::Problem, param::Any)
 return GetModel(this)[param] end
+
+
 
 
 @info "CCGA Modeling tools has been loaded. "

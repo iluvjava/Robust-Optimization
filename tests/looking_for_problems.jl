@@ -26,6 +26,7 @@ return nothing end
         1. Set up the default master problem and obtain inigial γ̄, w̄. 
         2. Set up the FMP problem and solve for a specific: d̂, ϵ, M. 
             * Checks if the corresponding FMP instance turns out to be feasible or not. 
+    The lower bound for lambda seems to be the problem. Also not sure why there is a lower bound for lambda there. 
 """
 
 let
