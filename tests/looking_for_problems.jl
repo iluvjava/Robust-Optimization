@@ -143,3 +143,33 @@ let
 end
 
 
+### ====================================================================================================================
+### Testing FMP feasibility with Dual
+### ====================================================================================================================
+
+
+let 
+
+    ϵ = 0.1
+    M = 10
+    d̂ = 40*(size(MatrixConstruct.H, 2)|>ones)
+    model_msp = Model(
+                optimizer_with_attributes(HiGHS.Optimizer, "output_flag" =>true),
+            )
+    global msp = MSP(
+        model_msp, 
+        d̂,
+        M
+    )
+    Solve!(msp)
+    w̄ = Getw(msp)
+    γ̄ = GetGamma(msp)
+
+    model_fmp = Model(Gurobi.Optimizer)
+    global fmp = FMP(w̄, γ̄, d̂, model_fmp)
+    PortOutVariable!(fmp, :v) do v 
+        SparsifyVee!(v[end])
+    end
+    Solve!(fmp)
+
+end

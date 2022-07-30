@@ -6,6 +6,20 @@ include("utilities.jl")
 include("matrix_construction_export.jl")
 include("ccga_modeling.jl")
 
+"""
+    Fix the v slack variables for all constraints that are not related to the system demands. So that the feasibility 
+    problem is only testing on whether the demands can be satisfies given some non-negative slacks. 
+        * This will be used for the MP, FSP, and FMP. 
+        * Mutates the variables for the model. 
+"""
+function SparsifyVee!(v::Vector{VariableRef}, demand_groups="Demand Balance")
+    starting, ending = MatrixConstruct.RHS_Groups[demand_groups]
+    for II in setdiff(Set(1:size(MatrixConstruct.H, 1)), Set(starting:ending))
+        fix(v[II], 0, force=true)
+    end
+return nothing end
+
+
 ϵ = 0.1
 M = 40
 d̂ = 40*(size(MatrixConstruct.H, 2)|>ones)
@@ -68,8 +82,13 @@ for II in 1:1
         model_fsp =  Model(
             optimizer_with_attributes(HiGHS.Optimizer, "output_flag"=>false)
         )
-
+        
         global fsp = FSP(w̄, γ̄, d, model_fsp)
+        
+        PortOutVariable!(fsp, :v) do v
+            SparsifyVee!(v)
+        end
+
         Solve!(fsp)
         L = objective_value(fsp)
         global u = Getu(fsp)
@@ -90,6 +109,7 @@ for II in 1:1
         
         Constraints = IntroduceCut!(msp, u, q, ρ⁺, ρ⁻)
         DebugReport(msp, "msp_after_first_cut")
+        DebugReport(fsp, "fsp")
         DebugReport(mp, "main_problem_referece")
     end
 
