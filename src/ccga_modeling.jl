@@ -150,10 +150,10 @@ function AddMainProblemConstraints!(this::MP)
     G = MatrixConstruct.G
     H = MatrixConstruct.H
     h = MatrixConstruct.h
-    γ = this.gamma
+    γ = this.gamma  # Unused. 
     v = this.v
     push!(this.con, @constraint(model, B*w + C*u + G*q + H*d - v .<= h)...)
-    push!(this.con, @constraint(model, d .>= γ)...)
+    # push!(this.con, @constraint(model, d .>= γ)...)
 return this end
 
 
@@ -166,13 +166,19 @@ return this end
 """
 function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
     d = this.d
-    for I in 1:length(d)
-        fix(d[I], demand[I]; force=true)
-    end
+    fix.(d, demand; force=true)
+    @objective(this.M, Min, sum(this.v))
     Solve!(this)
-    ToReturn = !(this |>objective_value|>isnan)
+    ToReturn = !((this |>objective_value) > 0 || (this|>objective_value|>isnan))
     unfix.(d)
 return ToReturn end
+
+"""
+    Adapting the function when the user decided to put into a number instead 
+    of a vector for the demand to test. 
+"""
+function DemandFeasible(this::MP, demand::N)  where {N<:Number}
+return DemandFeasible(this, demand*ones(size(this.d))) end
 
 
 
@@ -182,14 +188,14 @@ return ToReturn end
         * Fix the slack variable to be zero.
 """
 function MainProblemObjective!(this::MP)
+    @warn "METHOD DEPRECATED. "
     m = this|>GetModel
     γ = m[:γ]
     v = this.v
-    # d = this.d
-    @objective(m, Max, γ)
-    fix.(v, 0; force=true)
+    d = this.d
+    # @objective(m, Max, γ)
+    # fix.(v, 0; force=true)
 return end
-
 
 
 """
@@ -207,7 +213,9 @@ function EstablishMainProblem!(this::MP)
     # Prepare constraints for the Main Problem.
     PreppareConstraintsPrimary!(this)
     AddMainProblemConstraints!(this)
-    MainProblemObjective!(this)
+
+    # Add it yourself whenever you make it. 
+    # MainProblemObjective!(this)
 return this end
 
 
@@ -811,7 +819,6 @@ return this end
 ### ====================================================================================================================
 
 
-
 """
     Solve the inner JuMP optimization problem by directly invoking `optimize!` in JuMP on the model.
 """
@@ -830,13 +837,6 @@ return this.model end
 """
 function GetModel(this::Union{MP, MSP})
 return this.M end
-
-# """
-#     Print out a debug report for the given Problem object.
-# """
-# function DebugReport(this::Problem)
-#     error("Not yet implemented for $(typeof(this)) objects.")
-# return end
 
 """
     Produce a report for the MP (master problem), which also checks feasibility of the original problem and stuff.
