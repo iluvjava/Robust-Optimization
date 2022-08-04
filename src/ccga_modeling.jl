@@ -588,7 +588,7 @@ end
 
     v::Vector{Vector{VariableRef}}                # The slack decision variables for each of the previous demands.
     u::Vector{Vector{VariableRef}}                # The secondary continuous decision variables.
-    d::Vector{VariableRef}                        # The demand decision variable, as a giant vector.
+    # d::Vector{VariableRef}                        # The demand decision variable, as a giant vector.
     eta::VariableRef                              # The eta lower bound for all feasibility.
     lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
     rho_plus::Vector{VariableRef}                 # binary decision variables for the bilinear demands
@@ -650,7 +650,7 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}
         push!(Decisionvariables, zeros(Int, size(q[2])...)...)
         push!(Decisionvariables, zeros(Int, size(q[3])...)...)
         push!(this.q, Decisionvariables)
-        this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)] >= 0)[:]
+        # this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)] >= 0)[:]
         this.eta = @variable(this.model, η >= 0)
     else
         push!(this.q, q_given)
@@ -712,7 +712,7 @@ function PrepareConstraints!(this::FMP)
     C = MatrixConstruct.C
     h = MatrixConstruct.h
     λ = this.lambda[k]
-    d = this.d
+    # d = this.d
     d̂ = this.d_hat
     γ = this.gamma
     q = this.q[k]
@@ -720,8 +720,8 @@ function PrepareConstraints!(this::FMP)
 
     @constraint(model, η <= sum(v), base_name="constraint[$(k)][1]").|>addConstraints!
     @constraint(model, λ'*C .<= 0, base_name="constraint[$(k)][3]").|>addConstraints!
-    @constraint(model, d .<= d̂ .+ γ, base_name="constraint[$(k)][4]").|>addConstraints!
-    @constraint(model, d .>= d̂ .- γ, base_name="constraint[$(k)][5]").|>addConstraints!
+    # @constraint(model, d .<= d̂ .+ γ, base_name="constraint[$(k)][4]").|>addConstraints!
+    # @constraint(model, d .>= d̂ .- γ, base_name="constraint[$(k)][5]").|>addConstraints!
 
     # Sparse bilinear constraints setup:
     B̄ = size(H, 2)
@@ -757,12 +757,14 @@ function PrepareConstraints!(this::FMP)
         base_name="constraint[$(k)][7]"
     ).|>addConstraints!
     
+    if k == 1
     # new added demand feasibility constraints.
-    @constraint(
-        model,
-        B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ - γ*ρ⁻) - v .<= h,
-        base_name="constraint[$(k)][2]"
-    ).|>addConstraints!
+        @constraint(
+            model,
+            B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ - γ*ρ⁻) - v .<= h,
+            base_name="constraint[$(k)][2]"
+        ).|>addConstraints!
+    end
 
 return this end
 

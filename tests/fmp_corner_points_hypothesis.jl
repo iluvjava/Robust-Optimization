@@ -23,32 +23,34 @@ return nothing end
 
 
 ϵ = 0.1
-M = 16
-d̂ = 100*(size(MatrixConstruct.H, 2)|>ones)
+M = 60
+d̂ = 200(size(MatrixConstruct.H, 2)|>ones)
 global lowerbound_list = Vector()
 global upperbound_list = Vector()
 global all_qs = Vector{Vector}()
 global all_ds = Vector{Vector}()
-global d_continuous = Vector{Vector}()
+# global d_continuous = Vector{Vector}()
 
 model_mp = Model(HiGHS.Optimizer); global mp = MP(model_mp, M)
-PortOutVariable!(mp, :d) do d
-    fix.(d, d̂, force=true)
-end
-PortOutVariable!(mp, :v) do v
-    fix.(v, 0, force=true)
-end
+PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
+PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
 Solve!(mp)
 global w̄ = Getw(mp)
 γ̄ = M
+
 model_fmp = Model(Gurobi.Optimizer)
 global fmp = FMP(w̄, γ̄, d̂, model_fmp)
+
+# PortOutVariable!(fmp, :v) do v
+#     SparsifyVee!(v[end])
+# end
+
 Solve!(fmp)
 @assert !(objective_value(fmp)|>isnan)
 
-# push!(upperbound_list, objective_value(fmp))
+push!(upperbound_list, objective_value(fmp))
 for III in 1:10
-    global d = GetDemandVertex(fmp); push!(all_ds, d); push!(d_continuous, fmp.d.|>value)
+    global d = GetDemandVertex(fmp); push!(all_ds, d); # push!(d_continuous, fmp.d.|>value)
 
     model_fsp = Model(Gurobi.Optimizer)
     global fsp = FSP(w̄, γ̄, d, model_fsp)
@@ -60,6 +62,11 @@ for III in 1:10
     Solve!(fsp)
     global q = Getq(fsp); push!(all_qs, q)
     Introduce!(fmp, q)
+    
+    # PortOutVariable!(fmp, :v) do v
+    #     SparsifyVee!(v[end])
+    # end
+
     Solve!(fmp)
     push!(lowerbound_list, fsp |> objective_value)
     @assert !(objective_value(fmp)|>isnan)
@@ -68,8 +75,8 @@ for III in 1:10
         break
     end
 end
-fig = plot(upperbound_list, label="upper_fmp")
-plot!(fig, lowerbound_list, label="lower_fsp")
+fig = plot(upperbound_list, label="upper_fmp", marker=:x)
+plot!(fig, lowerbound_list, label="lower_fsp", marker=:x)
 fig|>display
 
 msp_model = Model(Gurobi.Optimizer)

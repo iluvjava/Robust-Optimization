@@ -1,6 +1,6 @@
 using JuMP, HiGHS, LinearAlgebra
 include("../src/matrix_construction_export.jl")
-H = RobustOptim.H
+H = MatrixConstruct.H
 
 """
     Make the original model with full ξ. 
@@ -85,9 +85,9 @@ d = 100 .+ 20*rand(size(H, 2))
 ModelSparseLP = MakeModel(H)
 Objective1 = RunModel(ModelSparseLP, H[H.!=0], d, γ)
 
-### Solve the MIP model and find the objective. 
-# ModelSparseMIP = MakeModel(H, ip=true)
-# Objective2 = RunModel(ModelSparseMIP, H[H.!=0], d, γ)
+## Solve the MIP model and find the objective. 
+ModelSparseMIP = MakeModel(H, ip=true)
+Objective2 = RunModel(ModelSparseMIP, H[H.!=0], d, γ)
 
 ModelDenseLP = MakeDenseModel(size(H, 1), size(H, 2))
 Objective3 = RunModel(ModelDenseLP, H'[:], d, γ)

@@ -1,6 +1,8 @@
 using JuMP, HiGHS, LinearAlgebra
 include("../src/matrix_construction_export.jl")
-H = RobustOptim.H
+H = MatrixConstruct.H
+
+function objective_value(m::Model) JuMP.objective_value(m) end 
 
 function MakeModel(B::Int=6, J::Int=100; ip::Bool=false)
     model = Model(HiGHS.Optimizer)
@@ -38,12 +40,12 @@ for II =1:100
     c = randn(variables|>length)
 
     
-    @objective(model, Min, dot(c, variables))
+    @objective(model, Max, dot(c, variables))
     optimize!(model)
     Obj_LP = objective_value(model)
 
     model_ip, variables = MakeModel(ip=true)
-    @objective(model_ip, Min, dot(c, variables))
+    @objective(model_ip, Max, dot(c, variables))
     optimize!(model_ip)
     Obj_IP = objective_value(model_ip)
     if abs(Obj_IP - Obj_LP) > 1e-10
