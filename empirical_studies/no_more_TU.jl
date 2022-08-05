@@ -23,10 +23,14 @@ function MakeDenseModel(J::Int, B::Int)
     @constraint(model,[b=1:B, j=1:J], ξ⁻[b, j] <= ρ⁻[b])
     @constraint(model,[b=1:B, j=1:J], λ[j] - (1 - ρ⁻[b]) <= ξ⁻[b, j])
     @constraint(model,[b=1:B, j=1:J], ξ⁻[b, j] <= λ[j] + (1 - ρ⁻[b]))
+    
     @constraint(model,[b=1:B], ρ⁺[b] + ρ⁻[b] == 1)
 
 return model end
 
+"""
+Make the model using the sparse matrix's entries to construct the constraints. 
+"""
 function MakeModel(H; ip::Bool=false)
     J, B = size(H)
     model = Model(HiGHS.Optimizer)
