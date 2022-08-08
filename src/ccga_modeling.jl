@@ -600,7 +600,6 @@ end
 """
 @AbsFMPTemplate @ProblemTemplate mutable struct FMP <: AbsFMP
     
-    
     function FMP()
         @warn("Construction shouldn't be called except for debugging purposes. ")
         d̂ = 100.0*ones(size(MatrixConstruct.H, 2))
@@ -630,9 +629,11 @@ end
 
 end
 
+
 # The adding of the constraints API methods for FMP
 """
-    THIS METHOD IS FOR POLYMORPHISM.  It's being inherited by subtypes of AbsFMP. 
+    THIS METHOD IS FOR POLYMORPHISM!!!
+    It's being inherited by subtypes of AbsFMP. 
 """
 function IntroduceVariables!(::Type{AbsFMP}, this::AbsFMP, q_given::Union{Nothing, Vector{Float64}})
     k = this.k
@@ -647,7 +648,6 @@ function IntroduceVariables!(::Type{AbsFMP}, this::AbsFMP, q_given::Union{Nothin
         push!(Decisionvariables, zeros(Int, size(q[2])...)...)
         push!(Decisionvariables, zeros(Int, size(q[3])...)...)
         push!(this.q, Decisionvariables)
-        # this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)] >= 0)[:]
         this.eta = @variable(this.model, η >= 0)
     else
         push!(this.q, q_given)
@@ -667,8 +667,6 @@ function IntroduceVariables!(::Type{AbsFMP}, this::AbsFMP, q_given::Union{Nothin
     λ = @variable(
         this.model, 
         [1:length(MatrixConstruct.h)], 
-        lower_bound=-1,
-        upper_bound=0, 
         base_name="λ[$(k)]"
     )
     
@@ -743,13 +741,12 @@ function PrepareConstraints!(this::FMP)
     IdxTuples = findall(!=(0), H).|>Tuple
     model = this.model
 
+    # Dual constraints
     @constraint(model, η <= sum(v), base_name="constraint[$(k)][1]").|>addConstraints!
     @constraint(model, λ'*C .<= 0, base_name="constraint[$(k)][3]").|>addConstraints!
-    # @constraint(model, d .<= d̂ .+ γ, base_name="constraint[$(k)][4]").|>addConstraints!
-    # @constraint(model, d .>= d̂ .- γ, base_name="constraint[$(k)][5]").|>addConstraints!
+    @constraint(model, -1 .<= λ .<= 0)
 
     # Sparse bilinear constraints setup:
-  
     ρ⁺ = this.rho_plus
     ρ⁻ = this.rho_minus
     ξ⁺ = this.xi_plus
@@ -825,7 +822,6 @@ function Introduce!(this::FMP, q::Vector{Float64})
     @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
     IntroduceVariables!(this, q)
     PrepareConstraints!(this)
-    
 return this end
 
 """
@@ -844,22 +840,31 @@ return this end
 
 @AbsFMPTemplate @ProblemTemplate mutable struct McCormickFMP <: AbsFMP
     
-    demands_con_idx::Set{Int}    # The set of indices that corresponds to the demand balance constraints. 
+    demands_con_idx::Set{Int}           # The set of indices that corresponds to the demand balance constraints. 
+    not_demands_con_idx::Set{Int}       # The set of indices that is not the demand balance constraints. 
+    d::Vector{VariableRef}
+
+    function McCormickFMP()
+        @warn("This construction only exists for testing purposes!")
+        return McCormickFMP(
+            Model(HiGHS.Optimizer),
+            40*ones(size(MatrixConstruct.H, 2)),
+            zeros(size(MatrixConstruct.B, 2)),
+            10   
+        )
+    end
+
 
     function McCormickFMP(
         model::Model, 
         d_hat::Vector, 
         w_bar::Vector, 
-        gamma_bar; 
-        q0::Union{Vector{Int}, Nothing}=Nothing
+        gamma_bar
     )
         this = new()
         this.w = w_bar
-        this.gamma_bar = gamma_bar
+        this.gamma = gamma_bar
         this.q = Vector{Vector}()
-        if q0 !== Nothing
-            push!(this.q, q0)
-        end
         this.v = Vector{Vector}()
         this.u = Vector{Vector}()
         this.lambda = Vector{Vector}()
@@ -868,21 +873,63 @@ return this end
         this.d_hat = d_hat
         this.con = Vector{Vector}()
         starting, ending = MatrixConstruct.RHS_Groups["Demand Balance"]
-        this.demands_con_idx = setdiff(Set(1:size(MatrixConstruct.H, 1)), Set(starting:ending))
+        this.demands_con_idx = Set(starting:ending)
+        this.not_demands_con_idx = setdiff(Set(1:size(MatrixConstruct.H, 1)), this.demands_con_idx)
         IntroduceVariables!(this)
-        PrepareConstraints!(this)
     return this end
 
 end
 
+
+"""
+    Introduce all the decision variables for the McCormic version of the FMP. 
+        * The upper bouned and lower bound for the variables are introduced as constraints in this function 
+        as well. 
+"""
+function IntroduceVariables!(this::McCormickFMP, q_given::Union{Nothing, Vector{Int}}=nothing)
+    IntroduceVariables!(AbsFMP, this, q_given)
+    this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)])
+    γ̄ = this.gamma
+    d̂ = this.d_hat
+    push!(
+        this.con, @constraint(this.model, -γ̄ .<= d - d̂ .<= γ̄)...
+    )
+return this end
+
+
+"""
+    Prepare the constraints for the FMP McCormic Formulations. 
+"""
 function PrepareConstraints!(this::McCormickFMP)
     function addConstraints!(cons::JuMP.ConstraintRef)
         push!(this.con, cons)
     end
-    
+    k = this.k
+    η = this.eta
+    u = this.u[k]
+    v = this.v[k]
+    w = this.w
+    H = MatrixConstruct.H
+    B = MatrixConstruct.B
+    G = MatrixConstruct.G
+    C = MatrixConstruct.C
+    h = MatrixConstruct.h
+    λ = this.lambda[k]
+    d = this.d
+    d̂ = this.d_hat
+    γ = this.gamma
+    q = this.q[k]
+    B̄ = size(H, 2)
+    IdxTuples = findall(!=(0), H).|>Tuple
+    model = this.model
+
+
+    # Bi-linear equality constraints: The strong duality: 
+
+
+    # operational constraints: 
+
 return this end
-
-
 
 
 
