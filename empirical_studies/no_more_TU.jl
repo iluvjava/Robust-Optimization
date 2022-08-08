@@ -1,4 +1,4 @@
-using JuMP, HiGHS, LinearAlgebra
+using JuMP, HiGHS, LinearAlgebra, CSV, DataFrames
 include("../src/matrix_construction_export.jl")
 H = MatrixConstruct.H
 
@@ -96,10 +96,7 @@ Objective2 = RunModel(ModelSparseMIP, H[H.!=0], d, γ)
 ModelDenseLP = MakeDenseModel(size(H, 1), size(H, 2))
 Objective3 = RunModel(ModelDenseLP, H'[:], d, γ)
 
-λ1 = ModelSparseLP[:λ].|>value
-λ2 = ModelDenseLP[:λ].|>value
-sum(λ1 .== -1)|>println
-sum(λ2 .== -1)|>println
+rhos_lambdas = hcat(ModelDenseLP[:λ], ModelDenseLP[:ξ⁺]')
 
 
 

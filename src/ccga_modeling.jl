@@ -50,6 +50,25 @@ abstract type AbsFMP <: Problem
     # FMP like problem. Different way of working with solving the FMP. 
 end
 
+@premix mutable struct AbsFMPTemplate
+    w::Vector{Float64}                            # Primary Generator decision variables.               (GIVEN CONSTANT)
+    gamma::Float64                                # the bound for the demands.                          (GIVEN CONSTANT)
+    q::Vector{Vector{Int}}                        # the secondary discrete decision variables           (GIVEN CONSTANT)
+    d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
+
+    v::Vector{Vector{VariableRef}}                # The slack decision variables for each of the previous demands.
+    u::Vector{Vector{VariableRef}}                # The secondary continuous decision variables.
+    # d::Vector{VariableRef}                        # The demand decision variable, as a giant vector.
+    eta::VariableRef                              # The eta lower bound for all feasibility.
+    lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
+    rho_plus::Vector{VariableRef}                 # binary decision variables for the bilinear demands
+    rho_minus::Vector{VariableRef}                # binary decision variables for the bilinear demands
+    xi_plus::Containers.DenseAxisArray            # The binary decision variable for the extreme demands, vertices of the demands cube. 
+    xi_minus::Containers.DenseAxisArray           # The binary decision variable for the extreme demands. 
+    
+    k::Int                                        # The iteration number from the ccga.
+end
+
 
 """
     Given a JuMP model, prepare the q, u variable for that model.
@@ -579,26 +598,9 @@ end
     searching for adversarial demands that can break our delivery system.
         * Determines the upper bound for the feasibility slack.
 """
-@ProblemTemplate mutable struct FMP <: AbsFMP
+@AbsFMPTemplate @ProblemTemplate mutable struct FMP <: AbsFMP
     
-    w::Vector{Float64}                            # Primary Generator decision variables.               (GIVEN CONSTANT)
-    gamma::Float64                                # the bound for the demands.                          (GIVEN CONSTANT)
-    q::Vector{Vector{Int}}                        # the secondary discrete decision variables           (GIVEN CONSTANT)
-    d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
-
-    v::Vector{Vector{VariableRef}}                # The slack decision variables for each of the previous demands.
-    u::Vector{Vector{VariableRef}}                # The secondary continuous decision variables.
-    # d::Vector{VariableRef}                        # The demand decision variable, as a giant vector.
-    eta::VariableRef                              # The eta lower bound for all feasibility.
-    lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
-    rho_plus::Vector{VariableRef}                 # binary decision variables for the bilinear demands
-    rho_minus::Vector{VariableRef}                # binary decision variables for the bilinear demands
-    xi_plus::Containers.DenseAxisArray            # The binary decision variable for the extreme demands, vertices of the demands cube. 
-    xi_minus::Containers.DenseAxisArray           # The binary decision variable for the extreme demands. 
     
-    k::Int                                        # The iteration number from the ccga.
-    
-
     function FMP()
         @warn("Construction shouldn't be called except for debugging purposes. ")
         d̂ = 100.0*ones(size(MatrixConstruct.H, 2))
@@ -629,20 +631,15 @@ end
 end
 
 # The adding of the constraints API methods for FMP
-
 """
-    Prepare a new set of decision variables for the given instance of the problem.
-        * u[k]::The continuous decision variable, for the kth iterations of the CCGA Algorithm.
-            * u[k] will be a compositive decision variables for all the modeling decision variables in the original problem.
-        * v, λ follows a similar token.
-    NOTE:
-        ALWAYS, run PrepareConstraints After a new constant "q[k]" is introduced to the system. 
+    THIS METHOD IS FOR POLYMORPHISM.  It's being inherited by subtypes of AbsFMP. 
 """
-function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}})
+function IntroduceVariables!(::Type{AbsFMP}, this::AbsFMP, q_given::Union{Nothing, Vector{Float64}})
     k = this.k
     # Prepare variable u for the model.
     push!(this.u, PrepareVarieblesForTheModel!(this|>GetModel, :u, k))
     # Prepare for variable q, depending on whether a `q_given` is defined. 
+    
     if q_given === nothing
         Decisionvariables = Vector()
         q = MatrixConstruct.q
@@ -656,7 +653,7 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}
         push!(this.q, q_given)
     end
 
-    # Prepare for variable v, the slack.
+    # Prepare for variable v, the violations for all k. 
     v = @variable(
         this.model, 
         [1:length(MatrixConstruct.h)], 
@@ -677,6 +674,32 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}
     
     push!(this.lambda, λ[:])
 
+    # Variables that only make then once for all k =============================
+    model = this.model
+    B̄ = size(MatrixConstruct.H, 2)
+    IdxTuples = findall(!=(0), MatrixConstruct.H).|>Tuple
+    if k == 1
+        this.rho_plus = @variable(model, [1:B̄], Bin, base_name="ρ⁺[$(k)]")
+        this.rho_minus = @variable(model, [1:B̄], Bin, base_name="ρ⁻[$(k)]")
+        this.xi_plus = @variable(model, [IdxTuples], base_name="ξ⁺[$(k)]")
+        this.xi_minus = @variable(model, [IdxTuples], base_name="ξ⁻[$(k)]")
+    end
+
+return this end
+
+
+
+"""
+    Prepare a new set of decision variables for the given instance of the problem.
+        * u[k]::The continuous decision variable, for the kth iterations of the CCGA Algorithm.
+            * u[k] will be a compositive decision variables for all the modeling decision variables in the original problem.
+        * v, λ follows a similar token.
+    NOTE:
+        * ALWAYS, run PrepareConstraints After a new constant "q[k]" is introduced to the system. 
+        * This method is for super type AbsFMP and it's sharing it downwards. 
+"""
+function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}})
+    IntroduceVariables!(AbsFMP, this, q_given)
 return this end
 
 
@@ -716,6 +739,8 @@ function PrepareConstraints!(this::FMP)
     d̂ = this.d_hat
     γ = this.gamma
     q = this.q[k]
+    B̄ = size(H, 2)
+    IdxTuples = findall(!=(0), H).|>Tuple
     model = this.model
 
     @constraint(model, η <= sum(v), base_name="constraint[$(k)][1]").|>addConstraints!
@@ -724,15 +749,7 @@ function PrepareConstraints!(this::FMP)
     # @constraint(model, d .>= d̂ .- γ, base_name="constraint[$(k)][5]").|>addConstraints!
 
     # Sparse bilinear constraints setup:
-    B̄ = size(H, 2)
-    IdxTuples = findall(!=(0), H).|>Tuple
-    if k == 1
-        this.rho_plus = @variable(model, [1:B̄], Bin, base_name="ρ⁺[$(k)]")
-        this.rho_minus = @variable(model, [1:B̄], Bin, base_name="ρ⁻[$(k)]")
-        this.xi_plus = @variable(model, [IdxTuples], base_name="ξ⁺[$(k)]")
-        this.xi_minus = @variable(model, [IdxTuples], base_name="ξ⁻[$(k)]")
-    end
-    
+  
     ρ⁺ = this.rho_plus
     ρ⁻ = this.rho_minus
     ξ⁺ = this.xi_plus
@@ -819,15 +836,55 @@ function PrepareObjective!(this::FMP)
 return this end
 
 ### ====================================================================================================================
-### Bi FMP: 
-###     - This struct is created for the purpose of investigating the corner point hypothesis which is not part of the
-###     CCGA YET. 
+### McCormickFMP: 
+###     A convex relaxations for the collinear constraints appeared in the FMP strong duality objective. It uses the 
+###     McCormick Envelope to achieve it. 
 ### ====================================================================================================================
 
 
-mutable struct BiFMP <: AbsFMP
+@AbsFMPTemplate @ProblemTemplate mutable struct McCormickFMP <: AbsFMP
+    
+    demands_con_idx::Set{Int}    # The set of indices that corresponds to the demand balance constraints. 
+
+    function McCormickFMP(
+        model::Model, 
+        d_hat::Vector, 
+        w_bar::Vector, 
+        gamma_bar; 
+        q0::Union{Vector{Int}, Nothing}=Nothing
+    )
+        this = new()
+        this.w = w_bar
+        this.gamma_bar = gamma_bar
+        this.q = Vector{Vector}()
+        if q0 !== Nothing
+            push!(this.q, q0)
+        end
+        this.v = Vector{Vector}()
+        this.u = Vector{Vector}()
+        this.lambda = Vector{Vector}()
+        this.k = 1
+        this.model = model
+        this.d_hat = d_hat
+        this.con = Vector{Vector}()
+        starting, ending = MatrixConstruct.RHS_Groups["Demand Balance"]
+        this.demands_con_idx = setdiff(Set(1:size(MatrixConstruct.H, 1)), Set(starting:ending))
+        IntroduceVariables!(this)
+        PrepareConstraints!(this)
+    return this end
 
 end
+
+function PrepareConstraints!(this::McCormickFMP)
+    function addConstraints!(cons::JuMP.ConstraintRef)
+        push!(this.con, cons)
+    end
+    
+return this end
+
+
+
+
 
 
 ### ====================================================================================================================
@@ -873,6 +930,7 @@ function PrintConstraintsGroup(con::Vector{JuMP.ConstraintRef}, filename::String
         con.|>repr.|>(to_print) -> println(io, to_print)
     end
 return end
+
 
 """
     Port out an variable for the user to write a functional to access a specific variable. 

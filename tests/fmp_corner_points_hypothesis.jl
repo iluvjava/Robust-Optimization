@@ -14,7 +14,7 @@ include("../src/ccga_modeling.jl")
         * Mutates the variables for the model. 
 """
 function SparsifyVee!(v::Vector{VariableRef}, demand_groups="Demand Balance")
-    starting, ending = MatrixConstruct.RHS_Groups[demand_groups]
+    
     for II in setdiff(Set(1:size(MatrixConstruct.H, 1)), Set(starting:ending))
         fix(v[II], 0, force=true)
     end
