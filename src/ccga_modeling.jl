@@ -61,10 +61,7 @@ end
     # d::Vector{VariableRef}                        # The demand decision variable, as a giant vector.
     eta::VariableRef                              # The eta lower bound for all feasibility.
     lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
-    rho_plus::Vector{VariableRef}                 # binary decision variables for the bilinear demands
-    rho_minus::Vector{VariableRef}                # binary decision variables for the bilinear demands
-    xi_plus::Containers.DenseAxisArray            # The binary decision variable for the extreme demands, vertices of the demands cube. 
-    xi_minus::Containers.DenseAxisArray           # The binary decision variable for the extreme demands. 
+    
     
     k::Int                                        # The iteration number from the ccga.
 end
@@ -600,6 +597,11 @@ end
 """
 @AbsFMPTemplate @ProblemTemplate mutable struct FMP <: AbsFMP
     
+    rho_plus::Vector{VariableRef}                 # binary decision variables for the bilinear demands
+    rho_minus::Vector{VariableRef}                # binary decision variables for the bilinear demands
+    xi_plus::Containers.DenseAxisArray            # The binary decision variable for the extreme demands, vertices of the demands cube. 
+    xi_minus::Containers.DenseAxisArray           # The binary decision variable for the extreme demands. 
+
     function FMP()
         @warn("Construction shouldn't be called except for debugging purposes. ")
         d̂ = 100.0*ones(size(MatrixConstruct.H, 2))
@@ -672,16 +674,6 @@ function IntroduceVariables!(::Type{AbsFMP}, this::AbsFMP, q_given::Union{Nothin
     
     push!(this.lambda, λ[:])
 
-    # Variables that only make then once for all k =============================
-    model = this.model
-    B̄ = size(MatrixConstruct.H, 2)
-    IdxTuples = findall(!=(0), MatrixConstruct.H).|>Tuple
-    if k == 1
-        this.rho_plus = @variable(model, [1:B̄], Bin, base_name="ρ⁺[$(k)]")
-        this.rho_minus = @variable(model, [1:B̄], Bin, base_name="ρ⁻[$(k)]")
-        this.xi_plus = @variable(model, [IdxTuples], base_name="ξ⁺[$(k)]")
-        this.xi_minus = @variable(model, [IdxTuples], base_name="ξ⁻[$(k)]")
-    end
 
 return this end
 
@@ -698,6 +690,21 @@ return this end
 """
 function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}})
     IntroduceVariables!(AbsFMP, this, q_given)
+    
+    # Variables that only make then once for all k =============================
+    # For FMP we need the bin decision variable for corner point formulations. 
+
+    model = this.model
+    k = this.k
+    B̄ = size(MatrixConstruct.H, 2)
+    IdxTuples = findall(!=(0), MatrixConstruct.H).|>Tuple
+    if k == 1
+        this.rho_plus = @variable(model, [1:B̄], Bin, base_name="ρ⁺[$(k)]")
+        this.rho_minus = @variable(model, [1:B̄], Bin, base_name="ρ⁻[$(k)]")
+        this.xi_plus = @variable(model, [IdxTuples], base_name="ξ⁺[$(k)]")
+        this.xi_minus = @variable(model, [IdxTuples], base_name="ξ⁻[$(k)]")
+    end
+
 return this end
 
 
@@ -827,7 +834,7 @@ return this end
 """
     Prepare the objective for the FMP problem, it's the sum of all v for all system configurations. 
 """
-function PrepareObjective!(this::FMP)
+function PrepareObjective!(this::AbsFMP)
     @objective(this.model, Max, this.eta)
 return this end
 
@@ -843,6 +850,7 @@ return this end
     demands_con_idx::Set{Int}           # The set of indices that corresponds to the demand balance constraints. 
     not_demands_con_idx::Set{Int}       # The set of indices that is not the demand balance constraints. 
     d::Vector{VariableRef}
+    xi::Containers.DenseAxisArray
 
     function McCormickFMP()
         @warn("This construction only exists for testing purposes!")
@@ -876,6 +884,8 @@ return this end
         this.demands_con_idx = Set(starting:ending)
         this.not_demands_con_idx = setdiff(Set(1:size(MatrixConstruct.H, 1)), this.demands_con_idx)
         IntroduceVariables!(this)
+        PrepareConstraints!(this)
+        PrepareObjective!(this)
     return this end
 
 end
@@ -886,14 +896,22 @@ end
         * The upper bouned and lower bound for the variables are introduced as constraints in this function 
         as well. 
 """
-function IntroduceVariables!(this::McCormickFMP, q_given::Union{Nothing, Vector{Int}}=nothing)
+function IntroduceVariables!(this::McCormickFMP, q_given::Union{Nothing, Vector{Float64}}=nothing)
     IntroduceVariables!(AbsFMP, this, q_given)
-    this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)])
     γ̄ = this.gamma
     d̂ = this.d_hat
-    push!(
-        this.con, @constraint(this.model, -γ̄ .<= d - d̂ .<= γ̄)...
-    )
+    k = this.k
+
+    # The decision variable for McCormic Envelope. 
+    # the ξ is Sparse! 
+    IdxTuples = findall(!=(0), MatrixConstruct.H).|>Tuple
+    if k == 1
+        this.xi = @variable(this.model, [IdxTuples], base_name="ξ")
+        d = this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)])
+        push!(
+            this.con, @constraint(this.model, -γ̄ .<= d - d̂ .<= γ̄)...
+        )
+    end
 return this end
 
 
@@ -915,23 +933,71 @@ function PrepareConstraints!(this::McCormickFMP)
     C = MatrixConstruct.C
     h = MatrixConstruct.h
     λ = this.lambda[k]
+    ξ = this.xi
+    D = this.demands_con_idx|>collect
+    D̃ = this.not_demands_con_idx|>collect
     d = this.d
     d̂ = this.d_hat
-    γ = this.gamma
+    γ̄ = this.gamma
     q = this.q[k]
     B̄ = size(H, 2)
     IdxTuples = findall(!=(0), H).|>Tuple
     model = this.model
+    
+    # Dual constraints
+    @constraint(model, η <= sum(v), base_name="[$(k)]").|>addConstraints!
+    @constraint(model, λ'*C .<= 0, base_name="[$(k)]").|>addConstraints!
+    @constraint(model, -1 .<= λ[D] .<= 0).|>addConstraints!
+    @constraint(model, λ[D̃] .== 0).|>addConstraints!
 
-
-    # Bi-linear equality constraints: The strong duality: 
-
-
+    # Bi-linear equality constraints: The strong duality via the McCormic Envelope
+    @constraint(
+        model,
+        dot(-H[H.!=0], ξ) == sum(v),
+        base_name="[$(k)]"
+    ).|>addConstraints!
+    for (j, b) in IdxTuples
+        if j in D
+            # (4a)
+            @constraint(model, ξ[(j, b)] >= (d̂[b] - γ̄)*λ[j] - d[b] + (d̂[b] - γ̄)).|>addConstraints!
+            # (4c)
+            @constraint(model, ξ[(j, b)] <= (d̂[b] + γ̄)*λ[j] - d[b] + (d̂[b] + γ̄)).|>addConstraints!
+        else
+            # (4a)
+            @constraint(model, ξ[(j, b)] >= λ[j]*(d̂[b] - γ̄)).|>addConstraints! 
+            # (4c)
+            @constraint(model, ξ[(j, b)] <= λ[j]*(d̂[b] + γ̄)).|>addConstraints!
+        end
+        # (4b)
+        @constraint(model, ξ[(j, b)] >= λ[j]*(d̂[b] + γ̄)).|>addConstraints!
+        # (4d)
+        @constraint(model, ξ[(j, b)] <= λ[j]*(d̂[b] - γ̄)).|>addConstraints!
+    end
+    
     # operational constraints: 
+    if k == 1
+        @constraint(
+            model,
+            B*w + G*q + C*u  + H*d - v .<= h,
+            base_name="[$(k)]"
+        ).|>addConstraints!
+    end
 
 return this end
 
+"""
+    Get the decision variable for demand as a vector of value. 
+"""
+function GetDemandVertex(this::McCormickFMP)
+return this.d.|>value end
 
+
+function Introduce!(this::McCormickFMP, q::Vector{Float64})
+    this.k += 1
+    @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
+    IntroduceVariables!(this, q)
+    PrepareConstraints!(this)
+return this end
 
 
 ### ====================================================================================================================
@@ -964,6 +1030,7 @@ return this.model end
 function DebugReport(this::Problem, filename="debug_report")
     open("$(filename).txt", "w") do io
         write(io, this|>GetModel|>repr)
+        write(io, "\n")
         this.con.|>(to_print) -> println(io, to_print)
         if !(this|>objective_value|>isnan)
             ["$(t[1]) = $(t[2])" for t in zip(this|>all_variables, this|>all_variables.|>value)].|>(to_print) -> println(io, to_print)

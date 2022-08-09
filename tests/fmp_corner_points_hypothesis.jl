@@ -23,8 +23,8 @@ return nothing end
 
 
 ϵ = 0.1
-M = 60
-d̂ = 200(size(MatrixConstruct.H, 2)|>ones)
+M = 40
+d̂ = 100(size(MatrixConstruct.H, 2)|>ones)
 global lowerbound_list = Vector()
 global upperbound_list = Vector()
 global all_qs = Vector{Vector}()
@@ -39,7 +39,8 @@ global w̄ = Getw(mp)
 γ̄ = M
 
 model_fmp = Model(Gurobi.Optimizer)
-global fmp = FMP(w̄, γ̄, d̂, model_fmp)
+# global fmp = FMP(w̄, γ̄, d̂, model_fmp)
+global fmp = McCormickFMP(model_fmp, d̂, w̄, γ̄)
 
 # PortOutVariable!(fmp, :v) do v
 #     SparsifyVee!(v[end])
@@ -79,11 +80,11 @@ fig = plot(upperbound_list, label="upper_fmp", marker=:x)
 plot!(fig, lowerbound_list, label="lower_fsp", marker=:x)
 fig|>display
 
-msp_model = Model(Gurobi.Optimizer)
-msp = MSP(msp_model, d̂, M)
-Solve!(msp)
-IntroduceCut!(msp, Getu(fsp), Getq(fsp), GetRhoPlus(fmp), GetRhoMinus(fmp))
-Solve!(msp)
-DebugReport(msp)
+# msp_model = Model(Gurobi.Optimizer)
+# msp = MSP(msp_model, d̂, M)
+# Solve!(msp)
+# IntroduceCut!(msp, Getu(fsp), Getq(fsp), GetRhoPlus(fmp), GetRhoMinus(fmp))
+# Solve!(msp)
+# DebugReport(msp)
 # yeah definitely not that feasible. 
 
