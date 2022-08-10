@@ -661,7 +661,6 @@ function IntroduceVariables!(
         starting, ending = (1, size(MatrixConstruct.H, 1))
     end
     this.demands_idx = D = Set(starting:ending)
-
     D̃ = setdiff(Set(1:size(MatrixConstruct.H, 1)), D)|>collect|>sort
 
     # Prepare variable u for the model.
@@ -688,6 +687,7 @@ function IntroduceVariables!(
         base_name="v[$(k)]"
     )
     push!(this.v, v[:])
+    
     if this.sparse_vee
         set_upper_bound.(v[D̃], 0)
     end
@@ -696,12 +696,12 @@ function IntroduceVariables!(
     λ = @variable(
         this.model, 
         [1:length(MatrixConstruct.h)], 
-        upper_bound=0,
+        upper_bound=0,lower_bound=-1,
         base_name="λ[$(k)]"
     )
 
     if this.sparse_vee
-        set_lower_bound.(λ, 0)
+        set_lower_bound.(λ[D̃], 0)
     end
     
     push!(this.lambda, λ[:])
