@@ -16,9 +16,5 @@ $$
 $$
 
 
-### **FMP: The Feasibility Upper Bound Searches**
-
-
-### **FSP: The Feasibility Lowerbound Searcher**
 
 

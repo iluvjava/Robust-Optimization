@@ -4,6 +4,7 @@ include("../src/utilities.jl")
 include("../src/matrix_construction_export.jl")
 include("../src/ccga_modeling.jl")
 
+using Debugger, Infiltrator
 
 ### Testing the FMP directly with Inner CCGA iterations. 
 
@@ -23,13 +24,13 @@ return nothing end
 
 
 ϵ = 0.1
-M = 40
+M = 20
 d̂ = 100(size(MatrixConstruct.H, 2)|>ones)
 global lowerbound_list = Vector()
 global upperbound_list = Vector()
 global all_qs = Vector{Vector}()
 global all_ds = Vector{Vector}()
-# global d_continuous = Vector{Vector}()
+
 
 model_mp = Model(HiGHS.Optimizer); global mp = MP(model_mp, M)
 PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
@@ -39,20 +40,16 @@ global w̄ = Getw(mp)
 γ̄ = M
 
 model_fmp = Model(Gurobi.Optimizer)
-# global fmp = FMP(w̄, γ̄, d̂, model_fmp)
-global fmp = McCormickFMP(model_fmp, d̂, w̄, γ̄)
+global fmp = FMP(w̄, γ̄, d̂, model_fmp, sparse_vee=false)
+# global fmp = McCormickFMP(model_fmp, d̂, w̄, γ̄;sparse_vee=true)
 
-# PortOutVariable!(fmp, :v) do v
-#     SparsifyVee!(v[end])
-# end
 
 Solve!(fmp)
 @assert !(objective_value(fmp)|>isnan)
 
 push!(upperbound_list, objective_value(fmp))
 for III in 1:10
-    global d = GetDemandVertex(fmp); push!(all_ds, d); # push!(d_continuous, fmp.d.|>value)
-
+    global d = GetDemandVertex(fmp); push!(all_ds, d); 
     model_fsp = Model(Gurobi.Optimizer)
     global fsp = FSP(w̄, γ̄, d, model_fsp)
     
@@ -63,10 +60,7 @@ for III in 1:10
     Solve!(fsp)
     global q = Getq(fsp); push!(all_qs, q)
     Introduce!(fmp, q)
-    
-    # PortOutVariable!(fmp, :v) do v
-    #     SparsifyVee!(v[end])
-    # end
+
 
     Solve!(fmp)
     push!(lowerbound_list, fsp |> objective_value)

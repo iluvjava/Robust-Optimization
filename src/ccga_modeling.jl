@@ -46,25 +46,6 @@ end
     con::Vector{ConstraintRef}
 end
 
-abstract type AbsFMP <: Problem
-    # FMP like problem. Different way of working with solving the FMP. 
-end
-
-@premix mutable struct AbsFMPTemplate
-    w::Vector{Float64}                            # Primary Generator decision variables.               (GIVEN CONSTANT)
-    gamma::Float64                                # the bound for the demands.                          (GIVEN CONSTANT)
-    q::Vector{Vector{Int}}                        # the secondary discrete decision variables           (GIVEN CONSTANT)
-    d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
-
-    v::Vector{Vector{VariableRef}}                # The slack decision variables for each of the previous demands.
-    u::Vector{Vector{VariableRef}}                # The secondary continuous decision variables.
-    # d::Vector{VariableRef}                        # The demand decision variable, as a giant vector.
-    eta::VariableRef                              # The eta lower bound for all feasibility.
-    lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
-    
-    
-    k::Int                                        # The iteration number from the ccga.
-end
 
 
 """
@@ -254,6 +235,7 @@ return this end
 ### ====================================================================================================================
 
 @ProblemTemplate mutable struct MSP <: Problem
+
     w::Array{VariableRef, 3}
     d_hat::Array{Float64}
     gamma::VariableRef
@@ -507,7 +489,7 @@ return model[:γ]|>value end
     w::Vector{Float64}
     d_star::Vector{Float64}
     gamma::Number
-    # con::Vector{ConstraintRef} # TODO: Remembers to Add constraints for debugg purposes. 
+    # TODO: Remembers to Add constraints for debugg purposes. 
 
     function FSP()
         @warn("This construction only exists for testing purposes!")
@@ -579,8 +561,6 @@ return model[:γ]|>value end
 end
 
 
-
-
 # ======================================================================================================================
 # FMP, the Upper bound locator.
 #   * Obtains a upper bound by giving a demands that can break the feasibility for all discrete secondary
@@ -589,21 +569,47 @@ end
 #   * Solving the system to obtain
 # ======================================================================================================================
 
+abstract type AbsFMP <: Problem
+    # FMP like problem. Different way of working with solving the FMP. 
+end
+
+@premix mutable struct AbsFMPTemplate
+    w::Vector{Float64}                            # Primary Generator decision variables.               (GIVEN CONSTANT)
+    gamma::Float64                                # the bound for the demands.                          (GIVEN CONSTANT)
+    q::Vector{Vector{Int}}                        # the secondary discrete decision variables           (GIVEN CONSTANT)
+    d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
+
+    v::Vector{Vector{VariableRef}}                # The slack decision variables for each of the previous demands.
+    u::Vector{Vector{VariableRef}}                # The secondary continuous decision variables.
+    # d::Vector{VariableRef}                        # The demand decision variable, as a giant vector.
+    eta::VariableRef                              # The eta lower bound for all feasibility.
+    lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
+    
+    k::Int                                        # The iteration number from the ccga.
+
+    sparse_vee::Bool
+    demands_idx::Set{Int}                              # subset of indices indicating the demands constraints. 
+
+end
+
+
 """
     Given the primary parameters and the secondary discrete decision variables
     meshed into a giant feasible set of many many constraints, we are
     searching for adversarial demands that can break our delivery system.
         * Determines the upper bound for the feasibility slack.
+
 """
 @AbsFMPTemplate @ProblemTemplate mutable struct FMP <: AbsFMP
     
-    rho_plus::Vector{VariableRef}                 # binary decision variables for the bilinear demands
-    rho_minus::Vector{VariableRef}                # binary decision variables for the bilinear demands
-    xi_plus::Containers.DenseAxisArray            # The binary decision variable for the extreme demands, vertices of the demands cube. 
-    xi_minus::Containers.DenseAxisArray           # The binary decision variable for the extreme demands. 
-
+    rho_plus::Vector{VariableRef}                         # binary decision variables for the bilinear demands
+    rho_minus::Vector{VariableRef}                        # binary decision variables for the bilinear demands
+    xi_plus::Vector{Containers.DenseAxisArray}            # The binary decision variable for the extreme demands, vertices of the demands cube. 
+    xi_minus::Vector{Containers.DenseAxisArray}           # The binary decision variable for the extreme demands. 
+    
+   
     function FMP()
-        @warn("Construction shouldn't be called except for debugging purposes. ")
+        @warn("This constructor shouldn't be called except for debugging purposes. ")
         d̂ = 100.0*ones(size(MatrixConstruct.H, 2))
     return FMP(zeros(size(MatrixConstruct.B, 2)), 10.0, d̂) end
 
@@ -611,7 +617,8 @@ end
         w::Vector,
         gamma,
         d_hat::Vector,
-        model::Model=Model(HiGHS.Optimizer)
+        model::Model=Model(HiGHS.Optimizer);
+        sparse_vee::Bool=false
     )
         this = new()
         this.w = w
@@ -624,6 +631,10 @@ end
         this.model = model
         this.d_hat = d_hat
         this.con = Vector{Vector}()
+        this.xi_plus = Vector{Containers.DenseAxisArray}()
+        this.xi_minus = Vector{Containers.DenseAxisArray}()
+        this.sparse_vee = sparse_vee
+
         IntroduceVariables!(this)
         PrepareConstraints!(this)
         PrepareObjective!(this)
@@ -637,12 +648,26 @@ end
     THIS METHOD IS FOR POLYMORPHISM!!!
     It's being inherited by subtypes of AbsFMP. 
 """
-function IntroduceVariables!(::Type{AbsFMP}, this::AbsFMP, q_given::Union{Nothing, Vector{Float64}})
+function IntroduceVariables!(
+    ::Type{AbsFMP}, 
+    this::AbsFMP, 
+    q_given::Union{Nothing, Vector{Float64}}
+)
     k = this.k
+
+    if this.sparse_vee
+        starting, ending = MatrixConstruct.RHS_Groups["Demand Balance"]
+    else
+        starting, ending = (1, size(MatrixConstruct.H, 1))
+    end
+    this.demands_idx = D = Set(starting:ending)
+
+    D̃ = setdiff(Set(1:size(MatrixConstruct.H, 1)), D)|>collect|>sort
+
     # Prepare variable u for the model.
     push!(this.u, PrepareVarieblesForTheModel!(this|>GetModel, :u, k))
-    # Prepare for variable q, depending on whether a `q_given` is defined. 
     
+    # Prepare for variable q, depending on whether a `q_given` is defined. 
     if q_given === nothing
         Decisionvariables = Vector()
         q = MatrixConstruct.q
@@ -662,15 +687,22 @@ function IntroduceVariables!(::Type{AbsFMP}, this::AbsFMP, q_given::Union{Nothin
         lower_bound=0, 
         base_name="v[$(k)]"
     )
-    
     push!(this.v, v[:])
+    if this.sparse_vee
+        set_upper_bound.(v[D̃], 0)
+    end
 
     # Parepare the variable lambda, the dual decision variables.
     λ = @variable(
         this.model, 
         [1:length(MatrixConstruct.h)], 
+        upper_bound=0,
         base_name="λ[$(k)]"
     )
+
+    if this.sparse_vee
+        set_lower_bound.(λ, 0)
+    end
     
     push!(this.lambda, λ[:])
 
@@ -682,41 +714,34 @@ return this end
 """
     Prepare a new set of decision variables for the given instance of the problem.
         * u[k]::The continuous decision variable, for the kth iterations of the CCGA Algorithm.
-            * u[k] will be a compositive decision variables for all the modeling decision variables in the original problem.
+            * u[k] will be a compositive decision variables for all the modeling decision variables in the original 
+            problem.
         * v, λ follows a similar token.
     NOTE:
         * ALWAYS, run PrepareConstraints After a new constant "q[k]" is introduced to the system. 
         * This method is for super type AbsFMP and it's sharing it downwards. 
 """
-function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}})
+function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}=nothing)
+    @assert q_given !== nothing || this.k == 1 "The conditions \"if q is nothing, then k == 1 for FMP is not true. \""
     IntroduceVariables!(AbsFMP, this, q_given)
-    
-    # Variables that only make then once for all k =============================
-    # For FMP we need the bin decision variable for corner point formulations. 
+    # Variables that we are using for the reformulations for the bi-linear constraints via the corner point assumptions
 
     model = this.model
     k = this.k
     B̄ = size(MatrixConstruct.H, 2)
     IdxTuples = findall(!=(0), MatrixConstruct.H).|>Tuple
+    push!(this.xi_plus, @variable(model, [IdxTuples], base_name="Ξ⁺[$(k)]"))
+    push!(this.xi_minus, @variable(model, [IdxTuples], base_name="Ξ⁻[$(k)]"))
+
+    # Demand corner points decision variables: 
     if k == 1
-        this.rho_plus = @variable(model, [1:B̄], Bin, base_name="ρ⁺[$(k)]")
-        this.rho_minus = @variable(model, [1:B̄], Bin, base_name="ρ⁻[$(k)]")
-        this.xi_plus = @variable(model, [IdxTuples], base_name="ξ⁺[$(k)]")
-        this.xi_minus = @variable(model, [IdxTuples], base_name="ξ⁻[$(k)]")
+        this.rho_plus = @variable(model, [1:B̄], Bin, base_name="ρ⁺")
+        this.rho_minus = @variable(model, [1:B̄], Bin, base_name="ρ⁻")
     end
 
 return this end
 
 
-"""
-    Prepare the variables for the r=k th iterations of the CCGA algorithm.
-        * In this case, when q, the binary decision variable is not given.
-"""
-function IntroduceVariables!(this::FMP)
-    @assert this.k == 1 "This function can only be called for the first creation of the FMP problem, where initial "*
-    "q is not given. "
-    IntroduceVariables!(this, nothing)
-return this end
 
 
 """
@@ -729,6 +754,7 @@ function PrepareConstraints!(this::FMP)
     function addConstraints!(cons::JuMP.ConstraintRef)
         push!(this.con, cons)
     end
+
     k = this.k
     η = this.eta
     u = this.u[k]
@@ -749,15 +775,15 @@ function PrepareConstraints!(this::FMP)
     model = this.model
 
     # Dual constraints
-    @constraint(model, η <= sum(v), base_name="constraint[$(k)][1]").|>addConstraints!
-    @constraint(model, λ'*C .<= 0, base_name="constraint[$(k)][3]").|>addConstraints!
+    @constraint(model, η <= sum(v), base_name="eta objective: [$(k)]").|>addConstraints!
+    @constraint(model, λ'*C .<= 0, base_name="dual constraints: [$(k)]").|>addConstraints!
     @constraint(model, -1 .<= λ .<= 0)
 
-    # Sparse bilinear constraints setup:
+    # Sparse bilinear constraints setup with corner point assumptions:
     ρ⁺ = this.rho_plus
     ρ⁻ = this.rho_minus
-    ξ⁺ = this.xi_plus
-    ξ⁻ = this.xi_minus
+    ξ⁺ = this.xi_plus[k]
+    ξ⁻ = this.xi_minus[k]
 
     for (j, b) in IdxTuples
         @constraint(model, -ρ⁺[b] <= ξ⁺[(j, b)])|>addConstraints!
@@ -774,18 +800,19 @@ function PrepareConstraints!(this::FMP)
     # Bi-linear constraints
     @constraint(
         model,
-        dot(λ, -H*d̂) + γ*dot(-H[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ,h - B*w - G*q) == sum(v),
+        dot(λ, -H*d̂) + γ*dot(-H[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ, h - B*w - G*q) == sum(v),
         base_name="constraint[$(k)][7]"
     ).|>addConstraints!
     
-    if k == 1
     # new added demand feasibility constraints.
-        @constraint(
-            model,
-            B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ - γ*ρ⁻) - v .<= h,
-            base_name="constraint[$(k)][2]"
-        ).|>addConstraints!
-    end
+    @constraint(
+        model,
+        B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ - γ*ρ⁻) - v .<= h,
+        base_name="constraint[$(k)][2]"
+    ).|>addConstraints!
+
+    # Additional constraints for the sparse vee conditions that might get applied here.
+
 
 return this end
 
@@ -847,27 +874,27 @@ return this end
 
 @AbsFMPTemplate @ProblemTemplate mutable struct McCormickFMP <: AbsFMP
     
-    demands_con_idx::Set{Int}           # The set of indices that corresponds to the demand balance constraints. 
-    not_demands_con_idx::Set{Int}       # The set of indices that is not the demand balance constraints. 
+    demands_con_idx::Set{Int}                  # The set of indices that corresponds to the demand balance constraints. 
+    not_demands_con_idx::Set{Int}              # The set of indices that is not the demand balance constraints. 
     d::Vector{VariableRef}
-    xi::Containers.DenseAxisArray
+    xi::Vector{Containers.DenseAxisArray}
 
-    function McCormickFMP()
+    function McCormickFMP(sparse_vee::Bool=true)
         @warn("This construction only exists for testing purposes!")
         return McCormickFMP(
             Model(HiGHS.Optimizer),
             40*ones(size(MatrixConstruct.H, 2)),
             zeros(size(MatrixConstruct.B, 2)),
-            10   
+            10; sparse_vee
         )
     end
-
 
     function McCormickFMP(
         model::Model, 
         d_hat::Vector, 
         w_bar::Vector, 
-        gamma_bar
+        gamma_bar; 
+        sparse_vee::Bool=true
     )
         this = new()
         this.w = w_bar
@@ -880,9 +907,8 @@ return this end
         this.model = model
         this.d_hat = d_hat
         this.con = Vector{Vector}()
-        starting, ending = MatrixConstruct.RHS_Groups["Demand Balance"]
-        this.demands_con_idx = Set(starting:ending)
-        this.not_demands_con_idx = setdiff(Set(1:size(MatrixConstruct.H, 1)), this.demands_con_idx)
+        this.xi = Vector{Containers.DenseAxisArray}()
+        this.sparse_vee = sparse_vee
         IntroduceVariables!(this)
         PrepareConstraints!(this)
         PrepareObjective!(this)
@@ -901,12 +927,11 @@ function IntroduceVariables!(this::McCormickFMP, q_given::Union{Nothing, Vector{
     γ̄ = this.gamma
     d̂ = this.d_hat
     k = this.k
-
     # The decision variable for McCormic Envelope. 
     # the ξ is Sparse! 
     IdxTuples = findall(!=(0), MatrixConstruct.H).|>Tuple
+    push!(this.xi, @variable(this.model, [IdxTuples], base_name="ξ[$(k)]"))
     if k == 1
-        this.xi = @variable(this.model, [IdxTuples], base_name="ξ")
         d = this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)])
         push!(
             this.con, @constraint(this.model, -γ̄ .<= d - d̂ .<= γ̄)...
@@ -933,55 +958,71 @@ function PrepareConstraints!(this::McCormickFMP)
     C = MatrixConstruct.C
     h = MatrixConstruct.h
     λ = this.lambda[k]
-    ξ = this.xi
-    D = this.demands_con_idx|>collect
-    D̃ = this.not_demands_con_idx|>collect
+    ξ = this.xi[k]
     d = this.d
     d̂ = this.d_hat
     γ̄ = this.gamma
     q = this.q[k]
-    B̄ = size(H, 2)
+    # B̄ = size(H, 2)
     IdxTuples = findall(!=(0), H).|>Tuple
     model = this.model
+
     
     # Dual constraints
-    @constraint(model, η <= sum(v), base_name="[$(k)]").|>addConstraints!
-    @constraint(model, λ'*C .<= 0, base_name="[$(k)]").|>addConstraints!
-    @constraint(model, -1 .<= λ[D] .<= 0).|>addConstraints!
-    @constraint(model, λ[D̃] .== 0).|>addConstraints!
+    @constraint(model, η <= sum(v), base_name="Objective lower Bound, k=$(k)").|>addConstraints!
+    @constraint(model, λ'*C .<= 0, base_name="Dual λ'C: k=$(k)").|>addConstraints!
+    
+    # sparse Vee related constraints
+    # @constraint(model, -1 .<= λ[D] .<= 0, base_name="λ range: k=$(k)").|>addConstraints!
 
     # Bi-linear equality constraints: The strong duality via the McCormic Envelope
     @constraint(
         model,
-        dot(-H[H.!=0], ξ) == sum(v),
-        base_name="[$(k)]"
+        dot(-H[H.!=0], ξ[:]) + dot(λ,h - B*w - G*q) == sum(v),
+        base_name="strong duality: k=$(k)"
     ).|>addConstraints!
     for (j, b) in IdxTuples
-        if j in D
+        if j in this.demands_idx
             # (4a)
-            @constraint(model, ξ[(j, b)] >= (d̂[b] - γ̄)*λ[j] - d[b] + (d̂[b] - γ̄)).|>addConstraints!
+            @constraint(
+                model,
+                ξ[(j, b)] >= (d̂[b] - γ̄)*λ[j] - d[b] + d̂[b] - γ̄, 
+                base_name="MC 4a D: k=$(k)"
+            ).|>addConstraints!
             # (4c)
-            @constraint(model, ξ[(j, b)] <= (d̂[b] + γ̄)*λ[j] - d[b] + (d̂[b] + γ̄)).|>addConstraints!
+            @constraint(
+                model, 
+                ξ[(j, b)] <= (d̂[b] + γ̄)*λ[j] - d[b] + d̂[b] + γ̄, 
+                base_name="MC 4c D: k=$(k)"
+            ).|>addConstraints!
         else
-            # (4a)
-            @constraint(model, ξ[(j, b)] >= λ[j]*(d̂[b] - γ̄)).|>addConstraints! 
-            # (4c)
-            @constraint(model, ξ[(j, b)] <= λ[j]*(d̂[b] + γ̄)).|>addConstraints!
+            @constraint(
+                model, 
+                ξ[(j, b)] == 0, 
+                base_bame="MC 4c ~D: k=$(k)"
+            ).|>addConstraints!
         end
         # (4b)
-        @constraint(model, ξ[(j, b)] >= λ[j]*(d̂[b] + γ̄)).|>addConstraints!
+        @constraint(
+            model, 
+            ξ[(j, b)] >= λ[j]*(d̂[b] + γ̄),
+            base_name="MC 4b: k=$(k)"
+        ).|>addConstraints!
         # (4d)
-        @constraint(model, ξ[(j, b)] <= λ[j]*(d̂[b] - γ̄)).|>addConstraints!
+        @constraint(
+            model, 
+            ξ[(j, b)] <= λ[j]*(d̂[b] - γ̄),
+            base_name="MC 4d: k=$(k)"
+        ).|>addConstraints!
     end
     
     # operational constraints: 
-    if k == 1
-        @constraint(
-            model,
-            B*w + G*q + C*u  + H*d - v .<= h,
-            base_name="[$(k)]"
-        ).|>addConstraints!
-    end
+    @constraint(
+        model,
+        B*w + G*q + C*u  + H*d - v .<= h,
+        base_name="Operational constraints:k=$(k)"
+    ).|>addConstraints!
+    
 
 return this end
 
@@ -992,6 +1033,9 @@ function GetDemandVertex(this::McCormickFMP)
 return this.d.|>value end
 
 
+"""
+    Add a new q variable for the FMP, and the q should be a solution from the FSP. 
+"""
 function Introduce!(this::McCormickFMP, q::Vector{Float64})
     this.k += 1
     @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
