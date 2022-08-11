@@ -701,7 +701,7 @@ function IntroduceVariables!(
     )
 
     if this.sparse_vee
-        set_lower_bound.(λ[D̃], 0)
+        delete_lower_bound.(λ[D̃])
     end
     
     push!(this.lambda, λ[:])
@@ -803,7 +803,7 @@ function PrepareConstraints!(this::FMP)
         base_name="bilinear obj:[$(k)]"
     ).|>addConstraints!
     
-    # new added demand feasibility constraints.
+    # new added demand feasibility constraints, the primal
     @constraint(
         model,
         B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ - γ*ρ⁻) - v .<= h,

@@ -15,16 +15,15 @@ using Debugger, Infiltrator
         * Mutates the variables for the model. 
 """
 function SparsifyVee!(v::Vector{VariableRef}, demand_groups="Demand Balance")
-    starting, ending = MatrixConstruct.RHS_Groups["Demand Balance"]
+    starting, ending = MatrixConstruct.RHS_Groups[demand_groups]
     for II in setdiff(Set(1:size(MatrixConstruct.H, 1)), Set(starting:ending))
         fix(v[II], 0, force=true)
     end
 return nothing end
 
 
-
 ϵ = 0.1
-M = 100
+M = 4
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
 global lowerbound_list = Vector()
 global upperbound_list = Vector()
@@ -37,7 +36,7 @@ PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
 PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
 Solve!(mp)
 global w̄ = Getw(mp)
-w̄ = zeros(size(w̄))
+# w̄ = zeros(size(w̄))
 γ̄ = M
 
 model_fmp = Model(Gurobi.Optimizer)
@@ -61,7 +60,6 @@ for III in 1:10
     Solve!(fsp)
     global q = Getq(fsp); push!(all_qs, q)
     Introduce!(fmp, q)
-
 
     Solve!(fmp)
     push!(lowerbound_list, fsp |> objective_value)
