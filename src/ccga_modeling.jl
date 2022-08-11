@@ -706,7 +706,6 @@ function IntroduceVariables!(
     
     push!(this.lambda, λ[:])
 
-
 return this end
 
 
@@ -774,10 +773,10 @@ function PrepareConstraints!(this::FMP)
     IdxTuples = findall(!=(0), H).|>Tuple
     model = this.model
 
-    # Dual constraints
+    
     @constraint(model, η <= sum(v), base_name="eta objective: [$(k)]").|>addConstraints!
+    # Dual constraints
     @constraint(model, λ'*C .<= 0, base_name="dual constraints: [$(k)]").|>addConstraints!
-    @constraint(model, -1 .<= λ .<= 0)
 
     # Sparse bilinear constraints setup with corner point assumptions:
     ρ⁺ = this.rho_plus
@@ -795,24 +794,26 @@ function PrepareConstraints!(this::FMP)
         @constraint(model, λ[j] - (1 - ρ⁻[b]) <= ξ⁻[(j, b)])|>addConstraints!
         @constraint(model, ξ⁻[(j, b)] <= λ[j] + (1 - ρ⁻[b]))|>addConstraints!
     end
-    @constraint(model, [b=1:B̄], ρ⁺[b] + ρ⁻[b] == 1, base_name="constraint[$(k)][6]").|>addConstraints!
+    @constraint(model, [b=1:B̄], ρ⁺[b] + ρ⁻[b] == 1, base_name="bin con:[$(k)]").|>addConstraints!
     
     # Bi-linear constraints
     @constraint(
         model,
         dot(λ, -H*d̂) + γ*dot(-H[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ, h - B*w - G*q) == sum(v),
-        base_name="constraint[$(k)][7]"
+        base_name="bilinear obj:[$(k)]"
     ).|>addConstraints!
     
     # new added demand feasibility constraints.
     @constraint(
         model,
         B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ - γ*ρ⁻) - v .<= h,
-        base_name="constraint[$(k)][2]"
+        base_name="opt con: [$(k)]"
     ).|>addConstraints!
 
     # Additional constraints for the sparse vee conditions that might get applied here.
-
+    
+    # DEBUG CONSTRAINTS
+    # @constraint(model, sum(v) <= 500000, base_name="debug con: [$k]") |>addConstraints!
 
 return this end
 

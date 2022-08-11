@@ -24,8 +24,8 @@ return nothing end
 
 
 ϵ = 0.1
-M = 200
-d̂ = 200(size(MatrixConstruct.H, 2)|>ones)
+M = 100
+d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
 global lowerbound_list = Vector()
 global upperbound_list = Vector()
 global all_qs = Vector{Vector}()
@@ -37,11 +37,12 @@ PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
 PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
 Solve!(mp)
 global w̄ = Getw(mp)
+w̄ = zeros(size(w̄))
 γ̄ = M
 
 model_fmp = Model(Gurobi.Optimizer)
-# global fmp = FMP(w̄, γ̄, d̂, model_fmp, sparse_vee=true)
-global fmp = McCormickFMP(model_fmp, d̂, w̄, γ̄;sparse_vee=true)
+global fmp = FMP(w̄, γ̄, d̂, model_fmp, sparse_vee=true)
+# global fmp = McCormickFMP(model_fmp, d̂, w̄, γ̄;sparse_vee=true)
 
 
 Solve!(fmp)
