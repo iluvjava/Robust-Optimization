@@ -5,8 +5,8 @@ T = CONST_PROBLEM_PARAMETERS.HORIZON
 N = PRIMARY_GENERATORS|>length
 M = SECONDARY_GENERATORS|>length
 S = STORAGE_SYSTEM|>length
-B̄ = (SIGMAS|>size)[1]
-L = (SIGMAS|>size)[2]
+B̄ = (SIGMAS|>size)[1]               # total number of buses
+L = (SIGMAS|>size)[2]               # total number of transmission lines 
 
 # ==============================================================================
 # set up all decisions variables and their dimensions using the enumeration sets

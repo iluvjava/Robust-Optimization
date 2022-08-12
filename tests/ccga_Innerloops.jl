@@ -1,5 +1,6 @@
 ### We want to know more about the feasibility of the FMP, and we want to know if the corner point demands hypothesis is 
 ### legit. 
+
 include("../src/utilities.jl")
 include("../src/matrix_construction_export.jl")
 include("../src/ccga_modeling.jl")
@@ -79,6 +80,7 @@ function CCGAInnerLoop(
         end
         
     end
+    @exfiltrate
     
 return CCGAInnerloopParameters(
     fmp,
@@ -89,19 +91,6 @@ return CCGAInnerloopParameters(
     lowerbound_list
 ) end
 
-### using the sub routine here. 
+### using the sub routine here. ========================================================================================
 
-ϵ = 0.1
-γ̄ = 4.173
-d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
-model_mp = Model(HiGHS.Optimizer); global mp = MP(model_mp, γ̄)
-PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
-PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
-Solve!(mp)
-w̄ = Getw(mp)
 
-Results = CCGAInnerLoop(γ̄, w̄, d̂, sparse_vee=true)
-
-fig = plot(Results.upper_bounds, label="upper_fmp", marker=:x)
-plot!(fig, Results.lower_bounds, label="lower_fsp", marker=:x)
-fig|>display

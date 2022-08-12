@@ -11,7 +11,7 @@ $$
     \hat{d} - \bar{\gamma} \le d \le \hat{d} - \bar\gamma
     \\
     & 
-    Cu - v + B\bar{w} + Gq\le d + h
+    Cu - v + B\bar{w} + Gq\le Hd + h
 \end{aligned}
 $$
 

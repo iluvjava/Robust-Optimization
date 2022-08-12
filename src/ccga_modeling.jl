@@ -415,8 +415,9 @@ function IntroduceCut!(
     end
 
     # FIXING soem weird weird floating point problem introduced by the cut. 
-    δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
-    δv[end - 63:end] .= 0
+    # δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
+    # δv[end - 63:end] .= 0
+    
     model[:s] = s = @variable(
         model, 
         [1:length(h)], 
@@ -426,7 +427,7 @@ function IntroduceCut!(
 
     CutConstraints = @constraint(
         model, 
-        B*w + C*u + G*q + H*d̂ + H*(γ*ρ⁺ - γ*ρ⁻) - v + δv - s .<= h, 
+        B*w + C*u + G*q + H*d̂ + H*(γ*ρ⁺ - γ*ρ⁻) - v - s .<= h, 
         base_name="Cut $(this.cut_count)"
     )
     
@@ -1153,7 +1154,7 @@ return this.q.|>value.|>(x) -> round(x, digits=1)  end
     Get the value of the u decision variables. 
 """
 function Getu(this::Union{FSP, MP})
-return this.u.|>value.|>(x) -> round(x, digits=1) end
+return this.u.|>value end
 
 
 function Getv(this::Union{FSP, MP})
