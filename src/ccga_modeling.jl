@@ -489,7 +489,8 @@ return model[:γ]|>value end
     w::Vector{Float64}
     d_star::Vector{Float64}
     gamma::Number
-    # TODO: Remembers to Add constraints for debugg purposes. 
+
+    sparse_vee::Bool
 
     function FSP()
         @warn("This construction only exists for testing purposes!")
@@ -501,14 +502,21 @@ return model[:γ]|>value end
     end
 
     """
-        Constrct the FSP, given the parameters setting the primary
-        variables, and then the adversarial demands vector.
+        Constrct the FSP. 
+        Parameter: 
+            * w̄::Vector{Float64}
+            * γ̄::Number
+            * d⋆::Vector{Float64}
+            * model::Model=Model(HiGHS.Optimizer)
+        Parameters called by names: 
+            * sparse_vee::Bool=false
     """
     function FSP(
         w::Vector{Float64}, 
-        gamma::Number, 
+        gamma::Number,
         d_star::Vector{Float64}, 
-        model::Model=Model(HiGHS.Optimizer)
+        model::Model=Model(HiGHS.Optimizer);
+        sparse_vee::Bool=false
     )
         this = new()
         this.model = model
@@ -516,6 +524,7 @@ return model[:γ]|>value end
         this.w = w
         this.d_star = d_star
         this.con = Vector{JuMP.ConstraintRef}()
+        this.sparse_vee = sparse_vee
         this|>IntroduceVariables!
         this|>AddConstraints!
         @objective(this.model, Min, sum(this.v))
@@ -533,6 +542,18 @@ return model[:γ]|>value end
         this.u = PrepareVarieblesForTheModel!(this|>GetModel, :u)
         this.q = PrepareVarieblesForTheModel!(this|>GetModel, :q)
         this.v = @variable(this.model, v[1:length(MatrixConstruct.h)], lower_bound=0)
+        starting, ending = MatrixConstruct.CON_GROUPS["Demand Balance"]
+        if this.sparse_vee
+            set_upper_bound.(
+                v[
+                    setdiff(
+                        1:size(MatrixConstruct.H, 1)|>Set,
+                        starting:ending|>Set
+                    )|>collect|>sort
+                ], 
+                0
+            )
+        end
     return end
 
 
@@ -656,7 +677,7 @@ function IntroduceVariables!(
     k = this.k
 
     if this.sparse_vee
-        starting, ending = MatrixConstruct.RHS_Groups["Demand Balance"]
+        starting, ending = MatrixConstruct.CON_GROUPS["Demand Balance"]
     else
         starting, ending = (1, size(MatrixConstruct.H, 1))
     end
@@ -897,6 +918,7 @@ return this end
         gamma_bar; 
         sparse_vee::Bool=true
     )
+        @error "The struct: McCormickFMP is DEPRECATED and shouldn't be used."
         this = new()
         this.w = w_bar
         this.gamma = gamma_bar
@@ -928,6 +950,7 @@ function IntroduceVariables!(this::McCormickFMP, q_given::Union{Nothing, Vector{
     γ̄ = this.gamma
     d̂ = this.d_hat
     k = this.k
+    
     # The decision variable for McCormic Envelope. 
     # the ξ is Sparse! 
     IdxTuples = findall(!=(0), MatrixConstruct.H).|>Tuple

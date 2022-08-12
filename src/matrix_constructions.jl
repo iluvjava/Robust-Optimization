@@ -434,7 +434,7 @@ return rhs end
 B, C, G, F = MakeCoefMatrices()
 
 
-RHS_Groups = Dict{String, Tuple}()
+CON_GROUPS = Dict{String, Tuple}()
 RHS = FuelConstraints() # Fuel Constraints
 SyncRow(B, C, G, F)
 
@@ -488,7 +488,7 @@ SyncRow(B, C, G, F)
 DemandGroupStart = length(RHS) + 1
 RHS = vcat(RHS, DemandBalanceConstraints()) # demand balance
 SyncRow(B, C, G, F)
-RHS_Groups["Demand Balance"] = (DemandGroupStart, length(RHS))
+CON_GROUPS["Demand Balance"] = (DemandGroupStart, length(RHS))
 
 B = (B|>GetMatrix)
 C = (C|>GetMatrix)
