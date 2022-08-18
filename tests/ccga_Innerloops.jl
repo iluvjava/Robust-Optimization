@@ -43,7 +43,8 @@ function CCGAInnerLoop(
     max_iter::Int=8,
     sparse_vee::Bool=true
 ) where {N1<:Number, N2<:Number, N3 <:Number}
-    premise = "during executing CCGA Inner for loop: "
+    
+    premise = "During executing CCGA Inner for loop: "
     @assert length(w_bar) == size(MatrixConstruct.B, 2) "$(premis)w̄ has the wrong size. please verify."
     @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(premise)d̂ has the wrong size, please check the code. "
     @assert epsilon >= 0 "$(premise)ϵ for terminating should be non-negative. "
@@ -51,8 +52,8 @@ function CCGAInnerLoop(
     @assert gamma_bar >= 0 "$(premise)γ̄ should be non-negative. "
     
     γ̄ = gamma_bar; d̂ = d_hat; ϵ=epsilon; w̄ = w_bar
-    lowerbound_list = Vector()
-    upperbound_list = Vector()
+    lowerbound_list = Vector{Float64}()
+    upperbound_list = Vector{Float64}()
     all_qs = Vector{Vector}()
     all_ds = Vector{Vector}()
     model_fmp = Model(Gurobi.Optimizer)
@@ -68,6 +69,7 @@ function CCGAInnerLoop(
         fsp = FSP(w̄, γ̄, d, model_fsp, sparse_vee=sparse_vee)
         
         Solve!(fsp); push!(lowerbound_list, fsp |> objective_value)
+
         q = Getq(fsp); push!(all_qs, q)
         Introduce!(fmp, q)
 
