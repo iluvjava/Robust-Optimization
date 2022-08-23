@@ -43,7 +43,7 @@ $$
 (\lambda^{(k)})^T H\hat d + \bar\gamma \sum_{(i, j)\in [J]\times [B]}^{}(H\circ (\Xi^+_k - \Xi^-_k))_{i, j}
 $$
 
-We use $(\Xi^+_k)_{j, b}$ to denote a particular decision variables indexed by $(j, b)$ inside of the matrix. The constraints that enfoce such equality for all corner points demands is formulated as: 
+We use $(\Xi^+_k)_{j, b}$ to denote a particular decision variables indexed by $(j, b)$ inside of the matrix. The constraints that enforce such equality for all corner points demands is formulated as: 
 
 $$
 \begin{aligned}
@@ -68,10 +68,38 @@ $$
 \end{aligned}
 $$
 
+Depending on the choice of $\rho^\pm$, a whole column worth of $\Xi_k^{\pm}$ is set to the vector $\lambda$. 
+
 
 ---
-### **Addressing the Uneven Demands Issues**
+### **Relaxing the Restrictions for the Demands**
 
+Consider demands in the form of: $d_i^{(t)} \in [-\gamma^{(t)} + \hat d_i^{(t)}, \gamma^{(t)} + \hat d_i^{(t)}]$ as a better model. Then the problem needs to be reformulated. Let:
+
+$$
+\Gamma = \vec\gamma \otimes I_T
+$$
+
+Define the gamma matrix to be the kronecker product between $\vec\gamma$ vector and the Identity matrix. This matrix will be a block diagonal matrix of block size $B\times B$, and $T$ of those block. Using this, the demands vector across all generators and time is expressed as: 
+
+$$
+d = \Gamma \rho^+ + \hat d - \Gamma \rho^-
+$$
+
+Now we reconsider the cross term: $(\lambda^{(k)})^THd$ which will give us: 
+
+$$
+(\lambda^{(k)})^THd = (\lambda^{(k)})^TH\hat d + 
+(\lambda^{(k)})^TH\Gamma \rho^+ - (\lambda^{(k)})^TH\Gamma \rho^-
+$$
+
+Which is exactly the same type of formulations as before, but instead of $H$, we have $H\Gamma$, and $\bar \gamma$ is now gone. And therefore, the same set of inequalities will assert: $\sum_{(i, j)\in [J]\times[B]}H\Gamma\circ\Xi_k^+ = (\lambda^{(k)})^TH\Gamma \rho^+$, giving us the following formulation of the cross product: 
+
+$$
+(\lambda^{(k)})^THd = (\lambda^{(k)})^TH\hat d + \sum_{(i, j)\in[J]\times[B]}^{}(H\Gamma\circ(\Xi_k^{+} - \Xi^{-}_k))_{i, j}
+$$
+
+And constraints formulated would still be the same. However, we need to change the objective value of the master problem, which now should be: $\max\min_{t}\{d^{(t)}\}$. 
 
 
 ---

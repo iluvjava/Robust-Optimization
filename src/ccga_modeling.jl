@@ -414,20 +414,18 @@ function IntroduceCut!(
         v = zeros(length(h))
     end
 
-    # FIXING soem weird weird floating point problem introduced by the cut. 
-    # δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
-    # δv[end - 63:end] .= 0
+    δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
     
-    model[:s] = s = @variable(
-        model, 
-        [1:length(h)], 
-        lower_bound=0, 
-        base_name="s"
-    )
+    # model[:s] = s = @variable(
+    #     model, 
+    #     [1:length(h)], 
+    #     lower_bound=0, 
+    #     base_name="s"
+    # )
 
     CutConstraints = @constraint(
         model, 
-        B*w + C*u + G*q + H*d̂ + H*(γ*ρ⁺ - γ*ρ⁻) - v - s .<= h, 
+        B*w + C*u + G*q + H*d̂ + H*(γ*ρ⁺ - γ*ρ⁻) - v + δv .<= h, 
         base_name="Cut $(this.cut_count)"
     )
     
@@ -834,8 +832,6 @@ function PrepareConstraints!(this::FMP)
 
     # Additional constraints for the sparse vee conditions that might get applied here.
     
-    # DEBUG CONSTRAINTS
-    # @constraint(model, sum(v) <= 500000, base_name="debug con: [$k]") |>addConstraints!
 
 return this end
 
