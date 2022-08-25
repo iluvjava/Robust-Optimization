@@ -36,7 +36,7 @@ end
     Performs the CCGA Inter forloops and returns the results for the cut. 
 """
 function CCGAInnerLoop(
-    gamma_bar::N1, 
+    gamma_bar::Vector{N1}, 
     w_bar::Vector{N2}, 
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
@@ -49,7 +49,7 @@ function CCGAInnerLoop(
     @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(premise)d̂ has the wrong size, please check the code. "
     @assert epsilon >= 0 "$(premise)ϵ for terminating should be non-negative. "
     @assert max_iter >= 0 "$(premise)Maximum iterations for the inner CCGA forloop should be non-negative. "
-    @assert gamma_bar >= 0 "$(premise)γ̄ should be non-negative. "
+    @assert !(0 in (gamma_bar .>= 0)) "$(premise)γ̄ should be non-negative. "
     
     γ̄ = gamma_bar; d̂ = d_hat; ϵ=epsilon; w̄ = w_bar
     lowerbound_list = Vector{Float64}()
@@ -66,7 +66,7 @@ function CCGAInnerLoop(
     for _ in 1:max_iter
         d = GetDemandVertex(fmp); push!(all_ds, d)
         model_fsp = Model(Gurobi.Optimizer)
-        fsp = FSP(w̄, γ̄, d, model_fsp, sparse_vee=sparse_vee)
+        fsp = FSP(w̄, d, model_fsp, sparse_vee=sparse_vee)
         
         Solve!(fsp); push!(lowerbound_list, fsp |> objective_value)
 
@@ -82,7 +82,6 @@ function CCGAInnerLoop(
         end
         
     end
-    @exfiltrate
     
 return CCGAInnerloopParameters(
     fmp,

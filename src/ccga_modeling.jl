@@ -2,7 +2,7 @@
 ### Important functions for variables constructions for JuMP models.
 ### ====================================================================================================================
 
-using Mixers
+using Mixers, Kronecker
 
 """
     Does a cartesian outter product on a list of vectors
@@ -91,7 +91,7 @@ return nothing end
 @ProblemTemplate mutable struct MP <: Problem
     
     w::Array{VariableRef, 3}
-    gamma::VariableRef
+    gamma::Vector{VariableRef}
     gamma_upper::Number         # an upper bound for the gamma variable.
     u::Vector{VariableRef}      # secondary continuous decision variables.
     q::Vector{VariableRef}      # secondary discrete decision variables.
@@ -238,7 +238,7 @@ return this end
 
     w::Array{VariableRef, 3}
     d_hat::Array{Float64}
-    gamma::VariableRef
+    gamma::Vector{VariableRef}
     gamma_upper::Number         # an upper bound for the gamma variable.
     G::Int64; T::Int64          # Given number of generators and time horizon for the problem.
     Tmind::Array{Int}           # Min up down for primary generators
@@ -272,7 +272,6 @@ return this end
     function MSP(d_hat::Vector{T}, gamma_upper=50) where {T<:AbstractFloat}
     return MSP(Model(HiGHS.Optimizer), d_hat, gamma_upper) end
 
-
 end
 
 
@@ -284,7 +283,7 @@ end
 function MasterProblemObjective!(this::MSP)
     model = GetModel(this)
     γ = this.gamma
-    @objective(model, Max, γ)
+    @objective(model, Max, sum(γ))
 return this end
 
 
@@ -307,12 +306,13 @@ function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
         ], Bin
     )
 
-    # Scaler Continuous variables for demand interval.
+    # Scalar Continuous variables for demand interval.
+    time_horizon = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
     this.gamma = @variable(
         model,
-        γ,
+        γ[1:time_horizon],
         lower_bound=0, upper_bound=this.gamma_upper
-    )
+    )[:]
 return this end
 
 
@@ -408,6 +408,7 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.gamma
+    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal
     this.cut_count += 1
     
     if v === nothing
@@ -416,16 +417,19 @@ function IntroduceCut!(
 
     δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
     
-    # model[:s] = s = @variable(
-    #     model, 
-    #     [1:length(h)], 
-    #     lower_bound=0, 
-    #     base_name="s"
-    # )
+    model[:s] = s = @variable(
+        model, 
+        [1:length(h)], 
+        lower_bound=0, 
+        base_name="s"
+    )
+    # fix.(model[:s][374:end], 0, force=true)
+    fix.(model[:s][1:381], 0, force=true)
 
+    # Infiltrator.@exfiltrate
     CutConstraints = @constraint(
         model, 
-        B*w + C*u + G*q + H*d̂ + H*(γ*ρ⁺ - γ*ρ⁻) - v + δv .<= h, 
+        B*w + C*u + G*q + H*d̂ + H*Γ*(ρ⁺ - ρ⁻) - v - s .<= h, 
         base_name="Cut $(this.cut_count)"
     )
     
@@ -450,6 +454,13 @@ function Getw(this::Union{MP, MSP})
 return this|>Flattenw.|>value end
 
 """
+    Get the gamma vector from the master problem that is here. The gamma vector will be a float64 vector 
+    with the same length as the number of time horizon that is there. 
+"""
+function GetGamma(this::Union{MP, MSP})
+return this.gamma.|>value end
+
+"""
     Fletten the w decision variable. 
 """
 function Flattenw(this::Union{MP, MSP})
@@ -459,13 +470,6 @@ function Flattenw(this::Union{MP, MSP})
     push!(Vec, this.w[3, :, :][:]...)
 return Vec end
 
-
-"""
-    Get the gamma, the objective of the LP function.
-"""
-function GetGamma(this::Union{MP, MSP})
-    model = GetModel(this)
-return model[:γ]|>value end
 
 
 
@@ -487,7 +491,7 @@ return model[:γ]|>value end
     # Given parameters
     w::Vector{Float64}
     d_star::Vector{Float64}
-    gamma::Number
+    #  gamma::Vector{Float64}      # TODO: I think Gamma is unused. 
 
     sparse_vee::Bool
 
@@ -512,14 +516,14 @@ return model[:γ]|>value end
     """
     function FSP(
         w::Vector{Float64}, 
-        gamma::Number,
+       #  gamma::Vector{Float64},
         d_star::Vector{Float64}, 
         model::Model=Model(HiGHS.Optimizer);
         sparse_vee::Bool=false
     )
         this = new()
         this.model = model
-        this.gamma = gamma
+        # this.gamma = gamma
         this.w = w
         this.d_star = d_star
         this.con = Vector{JuMP.ConstraintRef}()
@@ -595,7 +599,7 @@ end
 
 @premix mutable struct AbsFMPTemplate
     w::Vector{Float64}                            # Primary Generator decision variables.               (GIVEN CONSTANT)
-    gamma::Float64                                # the bound for the demands.                          (GIVEN CONSTANT)
+    gamma::Vector{Float64}                        # the bound for the demands on all the buses during a specific time  (GIVEN CONSTANT)
     q::Vector{Vector{Int}}                        # the secondary discrete decision variables           (GIVEN CONSTANT)
     d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
 
@@ -635,12 +639,15 @@ end
 
     function FMP(
         w::Vector,
-        gamma,
+        gamma::Vector,
         d_hat::Vector,
         model::Model=Model(HiGHS.Optimizer);
         sparse_vee::Bool=false
     )
         this = new()
+        # Verify dimensions: 
+        @assert length(w) == size(MatrixConstruct.B, 2) "w is having the wrong dimension when it's passed to the FMP. "
+        @assert length(gamma) == MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON "gamma, the demand interval vector should be the same length as the time horizon, but it's not. " 
         this.w = w
         this.gamma = gamma
         this.q = Vector{Vector}()
@@ -788,8 +795,10 @@ function PrepareConstraints!(this::FMP)
     # d = this.d
     d̂ = this.d_hat
     γ = this.gamma
+    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal
     q = this.q[k]
-    B̄ = size(H, 2)
+    
+    
     IdxTuples = findall(!=(0), H).|>Tuple
     model = this.model
 
@@ -814,19 +823,20 @@ function PrepareConstraints!(this::FMP)
         @constraint(model, λ[j] - (1 - ρ⁻[b]) <= ξ⁻[(j, b)])|>addConstraints!
         @constraint(model, ξ⁻[(j, b)] <= λ[j] + (1 - ρ⁻[b]))|>addConstraints!
     end
-    @constraint(model, [b=1:B̄], ρ⁺[b] + ρ⁻[b] == 1, base_name="bin con:[$(k)]").|>addConstraints!
-    
+    @constraint(model, [b=1:size(H, 2)], ρ⁺[b] + ρ⁻[b] == 1, base_name="bin con:[$(k)]").|>addConstraints!
+
     # Bi-linear constraints
+    
     @constraint(
         model,
-        dot(λ, -H*d̂) + γ*dot(-H[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ, h - B*w - G*q) == sum(v),
+        dot(λ, -H*d̂) + dot(-(H*Γ)[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ, h - B*w - G*q) == sum(v),
         base_name="bilinear obj:[$(k)]"
     ).|>addConstraints!
     
     # new added demand feasibility constraints, the primal
     @constraint(
         model,
-        B*w + G*q + C*u  + H*(d̂ + γ*ρ⁺ - γ*ρ⁻) - v .<= h,
+        B*w + G*q + C*u  + H*d̂ +  H*Γ*(ρ⁺ - ρ⁻) - v .<= h,
         base_name="opt con: [$(k)]"
     ).|>addConstraints!
 
@@ -846,8 +856,9 @@ function GetDemandVertex(this::FMP)
     ρ⁺ = this.rho_plus.|>value 
     ρ⁻ = this.rho_minus.|>value
     γ = this.gamma.|>value
+    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal
     d̂ = this.d_hat
-return d̂ + γ*ρ⁺ - γ*ρ⁻ end
+return d̂ + Γ*(ρ⁺ - ρ⁻) end
 
 
 """

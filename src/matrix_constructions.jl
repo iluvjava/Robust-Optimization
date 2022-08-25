@@ -435,6 +435,7 @@ B, C, G, F = MakeCoefMatrices()
 
 
 CON_GROUPS = Dict{String, Tuple}()
+RHS = Vector{Float64}()
 RHS = FuelConstraints() # Fuel Constraints
 SyncRow(B, C, G, F)
 
@@ -442,7 +443,7 @@ RHS = vcat(RHS, QuickStartConstraints()) # Quick start Constraints
 SyncRow(B, C, G, F)
 
 # Capacity constraints primary
-RHS = vcat( 
+RHS = vcat(
     RHS,
     CapacityConstraints(
         PRIMARY_GENERATORS,

@@ -68,7 +68,13 @@ $$
 \end{aligned}
 $$
 
-Depending on the choice of $\rho^\pm$, a whole column worth of $\Xi_k^{\pm}$ is set to the vector $\lambda$. 
+Depending on the choice of $\rho^\pm$, a whole column worth of $\Xi_k^{\pm}$ is set to the vector $\lambda$. Alledgedly it doesn't matter, so we will try different objectives experimentally to see which one does the best. The cut when introduced to the master problem will get reformulated as: 
+
+$$
+\begin{aligned}
+   C(u^{(k + 1)})^* + G(q^{(k + 1)})^* \le H\hat d + HΓ(\rho^+_* - \rho^-_*) + h - Bw
+\end{aligned}
+$$
 
 
 ---
@@ -77,7 +83,7 @@ Depending on the choice of $\rho^\pm$, a whole column worth of $\Xi_k^{\pm}$ is 
 Consider demands in the form of: $d_i^{(t)} \in [-\gamma^{(t)} + \hat d_i^{(t)}, \gamma^{(t)} + \hat d_i^{(t)}]$ as a better model. Then the problem needs to be reformulated. Let:
 
 $$
-\Gamma = \vec\gamma \otimes I_T
+\Gamma = \text{diag}(\vec\gamma) \otimes I_T
 $$
 
 Define the gamma matrix to be the kronecker product between $\vec\gamma$ vector and the Identity matrix. This matrix will be a block diagonal matrix of block size $B\times B$, and $T$ of those block. Using this, the demands vector across all generators and time is expressed as: 
@@ -99,7 +105,7 @@ $$
 (\lambda^{(k)})^THd = (\lambda^{(k)})^TH\hat d + \sum_{(i, j)\in[J]\times[B]}^{}(H\Gamma\circ(\Xi_k^{+} - \Xi^{-}_k))_{i, j}
 $$
 
-And constraints formulated would still be the same. However, we need to change the objective value of the master problem, which now should be: $\max\min_{t}\{d^{(t)}\}$. 
+And constraints formulated would still be the same. However, we need to change the objective value of the master problem, which now should be: $\max\min_{t}\{\gamma^{(t)}\}$. 
 
 
 ---
