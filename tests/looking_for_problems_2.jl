@@ -1,5 +1,5 @@
 using Infiltrator
-include("ccga_Innerloops.jl")
+include("../src/ccga_Innerloops.jl")
 
 ### =====================================================================================================================
 ### Problems we are identifying: 
@@ -17,7 +17,7 @@ Solve!(mp)
 w̄ = Getw(mp)
 Solve!(msp)
 
-Results = CCGAInnerLoop(GetGamma(msp), w̄, d̂, sparse_vee=true)
+Results = CCGAInnerLoop(GetGamma(msp), w̄|>size|>zeros, d̂, sparse_vee=true)
 
 fig = plot(Results.upper_bounds, label="upper_fmp", marker=:x)
 plot!(fig, Results.lower_bounds, label="lower_fsp", marker=:x)
@@ -25,13 +25,11 @@ fig|>display
 
 IntroduceCut!(
     msp, 
-    Getu(Results.fsp), 
-    Getq(Results.fsp), 
     GetRhoPlus(Results.fmp), 
     GetRhoMinus(Results.fmp)
 )
 
 DebugReport(msp, "msp_with_cut")
 DebugReport(mp, "main_problem_for_reference")
-@objective(msp.model, Min, sum(msp[:s]))
+# @objective(msp.model, Min, sum(msp[:s]))
 

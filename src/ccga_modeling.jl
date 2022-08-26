@@ -52,7 +52,7 @@ end
     Given a JuMP model, prepare the q, u variable for that model.
         * Returns the variable 'u' or 'q' packed into Vector{JuMP.VariableRef}.
 """
-function PrepareVarieblesForTheModel!(
+function PrepareVariablesForTheModel!(
     model::Model,
     variable::Symbol,
     ccga_itr::Union{Nothing, Int}=0
@@ -134,8 +134,8 @@ end
 """
 function IntroduceVariables!(this::MP)
     model = this |> GetModel
-    this.u = PrepareVarieblesForTheModel!(model, :u)
-    this.q = PrepareVarieblesForTheModel!(model, :q)
+    this.u = PrepareVariablesForTheModel!(model, :u)
+    this.q = PrepareVariablesForTheModel!(model, :q)
     this.d = @variable(model, d[1:size(MatrixConstruct.H, 2)] >= 0)
     this.v = @variable(model, v[1:size(MatrixConstruct.H, 1)] >= 0)
 return this end
@@ -245,6 +245,8 @@ return this end
     Tminu::Array{Int}           # Min up time for primary generators
 
     cut_count::Int
+    u::Vector{Vector{VariableRef}}      # Decision variables from the cut introduced to the master problem. 
+    q::Vector{Vector{VariableRef}}
 
     function MSP(model::Model, d_hat::Vector{T}, gamma_upper) where {T<:AbstractFloat}
         this = new()
@@ -262,7 +264,9 @@ return this end
         this.con = Vector()
         this.d_hat = d_hat
         this.cut_count = 0
-        
+        this.u = Vector{Vector{VariableRef}}()
+        this.q = Vector{Vector{VariableRef}}()
+
         IntroduceMasterProblemVariables!(this)
         PreppareConstraintsPrimary!(this)
         MasterProblemObjective!(this)
@@ -391,11 +395,9 @@ return this end
 """
 function IntroduceCut!(
     this::MSP,
-    u::Vector{Float64},
-    q::Vector{Float64},
     rho_plus::Vector{Float64},
-    rho_minus::Vector{Float64}, 
-    v::Union{Vector{Float64}, Nothing}=nothing
+    rho_minus::Vector{Float64}
+    # v::Union{Vector{Float64}, Nothing}=nothing
 )
     model = this|>GetModel
     w = this |> Flattenw
@@ -410,26 +412,27 @@ function IntroduceCut!(
     γ = this.gamma
     Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal
     this.cut_count += 1
+    u = PrepareVariablesForTheModel!(model, :u, this.cut_count); push!(this.u, u)
+    q = PrepareVariablesForTheModel!(model, :q, this.cut_count); push!(this.q, q)
+    # DEBUGGING HERE. 
     
-    if v === nothing
-        v = zeros(length(h))
-    end
+    # if v === nothing
+    #     v = zeros(length(h))
+    # end
 
-    δv = min.(h - (B*(w.|>value) + C*u + G*q + H*d̂), 0)
-    
-    model[:s] = s = @variable(
-        model, 
-        [1:length(h)], 
-        lower_bound=0, 
-        base_name="s"
-    )
+    # model[:s] = s = @variable(
+    #     model, 
+    #     [1:length(h)], 
+    #     lower_bound=0, 
+    #     base_name="s"
+    # )
     # fix.(model[:s][374:end], 0, force=true)
-    fix.(model[:s][1:381], 0, force=true)
+    # fix.(model[:s][1:381], 0, force=true)
 
     # Infiltrator.@exfiltrate
     CutConstraints = @constraint(
         model, 
-        B*w + C*u + G*q + H*d̂ + H*Γ*(ρ⁺ - ρ⁻) - v - s .<= h, 
+        B*w + C*u + G*q + H*d̂ + H*Γ*(ρ⁺ - ρ⁻).<= h, 
         base_name="Cut $(this.cut_count)"
     )
     
@@ -542,8 +545,8 @@ return Vec end
         variables to the field of this struct.
     """
     function IntroduceVariables!(this::FSP)
-        this.u = PrepareVarieblesForTheModel!(this|>GetModel, :u)
-        this.q = PrepareVarieblesForTheModel!(this|>GetModel, :q)
+        this.u = PrepareVariablesForTheModel!(this|>GetModel, :u)
+        this.q = PrepareVariablesForTheModel!(this|>GetModel, :q)
         this.v = @variable(this.model, v[1:length(MatrixConstruct.h)], lower_bound=0)
         starting, ending = MatrixConstruct.CON_GROUPS["Demand Balance"]
         if this.sparse_vee
@@ -691,7 +694,7 @@ function IntroduceVariables!(
     D̃ = setdiff(Set(1:size(MatrixConstruct.H, 1)), D)|>collect|>sort
 
     # Prepare variable u for the model.
-    push!(this.u, PrepareVarieblesForTheModel!(this|>GetModel, :u, k))
+    push!(this.u, PrepareVariablesForTheModel!(this|>GetModel, :u, k))
     
     # Prepare for variable q, depending on whether a `q_given` is defined. 
     if q_given === nothing
