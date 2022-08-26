@@ -844,7 +844,7 @@ function PrepareConstraints!(this::FMP)
     ).|>addConstraints!
 
     # Additional constraints for the sparse vee conditions that might get applied here.
-    
+    @constraint(model, sum(v) <= 500000)
 
 return this end
 

@@ -160,6 +160,7 @@ return m end
 mutable struct Buses
     primary::Dict{Int, Set{Int}}
     secondary::Dict{Int, Set{Int}}
+    
     """
         Generator info are HARD CODED IN!!! 
     """

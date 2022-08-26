@@ -59,7 +59,11 @@ function CCGAInnerLoop(
     model_fmp = Model(Gurobi.Optimizer)
     fmp = FMP(w̄, γ̄, d̂, model_fmp, sparse_vee=sparse_vee)
     Solve!(fmp)
-    @assert !(objective_value(fmp)|>isnan) "$(premise) FMP is either unbounded or unfeasible on the first solve of FMP. "
+    if objective_value(fmp)|>isnan
+        DebugReport(fmp, "fmp_debug_report_inner_ccga")
+        Infiltrator.@exfiltrate
+        @assert false "$(premise) FMP is either unbounded or unfeasible on the first solve of FMP. "
+    end
     push!(upperbound_list, objective_value(fmp))
     
     fsp = nothing
