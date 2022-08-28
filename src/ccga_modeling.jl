@@ -312,11 +312,13 @@ function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
 
     # Scalar Continuous variables for demand interval.
     time_horizon = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
+    #TODO: Change here for gamma
     this.gamma = @variable(
         model,
         γ[1:time_horizon],
         lower_bound=0, upper_bound=this.gamma_upper
     )[:]
+
 return this end
 
 
@@ -410,16 +412,15 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.gamma
+    #TODO: Change here for gamma
     Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal
     this.cut_count += 1
     u = PrepareVariablesForTheModel!(model, :u, this.cut_count); push!(this.u, u)
     q = PrepareVariablesForTheModel!(model, :q, this.cut_count); push!(this.q, q)
-    # DEBUGGING HERE. 
-    
+
     # if v === nothing
     #     v = zeros(length(h))
     # end
-
     # model[:s] = s = @variable(
     #     model, 
     #     [1:length(h)], 
@@ -428,8 +429,8 @@ function IntroduceCut!(
     # )
     # fix.(model[:s][374:end], 0, force=true)
     # fix.(model[:s][1:381], 0, force=true)
-
     # Infiltrator.@exfiltrate
+
     CutConstraints = @constraint(
         model, 
         B*w + C*u + G*q + H*d̂ + H*Γ*(ρ⁺ - ρ⁻).<= h, 
@@ -493,8 +494,7 @@ return Vec end
 
     # Given parameters
     w::Vector{Float64}
-    d_star::Vector{Float64}
-    #  gamma::Vector{Float64}      # TODO: I think Gamma is unused. 
+    d_star::Vector{Float64} 
 
     sparse_vee::Bool
 
@@ -574,7 +574,7 @@ return Vec end
         H = MatrixConstruct.H
         B = MatrixConstruct.B
         G = MatrixConstruct.G
-        @info "Preparing constraints for the FSP model. "
+        # @info "Preparing constraints for the FSP model. "
         push!(
             this.con, 
             @constraint(this.model, C*u + H*d + B*w + G*q - v .<= h)...
@@ -798,7 +798,8 @@ function PrepareConstraints!(this::FMP)
     # d = this.d
     d̂ = this.d_hat
     γ = this.gamma
-    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal
+    #TODO: Change here for gamma
+    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal 
     q = this.q[k]
     
     
@@ -859,6 +860,7 @@ function GetDemandVertex(this::FMP)
     ρ⁺ = this.rho_plus.|>value 
     ρ⁻ = this.rho_minus.|>value
     γ = this.gamma.|>value
+    #TODO: Change here for gamma
     Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal
     d̂ = this.d_hat
 return d̂ + Γ*(ρ⁺ - ρ⁻) end
