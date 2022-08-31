@@ -207,8 +207,10 @@ function CCGAOutterLoop(
     gamma_upper::N2;
     epsilon_inner::N3=0.1, 
     inner_max_itr::Int=10,
-    outer_max_itr::Int=5,
-    make_plot::Bool=true
+    outer_max_itr::Int=10,
+    make_plot::Bool=true, 
+    cut_memory::Int=typemax(Int), 
+    single_qu::Bool=false,
 ) where {N1 <: Number, N2 <: Number, N3 <: Number}
 
     context = "During the execution of the outter loop of CCGA: "
@@ -219,8 +221,10 @@ function CCGAOutterLoop(
     @assert inner_max_itr > 0 && outer_max_itr >0 "$context both the inner_max_itr, outter_max_itr should be larger than zero strictly. " 
     ϵ = epsilon_inner; γ⁺ = gamma_upper; d̂ = d_hat
 
-    model_mp = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); mp = MP(model_mp, γ⁺); set_silent(model_mp)
-    model_msp = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); msp = MSP(model_msp, d̂, γ⁺); set_silent(model_msp)
+    model_mp = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model_mp)
+    mp = MP(model_mp, γ⁺)
+    model_msp = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model_msp)
+    msp = MSP(model_msp, d̂, γ⁺, cut_memory=cut_memory, single_qu=single_qu)
 
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
     PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
@@ -281,6 +285,6 @@ return OuterResults end
 ϵ = 0.1
 γ_upper = 100
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
-Results = CCGAOutterLoop(d̂, γ_upper);
+Results = CCGAOutterLoop(d̂, γ_upper, cut_memory=3);
 
 

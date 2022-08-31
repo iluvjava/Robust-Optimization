@@ -247,8 +247,18 @@ return this end
     cut_count::Int
     u::Vector{Vector{VariableRef}}      # Decision variables from the cut introduced to the master problem. 
     q::Vector{Vector{VariableRef}}
+    cut_con_starts::Int                 # the index where the cut constraints is going to be appened to the list of constraints.
+                                        # con.[cut_con_starts] is the first constraints of the oldest cut. 
+    cut_memory::Int                     # number of cuts to remember for the master problem. 
+    single_qu::Bool                     # whether to use just a single secondary decision variables for all the cuts. 
 
-    function MSP(model::Model, d_hat::Vector{T}, gamma_upper) where {T<:AbstractFloat}
+    function MSP(
+        model::Model, 
+        d_hat::Vector{T}, 
+        gamma_upper;
+        cut_memory::Int=typemax(Int), 
+        single_qu::Bool=false
+    ) where {T<:AbstractFloat}
         this = new()
         this.model= model
         this.gamma_upper = gamma_upper
@@ -266,7 +276,9 @@ return this end
         this.cut_count = 0
         this.u = Vector{Vector{VariableRef}}()
         this.q = Vector{Vector{VariableRef}}()
-
+        this.cut_con_starts = -1    # properly establish when primary generator constraints are introduced. 
+        @assert cut_memory >= 1 "The msp cut_memory should be larger than one."; this.cut_memory = cut_memory
+        this.single_qu = single_qu
         IntroduceMasterProblemVariables!(this)
         PreppareConstraintsPrimary!(this)
         MasterProblemObjective!(this)
@@ -383,6 +395,9 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
         )
     end
 
+    if isa(this, MSP)
+        this.cut_con_starts = length(this.con) + 1
+    end
 return this end
 
 
@@ -412,11 +427,27 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.gamma
-    #TODO: Change here for gamma
-    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal
+    Σγ⁺ = objective_value(this)
+
+    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal #TODO: Change here for gamma
     this.cut_count += 1
-    u = PrepareVariablesForTheModel!(model, :u, this.cut_count); push!(this.u, u)
-    q = PrepareVariablesForTheModel!(model, :q, this.cut_count); push!(this.q, q)
+
+    if this.cut_count > this.cut_memory  # cut out one oldest block of constraint. 
+        for c in this.con[this.cut_con_starts: this.cut_con_starts + length(h)]
+            delete(model, c)
+        end
+        # delete it from msp
+        deleteat!(this.con, this.cut_con_starts: this.cut_con_starts + length(h))
+    end
+    if this.single_qu && this.cut_count > 1
+        u = this.u[end]
+        q = this.q[end]
+    else
+        u = PrepareVariablesForTheModel!(model, :u, this.cut_count)
+        q = PrepareVariablesForTheModel!(model, :q, this.cut_count)
+    end 
+    push!(this.u, u)
+    push!(this.q, q)
 
     # if v === nothing
     #     v = zeros(length(h))
@@ -440,6 +471,9 @@ function IntroduceCut!(
     push!(
         this.con,
         CutConstraints...   
+    )
+    push!(this.con, 
+        @constraint(model, sum(γ) <= Σγ⁺)
     )
 
 return CutConstraints end
