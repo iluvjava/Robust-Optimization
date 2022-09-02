@@ -245,19 +245,14 @@ return this end
     Tminu::Array{Int}           # Min up time for primary generators
 
     cut_count::Int
-    u::Vector{Vector{VariableRef}}      # Decision variables from the cut introduced to the master problem. 
+    u::Vector{Vector{VariableRef}}  # Decision variables from the cut introduced to the master problem. 
     q::Vector{Vector{VariableRef}}
-    cut_con_starts::Int                 # the index where the cut constraints is going to be appened to the list of constraints.
-                                        # con.[cut_con_starts] is the first constraints of the oldest cut. 
-    cut_memory::Int                     # number of cuts to remember for the master problem. 
-    single_qu::Bool                     # whether to use just a single secondary decision variables for all the cuts. 
+    artificial_bound_at::Int         
 
     function MSP(
         model::Model, 
         d_hat::Vector{T}, 
         gamma_upper;
-        cut_memory::Int=typemax(Int), 
-        single_qu::Bool=false
     ) where {T<:AbstractFloat}
         this = new()
         this.model= model
@@ -276,9 +271,7 @@ return this end
         this.cut_count = 0
         this.u = Vector{Vector{VariableRef}}()
         this.q = Vector{Vector{VariableRef}}()
-        this.cut_con_starts = -1    # properly establish when primary generator constraints are introduced. 
-        @assert cut_memory >= 1 "The msp cut_memory should be larger than one."; this.cut_memory = cut_memory
-        this.single_qu = single_qu
+    
         IntroduceMasterProblemVariables!(this)
         PreppareConstraintsPrimary!(this)
         MasterProblemObjective!(this)
@@ -396,7 +389,7 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
     end
 
     if isa(this, MSP)
-        this.cut_con_starts = length(this.con) + 1
+        this.artificial_bound_at = length(this.con) + 1
     end
 return this end
 
@@ -413,8 +406,8 @@ return this end
 function IntroduceCut!(
     this::MSP,
     rho_plus::Vector{Float64},
-    rho_minus::Vector{Float64}
-    # v::Union{Vector{Float64}, Nothing}=nothing
+    rho_minus::Vector{Float64},
+    aritifical_bound::Float64
 )
     model = this|>GetModel
     w = this |> Flattenw
@@ -427,25 +420,13 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.gamma
-    Σγ⁺ = objective_value(this)
+    Σγ⁺ = aritifical_bound
 
     Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal #TODO: Change here for gamma
     this.cut_count += 1
-
-    if this.cut_count > this.cut_memory  # cut out one oldest block of constraint. 
-        for c in this.con[this.cut_con_starts: this.cut_con_starts + length(h)]
-            delete(model, c)
-        end
-        # delete it from msp
-        deleteat!(this.con, this.cut_con_starts: this.cut_con_starts + length(h))
-    end
-    if this.single_qu && this.cut_count > 1
-        u = this.u[end]
-        q = this.q[end]
-    else
-        u = PrepareVariablesForTheModel!(model, :u, this.cut_count)
-        q = PrepareVariablesForTheModel!(model, :q, this.cut_count)
-    end 
+    
+    u = PrepareVariablesForTheModel!(model, :u, this.cut_count)
+    q = PrepareVariablesForTheModel!(model, :q, this.cut_count)
     push!(this.u, u)
     push!(this.q, q)
 
@@ -461,23 +442,39 @@ function IntroduceCut!(
     # fix.(model[:s][374:end], 0, force=true)
     # fix.(model[:s][1:381], 0, force=true)
     # Infiltrator.@exfiltrate
+    
+    if this.cut_count > 1
+        previuosArtificialBound = popat!(this.con, this.artificial_bound_at)
+        delete(model, previuosArtificialBound)
+    end
+
+    insert!(this.con, 
+        this.artificial_bound_at, @constraint(model, sum(γ) <= Σγ⁺)
+    )
 
     CutConstraints = @constraint(
         model, 
         B*w + C*u + G*q + H*d̂ + H*Γ*(ρ⁺ - ρ⁻).<= h, 
         base_name="Cut $(this.cut_count)"
     )
-    
+
     push!(
         this.con,
         CutConstraints...   
     )
-    push!(this.con, 
-        @constraint(model, sum(γ) <= Σγ⁺)
-    )
-
+    
 return CutConstraints end
 
+"""
+    Delete all the previous cut introduced to the master problem. 
+    * There will be an error if no cut is introduced and we tried to delete them. 
+"""
+function DeleteAllPreviousCut!(this::MSP)
+    startingAt = this.artificial_bound_at + 1
+    endingAt = length(this.con)
+    delete.(this.model, this.con[startingAt: endingAt])
+    deleteat!(this.con, startingAt: endingAt)
+return this end
 
 
 """

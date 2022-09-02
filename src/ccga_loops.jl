@@ -209,8 +209,7 @@ function CCGAOutterLoop(
     inner_max_itr::Int=10,
     outer_max_itr::Int=10,
     make_plot::Bool=true, 
-    cut_memory::Int=typemax(Int), 
-    single_qu::Bool=false,
+    smart_cut::Bool=true
 ) where {N1 <: Number, N2 <: Number, N3 <: Number}
 
     context = "During the execution of the outter loop of CCGA: "
@@ -224,21 +223,24 @@ function CCGAOutterLoop(
     model_mp = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model_mp)
     mp = MP(model_mp, γ⁺)
     model_msp = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model_msp)
-    msp = MSP(model_msp, d̂, γ⁺, cut_memory=cut_memory, single_qu=single_qu)
+    msp = MSP(model_msp, d̂, γ⁺)
 
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
     PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
     Solve!(mp)
     w̄ = Getw(mp)
     Solve!(msp)
+    γ̄ = GetGamma(msp)
+    Σγ = objective_value(msp)
 
     OuterCounter = 0
     OuterResults = CCGAOuterLoop()
     for _ in 1:outer_max_itr
         OuterCounter += 1
         println("Outter Forloop itr=$OuterCounter")
-        Results = CCGAInnerLoop(GetGamma(msp), w̄, d̂, epsilon=ϵ, sparse_vee=false)
+        Results = CCGAInnerLoop(γ̄, w̄, d̂, epsilon=ϵ, sparse_vee=false)
         OuterResults(Results)
+        
         # SHOULD FACTOR IT OUT AND MAKE IT AS PART OF THE OUTER LOOP STRUCT OBJECTIVE. 
         if make_plot
             fig = plot(Results.upper_bounds, label="upper_fmp", marker=:x)
@@ -257,16 +259,27 @@ function CCGAOutterLoop(
             break
         end
 
+        @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "
+        
         IntroduceCut!(
             msp, 
             GetRhoPlus(Results.fmp), 
-            GetRhoMinus(Results.fmp)
+            GetRhoMinus(Results.fmp), 
+            Σγ
         )
-        @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "
         Solve!(msp)
         OuterResults(msp)  
-        @info "Objective value of msp settled at: $(objective_value(msp)). "
         w̄ = Getw(msp)
+        γ̄ = GetGamma(msp)
+        @info "Objective value of msp settled at: $(objective_value(msp)). "
+        @assert !isnan(objective_value(msp)) "$context objective value for msp is NaN. "
+        @assert !isinf(objective_value(msp)) "$contex objective value of msp is inf. "
+        if objective_value(msp) < Σγ && OuterCounter > 1 && smart_cut
+            Σγ = objective_value(msp)
+            DeleteAllPreviousCut!(msp)
+            @info "SmartCut is deleting all previous cut due to strict decrease of the msp objective. "
+        end
+        
     end
 
     OuterResults.msp = msp
@@ -283,8 +296,8 @@ return OuterResults end
 ### problem. 
 
 ϵ = 0.1
-γ_upper = 100
+γ_upper = 50
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
-Results = CCGAOutterLoop(d̂, γ_upper, cut_memory=3);
+Results = CCGAOutterLoop(d̂, γ_upper, smart_cut=true, inner_max_itr=10, outer_max_itr=20);
 
 
