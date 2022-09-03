@@ -6,11 +6,47 @@ include("ccga_modeling.jl")
 
 # Global solver settings. 
 const GUROBI_ENV = Gurobi.Env()
-
+const RESULTS_DIRECTORY = "./ccga_results"
+if !isdir(RESULTS_DIRECTORY)
+    mkdir(RESULTS_DIRECTORY)
+end
 
 function TimeStamp()
-return "["*(Date(now())|>string)*(Time(now())|>string)*"]" end
+return "["*(Date(now())|>string)*" "*(Time(now())|>string)*"]" end
 
+### SESSION_FILE =======================================================================================================
+# stores the location of a file. And it will write to it and close the stream, one line at a time. 
+# If writing to the file is frequent then this will be slow. 
+
+struct SessionFile
+    file_loc::String
+    function SessionFile(file_loc::String)
+        touch(file_loc) # create
+    return new(file_loc) end
+end
+
+
+"""
+    A () operator for the type SessionFile so that it prints the content of the string to the file and then
+    return the string for other processing tasks. 
+"""
+function (this::SessionFile)(that::String)
+    open(this.file_loc, "a+") do io
+        println(io, that)
+    end
+return that end
+
+"""
+    Close the IO for the internal file writing stream for the given FileSession instance. 
+"""
+function Close(this::SessionFile)
+    close(this.file_stream)
+return end
+
+FILE_SESSTION_TIME_STAMP = replace(replace(TimeStamp(), r":|\."=>"-"), r"\[|\]"=>"")
+mkdir(RESULTS_DIRECTORY*"/$FILE_SESSTION_TIME_STAMP")
+SESSION_DIR = RESULTS_DIRECTORY*"/"*FILE_SESSTION_TIME_STAMP
+SESSION_FILE = SessionFile(SESSION_DIR*"/"*"main_print_out.txt")
 
 
 # ======================================================================================================================
@@ -168,7 +204,8 @@ function CCGAInnerLoop(
         @assert !(objective_value(fmp)|>isnan) "$(premise) FMP"*
             " is infeasible or unbounded DURING the inner CCGA iterations. "
         if abs(upperbound_list[end] - lowerbound_list[end]) < ϵ
-            @info "Inner CCGA forloop termminated due to convergence of FSP and FMP on tolerance level ϵ=$(ϵ). "
+            @info "Inner CCGA forloop termminated due to convergence of"*
+                " FSP and FMP on tolerance level ϵ=$(ϵ), new fmp returns: $(fmp|>objective_value)"
             break
         end
         if II == max_iter
@@ -206,11 +243,12 @@ function CCGAOutterLoop(
     d_hat::Vector{N1}, 
     gamma_upper::N2;
     epsilon_inner::N3=0.1, 
+    epsilon_outer::N4=0.1
     inner_max_itr::Int=10,
     outer_max_itr::Int=10,
     make_plot::Bool=true, 
     smart_cut::Bool=true
-) where {N1 <: Number, N2 <: Number, N3 <: Number}
+) where {N1 <: Number, N2 <: Number, N3 <: Number, N4<:Number}
 
     context = "During the execution of the outter loop of CCGA: "
     @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(context)"*
@@ -254,7 +292,7 @@ function CCGAOutterLoop(
             break
         end
 
-        if Results.upper_bounds[end] < 1e-4
+        if Results.upper_bounds[end] < epsilon_outer
             @info "Outer for loop terminated due to convergence of FMP, FSP to an objective value of zero."
             break
         end
@@ -296,8 +334,7 @@ return OuterResults end
 ### problem. 
 
 ϵ = 0.1
-γ_upper = 50
+γ_upper = 100
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
-Results = CCGAOutterLoop(d̂, γ_upper, smart_cut=true, inner_max_itr=10, outer_max_itr=20);
-
+Results = CCGAOutterLoop(d̂, γ_upper, smart_cut=false, inner_max_itr=10, outer_max_itr=80);
 
