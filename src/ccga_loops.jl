@@ -175,7 +175,7 @@ function CCGAInnerLoop(
     all_ds = Vector{Vector}()
     model_fmp = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model_fmp)
     fmp = FMP(w̄, γ̄, d̂, model_fmp, sparse_vee=sparse_vee)
-    @info "$(TimeStamp()) Inner loop is initialized with fmp, and we are solving the initial fmp. "
+    @info "$(TimeStamp()) Inner loop is initialized with fmp, and we are solving the initial fmp. "|>SESSION_FILE
     Solve!(fmp)
     if objective_value(fmp)|>isnan
         DebugReport(fmp, "fmp_debug_report_inner_ccga")
@@ -188,24 +188,24 @@ function CCGAInnerLoop(
     for II in 1:max_iter
         d = GetDemandVertex(fmp); push!(all_ds, d)
         model_fsp = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model_fsp)
-        @info "$(TimeStamp()) FSP is made and we are solving it. "
+        @info "$(TimeStamp()) FSP is made and we are solving it. "|>SESSION_FILE
         fsp = FSP(w̄, d, model_fsp, sparse_vee=sparse_vee)
         Solve!(fsp); push!(lowerbound_list, fsp |> objective_value)
-        @info "(FSP Lower, FMP Upper) = $((lowerbound_list[end], upperbound_list[end])) at itr = $II"
+        @info "(FSP Lower, FMP Upper) = $((lowerbound_list[end], upperbound_list[end])) at itr = $II"|>SESSION_FILE
         if lowerbound_list[end] > ϵ
             @info "Inner CCGA forloop terminated due to a positive lower of bound of"*
-            ": $(lowerbound_list[end]) from FSP which is higher than: ϵ=$(ϵ)."
+            ": $(lowerbound_list[end]) from FSP which is higher than: ϵ=$(ϵ)."|>SESSION_FILE
             break
         end
         q = Getq(fsp); push!(all_qs, q)
         Introduce!(fmp, q)
-        @info "$(TimeStamp()) CCGA Inner loop continues, constraints is introduced to fmp and we are solving it. "
+        @info "$(TimeStamp()) CCGA Inner loop continues, constraints is introduced to fmp and we are solving it. "|>SESSION_FILE
         Solve!(fmp);push!(upperbound_list, objective_value(fmp))
         @assert !(objective_value(fmp)|>isnan) "$(premise) FMP"*
             " is infeasible or unbounded DURING the inner CCGA iterations. "
         if abs(upperbound_list[end] - lowerbound_list[end]) < ϵ
             @info "Inner CCGA forloop termminated due to convergence of"*
-                " FSP and FMP on tolerance level ϵ=$(ϵ), new fmp returns: $(fmp|>objective_value)"
+                " FSP and FMP on tolerance level ϵ=$(ϵ), new fmp returns: $(fmp|>objective_value)"|>SESSION_FILE
             break
         end
         if II == max_iter
@@ -243,7 +243,7 @@ function CCGAOutterLoop(
     d_hat::Vector{N1}, 
     gamma_upper::N2;
     epsilon_inner::N3=0.1, 
-    epsilon_outer::N4=0.1
+    epsilon_outer::N4=0.1,
     inner_max_itr::Int=10,
     outer_max_itr::Int=10,
     make_plot::Bool=true, 
@@ -256,6 +256,9 @@ function CCGAOutterLoop(
     @assert gamma_upper > 0 "$context gamma_upper should be a strictly positive number."
     @assert epsilon_inner > 0 "$context parameter epsilon should be strictly positive but got: $epsilon_inner. "
     @assert inner_max_itr > 0 && outer_max_itr >0 "$context both the inner_max_itr, outter_max_itr should be larger than zero strictly. " 
+    if (epsilon_outer > epsilon_inner)
+        @warn "The epsilon tolerance for the outer iteration is strictly less than the inner, this might cause outer forloop iterating indefinitely. "
+    end
     ϵ = epsilon_inner; γ⁺ = gamma_upper; d̂ = d_hat
 
     model_mp = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model_mp)
@@ -288,16 +291,16 @@ function CCGAOutterLoop(
 
         if Results.termination_status == -1
             OuterResults.termination_status = -2
-            @info "Outer loop terminated due to inner loop reaching maximum iterations without convergence."
+            @info "Outer loop terminated due to inner loop reaching maximum iterations without convergence."|>SESSION_FILE
             break
         end
 
         if Results.upper_bounds[end] < epsilon_outer
-            @info "Outer for loop terminated due to convergence of FMP, FSP to an objective value of zero."
+            @info "Outer for loop terminated due to convergence of FMP, FSP to an objective value of zero."|>SESSION_FILE
             break
         end
 
-        @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "
+        @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "|>SESSION_FILE
         
         IntroduceCut!(
             msp, 
@@ -309,13 +312,13 @@ function CCGAOutterLoop(
         OuterResults(msp)  
         w̄ = Getw(msp)
         γ̄ = GetGamma(msp)
-        @info "Objective value of msp settled at: $(objective_value(msp)). "
+        @info "Objective value of msp settled at: $(objective_value(msp)). "|>SESSION_FILE
         @assert !isnan(objective_value(msp)) "$context objective value for msp is NaN. "
         @assert !isinf(objective_value(msp)) "$contex objective value of msp is inf. "
         if objective_value(msp) < Σγ && OuterCounter > 1 && smart_cut
             Σγ = objective_value(msp)
             DeleteAllPreviousCut!(msp)
-            @info "SmartCut is deleting all previous cut due to strict decrease of the msp objective. "
+            @info "SmartCut is deleting all previous cut due to strict decrease of the msp objective. "|>SESSION_FILE
         end
         
     end
