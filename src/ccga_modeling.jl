@@ -639,14 +639,14 @@ end
 
     v::Vector{Vector{VariableRef}}                # The slack decision variables for each of the previous demands.
     u::Vector{Vector{VariableRef}}                # The secondary continuous decision variables.
-    # d::Vector{VariableRef}                        # The demand decision variable, as a giant vector.
+    # d::Vector{VariableRef}                      # The demand decision variable, as a giant vector.
     eta::VariableRef                              # The eta lower bound for all feasibility.
     lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
     
     k::Int                                        # The iteration number from the ccga.
 
     sparse_vee::Bool
-    demands_idx::Set{Int}                              # subset of indices indicating the demands constraints. 
+    demands_idx::Set{Int}                         # subset of indices indicating the demands constraints. 
 
 end
 
@@ -710,7 +710,7 @@ end
     It's being inherited by subtypes of AbsFMP. 
 """
 function IntroduceVariables!(
-    ::Type{AbsFMP}, 
+    ::Type{AbsFMP},
     this::AbsFMP, 
     q_given::Union{Nothing, Vector{Float64}}
 )
@@ -721,6 +721,7 @@ function IntroduceVariables!(
     else
         starting, ending = (1, size(MatrixConstruct.H, 1))
     end
+
     this.demands_idx = D = Set(starting:ending)
     D̃ = setdiff(Set(1:size(MatrixConstruct.H, 1)), D)|>collect|>sort
 
@@ -919,7 +920,8 @@ return this.rho_minus.|>value end
 """
 function Introduce!(this::FMP, q::Vector{Float64})
     this.k += 1
-    @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q. "
+    @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q."
+    
     IntroduceVariables!(this, q)
     PrepareConstraints!(this)
 return this end
@@ -991,6 +993,7 @@ end
 """
 function IntroduceVariables!(this::McCormickFMP, q_given::Union{Nothing, Vector{Float64}}=nothing)
     IntroduceVariables!(AbsFMP, this, q_given)
+    
     γ̄ = this.gamma
     d̂ = this.d_hat
     k = this.k

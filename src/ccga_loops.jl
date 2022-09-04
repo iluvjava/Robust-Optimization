@@ -158,7 +158,7 @@ function CCGAInnerLoop(
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
     max_iter::Int=8,
-    sparse_vee::Bool=true
+    sparse_vee::Bool=false
 ) where {N1<:Number, N2<:Number, N3 <:Number}
     
     premise = "During executing CCGA Inner for loop: "
@@ -244,10 +244,10 @@ function CCGAOutterLoop(
     gamma_upper::N2;
     epsilon_inner::N3=0.1, 
     epsilon_outer::N4=0.1,
-    inner_max_itr::Int=10,
-    outer_max_itr::Int=10,
+    inner_max_itr::Int=15,
+    outer_max_itr::Int=40,
     make_plot::Bool=true, 
-    smart_cut::Bool=true
+    smart_cut::Bool=false
 ) where {N1 <: Number, N2 <: Number, N3 <: Number, N4<:Number}
 
     context = "During the execution of the outter loop of CCGA: "
@@ -309,17 +309,17 @@ function CCGAOutterLoop(
             Σγ
         )
         Solve!(msp)
-        OuterResults(msp)  
+        OuterResults(msp)
         w̄ = Getw(msp)
         γ̄ = GetGamma(msp)
         @info "Objective value of msp settled at: $(objective_value(msp)). "|>SESSION_FILE
         @assert !isnan(objective_value(msp)) "$context objective value for msp is NaN. "
         @assert !isinf(objective_value(msp)) "$contex objective value of msp is inf. "
         if objective_value(msp) < Σγ && OuterCounter > 1 && smart_cut
-            Σγ = objective_value(msp)
             DeleteAllPreviousCut!(msp)
             @info "SmartCut is deleting all previous cut due to strict decrease of the msp objective. "|>SESSION_FILE
         end
+        Σγ = objective_value(msp)
         
     end
 

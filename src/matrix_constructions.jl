@@ -1,4 +1,8 @@
 ### This file focuses on the constructions of matrices.
+# Warning: 
+#   * The F coefficient matrix here is the H matrix in the paper. 
+#   * The H matrix defined at the end is the -H in the paper because right hand side only consists of numbers. 
+
 
 # Enumeration set Cardinality.
 T = CONST_PROBLEM_PARAMETERS.HORIZON
