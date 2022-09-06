@@ -244,6 +244,7 @@ function ProduceReport(this::CCGAOuterResults)::String
 
 return string_list|>join end
 
+
 """
     Make 2 plots and returns 2 plots. 
 """
@@ -453,6 +454,7 @@ function CCGAOutterLoop(
     # Print the results to files! 
     SESSION_FILE3() do io
         write(io, OuterResults|>ProduceReport)
+        write(io, OuterResults.inner_loops[end]|>ProduceReport)
     end
     fig1, fig2 = OuterResults|>ProducePlots
     savefig(fig1, SESSION_DIR*"/"*"last_fmp_fsp")
