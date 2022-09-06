@@ -428,7 +428,18 @@ function DemandBalanceConstraints()
 
 return rhs end
 
-
+"""
+    Given a symbol and the matrix that is supposed to responsbible for it, it returns 
+    what range of columns of the matrix corresponds to the given variable. 
+    
+    The columns will start indexing at one. 
+"""
+function ColumnRegimeFor(matrix::CoefficientMatrix, var::VariableCoefficientHolder)
+    if !(var.v in matrix.var_posi|>keys)
+        return -1 
+    end
+    starting = matrix.var_posi[var.v]
+return (starting + 1, starting + length(var)) end
 
 # ------------------------------------------------------------------------------
 # CALL these construction functions in the correct oder
@@ -494,6 +505,12 @@ DemandGroupStart = length(RHS) + 1
 RHS = vcat(RHS, DemandBalanceConstraints()) # demand balance
 SyncRow(B, C, G, F)
 CON_GROUPS["Demand Balance"] = (DemandGroupStart, length(RHS))
+
+# Load the coefficient manager to variables of different names. 
+B_ = B
+C_ = C
+G_ = G
+H_ = G
 
 B = (B|>GetMatrix)
 C = (C|>GetMatrix)
