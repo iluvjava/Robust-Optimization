@@ -59,14 +59,14 @@ SESSION_DIR = RESULTS_DIRECTORY*"/"*FILE_SESSTION_TIME_STAMP
 SESSION_FILE1 = SessionFile(SESSION_DIR*"/"*"main_print_out.txt")       # The main console printout for the algorithm.
 SESSION_FILE2 = SessionFile(SESSION_DIR*"/"*"ccga_parameters.txt")      # the parameters that are used to run the algorithm. 
 SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the results from the ccga outer and inner iterations. 
-OPTIMALITY_GAP = 1e-4
+OPTIMALITY_GAP = 0.1
 
 """
     Using the global environment variables to setup a model that has Gurobi optimzer attatched to it. 
 """
 function MakeOptimizer()
     model = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model)
-    set_optimizer_attribute(model, "MIPGap",OPTIMALITY_GAP)
+    set_optimizer_attribute(model, "MIPGap", OPTIMALITY_GAP)
 return model end
 
 
@@ -183,7 +183,6 @@ return fig end
         status code -1: max iteration is reached and it didn't break out of the forloop due to any conditions. 
         status code -2: break out pre-maturally due to inner ccga forloop reaching max iterations counter. 
         status code  0: Successfully finished all iterations without reaching the outer maximum iterations. 
-        
 """
 mutable struct CCGAOuterResults
     inner_loops::Vector{CCGAInnerResults}
@@ -432,6 +431,7 @@ function CCGAOutterLoop(
             GetRhoMinus(Results.fmp), 
             Σγ
         )
+
         Solve!(msp)
         OuterResults(msp)
         w̄ = Getw(msp)
@@ -451,6 +451,7 @@ function CCGAOutterLoop(
     if OuterCounter == outer_max_itr 
         OuterResults.termination_status = -1
     end
+
     # Print the results to files! 
     SESSION_FILE3() do io
         write(io, OuterResults|>ProduceReport)
