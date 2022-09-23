@@ -240,6 +240,7 @@ return this end
     d_hat::Array{Float64}
     gamma::Vector{VariableRef}
     gamma_upper::Number         # an upper bound for the gamma variable.
+    gamma_min::VariableRef       # A minimum bound for gamma. 
     G::Int64; T::Int64          # Given number of generators and time horizon for the problem.
     Tmind::Array{Int}           # Min up down for primary generators
     Tminu::Array{Int}           # Min up time for primary generators
@@ -292,7 +293,8 @@ end
 function MasterProblemObjective!(this::MSP)
     model = GetModel(this)
     γ = this.gamma
-    @objective(model, Max, sum(γ))
+    
+    @objective(model, Max, this.gamma_min)
 return this end
 
 
@@ -317,12 +319,22 @@ function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
 
     # Scalar Continuous variables for demand interval.
     time_horizon = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
-    #TODO: Change here for gamma
+    B̄ = size(MatrixConstruct.H, 2)
+
+    #TODO: Change here for gamma [x]
     this.gamma = @variable(
         model,
-        γ[1:time_horizon],
+        γ[1:B̄],
         lower_bound=0, upper_bound=this.gamma_upper
     )[:]
+    
+    if isa(this, MSP)
+        this.gamma_min = @variable(
+            model, 
+            γmin,
+            lower_bound = 0
+        )
+    end
 
 return this end
 
@@ -390,6 +402,12 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
 
     if isa(this, MSP)
         this.artificial_bound_at = length(this.con) + 1
+        for γ in this.gamma
+            push!(
+                this.con,
+                @constraint(model, this.gamma_min <= γ)
+            )
+        end
     end
 return this end
 
@@ -422,7 +440,7 @@ function IntroduceCut!(
     γ = this.gamma
     Σγ⁺ = aritifical_bound
 
-    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal #TODO: Change here for gamma
+    Γ = γ|>Diagonal             #TODO: Change here for gamma [x]
     this.cut_count += 1
     
     u = PrepareVariablesForTheModel!(model, :u, this.cut_count)
@@ -681,7 +699,7 @@ end
         this = new()
         # Verify dimensions: 
         @assert length(w) == size(MatrixConstruct.B, 2) "w is having the wrong dimension when it's passed to the FMP. "
-        @assert length(gamma) == MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON "gamma, the demand interval vector should be the same length as the time horizon, but it's not. " 
+        @assert length(gamma) == size(MatrixConstruct.H, 2) "gamma, the demand interval vector should be the same length as the time horizon, but it's not. " 
         this.w = w
         this.gamma = gamma
         this.q = Vector{Vector}()
@@ -830,8 +848,8 @@ function PrepareConstraints!(this::FMP)
     # d = this.d
     d̂ = this.d_hat
     γ = this.gamma
-    #TODO: Change here for gamma
-    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal 
+    #TODO: Change here for gamma [x]
+    Γ = γ|>Diagonal
     q = this.q[k]
     
     
@@ -892,8 +910,8 @@ function GetDemandVertex(this::FMP)
     ρ⁺ = this.rho_plus.|>value 
     ρ⁻ = this.rho_minus.|>value
     γ = this.gamma.|>value
-    #TODO: Change here for gamma
-    Γ = kronecker(γ|>Diagonal, ones(MatrixConstruct.B̄)|>Diagonal)|>collect|>Diagonal
+    #TODO: Change here for gamma [x]
+    Γ = γ|>Diagonal
     d̂ = this.d_hat
 return d̂ + Γ*(ρ⁺ - ρ⁻) end
 
