@@ -59,14 +59,13 @@ SESSION_DIR = RESULTS_DIRECTORY*"/"*FILE_SESSTION_TIME_STAMP
 SESSION_FILE1 = SessionFile(SESSION_DIR*"/"*"main_print_out.txt")       # The main console printout for the algorithm.
 SESSION_FILE2 = SessionFile(SESSION_DIR*"/"*"ccga_parameters.txt")      # the parameters that are used to run the algorithm. 
 SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the results from the ccga outer and inner iterations. 
-OPTIMALITY_GAP = 0.1
 
 """
     Using the global environment variables to setup a model that has Gurobi optimzer attatched to it. 
 """
-function MakeOptimizer()
+function MakeOptimizer(optimality_gap=0.1)
     model = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model)
-    set_optimizer_attribute(model, "MIPGap", OPTIMALITY_GAP)
+    set_optimizer_attribute(model, "MIPGap", optimality_gap)
 return model end
 
 

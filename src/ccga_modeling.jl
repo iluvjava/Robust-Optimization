@@ -321,7 +321,6 @@ function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
     time_horizon = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
     B̄ = size(MatrixConstruct.H, 2)
 
-    #TODO: Change here for gamma [x]
     this.gamma = @variable(
         model,
         γ[1:B̄],
@@ -414,18 +413,20 @@ return this end
 
 
 """
-    Introduce feasibility cut for the master problem which comes from the CCGA results.
-        * Delete all constraints established for the MainProblem.
-        * Continuous decision variable from FSP: u
-        * Discrete decision variable from FSP: q
-        * Adversarial demands from FMP: ρ⁺, ρ⁻
-        * introduce new objective for maximum demands intervals satisfactions.
+    Introduce feasibility cut for the master problem from the CCGA results. 
+    rho_plus, rho_minus:
+        Results returned from fmp, the demand upperbound and lowerbound discrete decision variables for each of the 
+        demands decision variables. they should have the exat same dimension as the demand decision variables. 
+    artificial_bound: 
+        This is the artificial bound for the objective of the Master problem, it can be introduced to ensure decrease in 
+        master problems objectives related to the gamma decision variables. 
+        
 """
 function IntroduceCut!(
     this::MSP,
     rho_plus::Vector{Float64},
     rho_minus::Vector{Float64},
-    aritifical_bound::Float64
+    aritifical_bound::Float64 
 )
     model = this|>GetModel
     w = this |> Flattenw
@@ -440,7 +441,7 @@ function IntroduceCut!(
     γ = this.gamma
     Σγ⁺ = aritifical_bound
 
-    Γ = γ|>Diagonal             #TODO: Change here for gamma [x]
+    Γ = γ|>Diagonal             
     this.cut_count += 1
     
     u = PrepareVariablesForTheModel!(model, :u, this.cut_count)
@@ -848,7 +849,6 @@ function PrepareConstraints!(this::FMP)
     # d = this.d
     d̂ = this.d_hat
     γ = this.gamma
-    #TODO: Change here for gamma [x]
     Γ = γ|>Diagonal
     q = this.q[k]
     
@@ -910,7 +910,6 @@ function GetDemandVertex(this::FMP)
     ρ⁺ = this.rho_plus.|>value 
     ρ⁻ = this.rho_minus.|>value
     γ = this.gamma.|>value
-    #TODO: Change here for gamma [x]
     Γ = γ|>Diagonal
     d̂ = this.d_hat
 return d̂ + Γ*(ρ⁺ - ρ⁻) end
