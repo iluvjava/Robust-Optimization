@@ -63,7 +63,7 @@ SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the re
 """
     Using the global environment variables to setup a model that has Gurobi optimzer attatched to it. 
 """
-function MakeOptimizer(optimality_gap=0.1)
+function MakeOptimizer(optimality_gap=0.001)
     model = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model)
     set_optimizer_attribute(model, "MIPGap", optimality_gap)
 return model end
@@ -358,7 +358,9 @@ function CCGAOutterLoop(
     inner_max_itr::Int=15,
     outer_max_itr::Int=40,
     make_plot::Bool=true, 
-    smart_cut::Bool=false
+    smart_cut::Bool=false, 
+    msp_objective_option::Int=1, 
+    msp_block_demand_option::Int=1
 ) where {N1 <: Number, N2 <: Number, N3 <: Number, N4<:Number}
 
     context = "During the execution of the outter loop of CCGA: "
@@ -388,7 +390,7 @@ function CCGAOutterLoop(
     model_mp = MakeOptimizer(); set_silent(model_mp)
     mp = MP(model_mp, γ⁺)
     model_msp = MakeOptimizer(); set_silent(model_msp)
-    msp = MSP(model_msp, d̂, γ⁺)
+    msp = MSP(model_msp, d̂, γ⁺, block_demands=msp_block_demand_option, objective_types=msp_objective_option)
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
     PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
     Solve!(mp)

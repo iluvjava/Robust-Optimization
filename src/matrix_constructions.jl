@@ -9,7 +9,7 @@ T = CONST_PROBLEM_PARAMETERS.HORIZON
 N = PRIMARY_GENERATORS|>length
 M = SECONDARY_GENERATORS|>length
 S = STORAGE_SYSTEM|>length
-B̄ = (SIGMAS|>size)[1]               # total number of buses
+B̄ = (SIGMAS|>size)[1]               # total number of buses, B_bar
 L = (SIGMAS|>size)[2]               # total number of transmission lines 
 
 # ==============================================================================

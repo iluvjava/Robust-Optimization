@@ -232,6 +232,13 @@ return this end
 #   Master Problem:
 #       * Determine primary decision variables only.
 #       * Similar format compare to the Main Problem.
+# Options and settings
+#   objective_types: 
+#       1. maximize gamma min.
+#       2. maximize sum of all gamma.
+#   block_demands_types
+#       0. no restriction on demand interval variable gamma. 
+#       1. restrict all generator at different time to have the same demand intervals. 
 ### ====================================================================================================================
 
 @ProblemTemplate mutable struct MSP <: Problem
@@ -248,12 +255,17 @@ return this end
     cut_count::Int
     u::Vector{Vector{VariableRef}}  # Decision variables from the cut introduced to the master problem. 
     q::Vector{Vector{VariableRef}}
-    artificial_bound_at::Int         
+    artificial_bound_at::Int        # an artificla bounds for the objective, it's undefined before adding any cuts 
+    
+    block_demands_types::Int    # whether to lock the group of demand uncertainty interval gamma to the same value. 
+    objective_types::Int            # a integer that switches between different type of objectives for the msp problem. 
 
     function MSP(
         model::Model, 
         d_hat::Vector{T}, 
         gamma_upper;
+        block_demands::Int = 0, 
+        objective_types::Int = 1
     ) where {T<:AbstractFloat}
         this = new()
         this.model= model
@@ -272,6 +284,8 @@ return this end
         this.cut_count = 0
         this.u = Vector{Vector{VariableRef}}()
         this.q = Vector{Vector{VariableRef}}()
+        this.block_demands_types = block_demands;
+        this.objective_types = objective_types;
     
         IntroduceMasterProblemVariables!(this)
         PreppareConstraintsPrimary!(this)
@@ -292,9 +306,15 @@ end
 """
 function MasterProblemObjective!(this::MSP)
     model = GetModel(this)
-    γ = this.gamma
-    
-    @objective(model, Max, this.gamma_min)
+    γ = this.gamma; γmin = this.gamma_min
+
+    if this.objective_types == 1
+        @objective(model, Max, γmin)
+    elseif this.objective_types == 2
+        @objective(model, Max, sum(γ))
+    else
+        error("this.objective_types = $(this.objective_types) is not a valid argument. ")
+    end
 return this end
 
 
@@ -319,11 +339,10 @@ function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
 
     # Scalar Continuous variables for demand interval.
     time_horizon = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
-    B̄ = size(MatrixConstruct.H, 2)
-
+    # B̄ = size(MatrixConstruct.H, 2)
     this.gamma = @variable(
         model,
-        γ[1:B̄],
+        γ[1:MatrixConstruct.B̄, 1:time_horizon],
         lower_bound=0, upper_bound=this.gamma_upper
     )[:]
     
@@ -400,13 +419,26 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
     end
 
     if isa(this, MSP)
-        this.artificial_bound_at = length(this.con) + 1
-        for γ in this.gamma
-            push!(
-                this.con,
-                @constraint(model, this.gamma_min <= γ)
-            )
+        # depends on the option settings, we assert different type of block constraints on the demand invervals decision 
+        # variable gamma. 
+        if this.block_demands_types == 0
+            # do nothing here. 
+        elseif this.block_demands_types == 1
+            num_gen = MatrixConstruct.B̄; t_horizon = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
+            γ = this.gamma
+            for t in 0:t_horizon - 1
+                γ_block = γ[num_gen*t + 1: num_gen*(t + 1)]
+                for (γ1, γ2) in zip(γ_block[1:end - 1], γ_block[2: end])
+                    push!(this.con, @constraint(model, γ1 == γ2))
+                end
+            end
+        else
+            error("this.block_demands_types=$(this.block_demands_types) is an invalid argument. ")
         end
+
+        # this constraint has to be the LAST constraints to be added to avoid any type of errors. 
+        this.artificial_bound_at = length(this.con) + 1   # an index to locate the artificial bound introduced. 
+        push!(this.con, @constraint(model, this.gamma_min .<= this.gamma)...)
     end
 return this end
 
@@ -466,7 +498,6 @@ function IntroduceCut!(
         previuosArtificialBound = popat!(this.con, this.artificial_bound_at)
         delete(model, previuosArtificialBound)
     end
-
     insert!(this.con, 
         this.artificial_bound_at, @constraint(model, sum(γ) <= Σγ⁺)
     )
@@ -1133,7 +1164,7 @@ return this end
 
 
 ### ====================================================================================================================
-### GENETRIC FUNCTIONS FOR ALL ABOVE TYPES and Subsets of These types. 
+### GENETRIC FUNCTIONS FOR ALL ABOVE TYPES AND SUBSETS OF THOSE TYPES. 
 ###     - Generics Functions for abstract type of problems that contain a JuMP inner model, specific overrides too.
 ### ====================================================================================================================
 
