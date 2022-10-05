@@ -359,7 +359,7 @@ function CCGAOutterLoop(
     outer_max_itr::Int=40,
     make_plot::Bool=true, 
     smart_cut::Bool=false, 
-    msp_objective_option::Int=1, 
+    msp_objective_option::Int=2, 
     msp_block_demand_option::Int=1
 ) where {N1 <: Number, N2 <: Number, N3 <: Number, N4<:Number}
 
@@ -475,5 +475,5 @@ return OuterResults end
 ϵ = 0.1
 γ_upper = 50
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
-Results = CCGAOutterLoop(d̂, γ_upper, smart_cut=false, inner_max_itr=10, outer_max_itr=80);
+Results = CCGAOutterLoop(d̂, γ_upper, smart_cut=false, inner_max_itr=10, outer_max_itr=2);
 
