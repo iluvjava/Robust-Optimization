@@ -475,5 +475,5 @@ return OuterResults end
 ϵ = 0.1
 γ_upper = 50
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
-Results = CCGAOutterLoop(d̂, γ_upper, smart_cut=false, inner_max_itr=10, outer_max_itr=2);
+Results = CCGAOutterLoop(d̂, γ_upper, smart_cut=false, inner_max_itr=10, outer_max_itr=10);
 
