@@ -382,6 +382,7 @@ function CCGAOutterLoop(
             println(io, "epsilon_outer = $epsilon_outer")
             println(io, "inner_max_itr = $inner_max_itr")
             println(io, "outer_max_itr = $outer_max_itr")
+            println(io, "HORIZON = $(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON)")
         end
     end
     # END
@@ -403,7 +404,7 @@ function CCGAOutterLoop(
     OuterResults = CCGAOuterResults()
     for _ in 1:outer_max_itr
         OuterCounter += 1
-        println("Outter Forloop itr=$OuterCounter")
+        @info "Outter Forloop itr=$OuterCounter" |> SESSION_FILE1
         Results = CCGAInnerLoop(γ̄, w̄, d̂, epsilon=ϵ, sparse_vee=false)
         OuterResults(Results)
         
@@ -475,5 +476,12 @@ return OuterResults end
 ϵ = 0.1
 γ_upper = 50
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
-Results = CCGAOutterLoop(d̂, γ_upper, smart_cut=false, inner_max_itr=10, outer_max_itr=10);
+Results = CCGAOutterLoop(
+    d̂,
+    γ_upper, 
+    smart_cut=false, 
+    inner_max_itr=10, 
+    outer_max_itr=10, 
+    msp_objective_option=1
+);
 
