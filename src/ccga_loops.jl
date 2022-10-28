@@ -63,9 +63,11 @@ SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the re
 """
     Using the global environment variables to setup a model that has Gurobi optimzer attatched to it. 
 """
-function MakeOptimizer(optimality_gap=0.001)
-    model = Model(() -> Gurobi.Optimizer(GUROBI_ENV)); set_silent(model)
+function MakeOptimizer(optimality_gap=0.001, time_out=180)
+    model = Model(() -> Gurobi.Optimizer(GUROBI_ENV))
+    
     set_optimizer_attribute(model, "MIPGap", optimality_gap)
+    set_optimizer_attribute(model, "TIME_LIMIT", time_out)
 return model end
 
 
@@ -284,7 +286,7 @@ function CCGAInnerLoop(
     upperbound_list = Vector{Float64}()
     all_qs = Vector{Vector}()
     all_ds = Vector{Vector}()
-    model_fmp = MakeOptimizer(); set_silent(model_fmp)
+    model_fmp = MakeOptimizer()
     fmp = FMP(w̄, γ̄, d̂, model_fmp, sparse_vee=sparse_vee)
     @info "$(TimeStamp()) Inner loop is initialized with fmp, and we are solving the initial fmp. "|>SESSION_FILE1
     Solve!(fmp)
@@ -298,7 +300,7 @@ function CCGAInnerLoop(
     termination_status = 0
     for II in 1:max_iter
         d = GetDemandVertex(fmp); push!(all_ds, d)
-        model_fsp = MakeOptimizer(); set_silent(model_fsp)
+        model_fsp = MakeOptimizer()
         @info "$(TimeStamp()) FSP is made and we are solving it. "|>SESSION_FILE1
         fsp = FSP(w̄, d, model_fsp, sparse_vee=sparse_vee)
         Solve!(fsp); push!(lowerbound_list, fsp |> objective_value)
@@ -388,9 +390,9 @@ function CCGAOutterLoop(
     # END
 
     ϵ = epsilon_inner; γ⁺ = gamma_upper; d̂ = d_hat
-    model_mp = MakeOptimizer(); set_silent(model_mp)
+    model_mp = MakeOptimizer()
     mp = MP(model_mp, γ⁺)
-    model_msp = MakeOptimizer(); set_silent(model_msp)
+    model_msp = MakeOptimizer()
     msp = MSP(model_msp, d̂, γ⁺, block_demands=msp_block_demand_option, objective_types=msp_objective_option)
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
     PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end

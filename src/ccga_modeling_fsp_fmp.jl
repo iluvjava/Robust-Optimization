@@ -309,7 +309,14 @@ function PrepareConstraints!(this::FMP)
         dot(λ, -H*d̂) + dot(-(H*Γ)[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ, h - B*w - G*q) == v,
         base_name="bilinear obj:[$(k)]"
     ).|>addConstraints!
-    
+
+    # Duality constraints
+    @constraint(
+        model, 
+        sum(v) >= -1,
+        base_name="duality con:[$(k)]"
+    ).|>addConstraints!
+
     # new added demand feasibility constraints, the primal
     @constraint(
         model,

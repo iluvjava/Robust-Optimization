@@ -22,7 +22,7 @@ $$
     \\
     (\lambda^{(r)})^T C &\le \mathbf 0 \quad &\forall i = 1, \cdots, k
     \\
-    \mathbf 1^T \lambda^{(r)} &\ge - \mathbf 1
+    \mathbf 1^T \lambda^{(r)} &\ge -1
     \quad 
     &\forall i = 1, \cdots, k
     \\
@@ -40,4 +40,7 @@ $$
 ---
 ### **LOG**
 
-
+1. Get the time stamp print out for the report file.
+2. Get the jump model formulation print out.
+3. Change the solver settings to printout more details, and change the time limit settings. 
+4. Adapt the code to the new model.
