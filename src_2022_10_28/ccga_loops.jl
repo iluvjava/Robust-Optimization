@@ -482,6 +482,6 @@ Results = CCGAOutterLoop(
     smart_cut=false, 
     inner_max_itr=10, 
     outer_max_itr=10, 
-    msp_objective_option=2
+    msp_objective_option=1
 );
 
