@@ -570,7 +570,7 @@ return Vec end
 @ProblemTemplate mutable struct FSP <: Problem
     # model::Model
     u::Vector{VariableRef}
-    v::Vector{VariableRef}
+    v::Vector{VariableRef}  # TODO: CHANGE HERE
     q::Vector{VariableRef}
 
     # Given parameters
@@ -628,8 +628,10 @@ return Vec end
     function IntroduceVariables!(this::FSP)
         this.u = PrepareVariablesForTheModel!(this|>GetModel, :u)
         this.q = PrepareVariablesForTheModel!(this|>GetModel, :q)
+        # TODO: CHANGE HERE
         this.v = @variable(this.model, v[1:length(MatrixConstruct.h)], lower_bound=0)
         starting, ending = MatrixConstruct.CON_GROUPS["Demand Balance"]
+        # TODO: CHANGE HERE
         if this.sparse_vee
             set_upper_bound.(
                 v[
@@ -687,6 +689,7 @@ end
     q::Vector{Vector{Int}}                        # the secondary discrete decision variables           (GIVEN CONSTANT)
     d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
 
+    # TODO:CHANGE HERE. 
     v::Vector{Vector{VariableRef}}                # The slack decision variables for each of the previous demands.
     u::Vector{Vector{VariableRef}}                # The secondary continuous decision variables.
     # d::Vector{VariableRef}                      # The demand decision variable, as a giant vector.
@@ -726,7 +729,7 @@ end
         gamma::Vector,
         d_hat::Vector,
         model::Model=Model(HiGHS.Optimizer);
-        sparse_vee::Bool=false
+        sparse_vee::Bool=false # TODO: CHANGE HERE 
     )
         this = new()
         # Verify dimensions: 
@@ -735,7 +738,7 @@ end
         this.w = w
         this.gamma = gamma
         this.q = Vector{Vector}()
-        this.v = Vector{Vector}()
+        this.v = Vector{Vector}()   # TODO: CHANGE HERE
         this.u = Vector{Vector}()
         this.lambda = Vector{Vector}()
         this.k = 1
@@ -792,6 +795,8 @@ function IntroduceVariables!(
     end
 
     # Prepare for variable v, the violations for all k. 
+
+    # TODO: CHANGE HERE
     v = @variable(
         this.model, 
         [1:length(MatrixConstruct.h)], 
@@ -800,18 +805,21 @@ function IntroduceVariables!(
     )
     push!(this.v, v[:])
     
-    if this.sparse_vee
-        set_upper_bound.(v[D̃], 0)
-    end
+    
 
     # Parepare the variable lambda, the dual decision variables.
+    # TODO: CHANGE HERE
     λ = @variable(
         this.model, 
         [1:length(MatrixConstruct.h)], 
         upper_bound=0,lower_bound=-1,
         base_name="λ[$(k)]"
     )
-
+    
+    # adapts for the sparse_vee option. 
+    if this.sparse_vee
+        set_upper_bound.(v[D̃], 0)
+    end
     if this.sparse_vee
         delete_lower_bound.(λ[D̃])
     end
@@ -887,7 +895,7 @@ function PrepareConstraints!(this::FMP)
     IdxTuples = findall(!=(0), H).|>Tuple
     model = this.model
 
-    
+    # TODO: CHANGE HERE
     @constraint(model, η <= sum(v), base_name="eta objective: [$(k)]").|>addConstraints!
     # Dual constraints
     @constraint(model, λ'*C .<= 0, base_name="dual constraints: [$(k)]").|>addConstraints!
@@ -911,7 +919,7 @@ function PrepareConstraints!(this::FMP)
     @constraint(model, [b=1:size(H, 2)], ρ⁺[b] + ρ⁻[b] == 1, base_name="bin con:[$(k)]").|>addConstraints!
 
     # Bi-linear constraints
-    
+    # TODO: CHANGE HERE
     @constraint(
         model,
         dot(λ, -H*d̂) + dot(-(H*Γ)[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ, h - B*w - G*q) == sum(v),
