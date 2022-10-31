@@ -480,7 +480,7 @@ return OuterResults end
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
 Results = CCGAOutterLoop(
     d̂,
-    γ_upper, 
+    γ_upper,
     smart_cut=false, 
     inner_max_itr=10, 
     outer_max_itr=10, 

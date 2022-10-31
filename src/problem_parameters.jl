@@ -22,7 +22,7 @@ mutable struct ConstParameters
 
     function ConstParameters()
         this = new()
-        this.HORIZON = 24; 
+        this.HORIZON = 16; 
         this.Φ = 1e8; 
         this.RREGD = zeros(this.HORIZON)
         this.RREGU = zeros(this.HORIZON)
@@ -96,13 +96,13 @@ mutable struct StorageSystem
     CharingLim::Array{Number}  # G̅+
     DischargingLim::Array{Number}  # G̅-
     
-    s  # total number of storage system
+    s  # total number of storage system 
     function StorageSystem()
         this = new()
         properties = CSV_STORAGE|>propertynames
         this.Efficiency = CSV_STORAGE[properties[2]]
         this.Capacity = CSV_STORAGE[properties[3]]
-        this.CharingLim = CSV_STORAGE[properties[4]]
+        this.CharingLim = CSV_STORAGE[properties[4]]    
         this.DischargingLim = CSV_STORAGE[properties[5]]
         this.s = CSV_STORAGE |> length
 
