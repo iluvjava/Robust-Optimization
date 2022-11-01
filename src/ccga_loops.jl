@@ -461,6 +461,7 @@ function CCGAOutterLoop(
         write(io, OuterResults|>ProduceReport)
         write(io, OuterResults.inner_loops[end]|>ProduceReport)
     end
+
     fig1, fig2 = OuterResults|>ProducePlots
     savefig(fig1, SESSION_DIR*"/"*"last_fmp_fsp")
     savefig(fig2, SESSION_DIR*"/"*"initial_fmp_fsp")
@@ -483,7 +484,7 @@ Results = CCGAOutterLoop(
     γ_upper,
     smart_cut=false, 
     inner_max_itr=10, 
-    outer_max_itr=10, 
+    outer_max_itr=3, 
     msp_objective_option=2
 );
 
