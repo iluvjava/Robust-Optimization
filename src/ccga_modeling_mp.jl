@@ -171,7 +171,7 @@ return this end
     cut_count::Int
     u::Vector{Vector{VariableRef}}  # Decision variables from the cut introduced to the master problem. 
     q::Vector{Vector{VariableRef}}
-    artificial_bound_at::Int        # an artificla bounds for the objective, it's undefined before adding any cuts 
+    # artificial_bound_at::Int        # an artificla bounds for the objective, it's undefined before adding any cuts 
     
     block_demands_types::Int    # whether to lock the group of demand uncertainty interval gamma to the same value. 
     objective_types::Int            # a integer that switches between different type of objectives for the msp problem. 
@@ -353,8 +353,8 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
         end
 
         # this constraint has to be the LAST constraints to be added to avoid any type of errors. 
-        this.artificial_bound_at = length(this.con) + 1   # an index to locate the artificial bound introduced. 
-        push!(this.con, @constraint(model, this.gamma_min .<= this.gamma)...)
+        # this.artificial_bound_at = length(this.con) + 1   # an index to locate the artificial bound introduced. 
+        # push!(this.con, @constraint(model, this.gamma_min .<= this.gamma)...)
     end
 return this end
 
@@ -374,7 +374,7 @@ function IntroduceCut!(
     this::MSP,
     rho_plus::Vector{Float64},
     rho_minus::Vector{Float64},
-    aritifical_bound::Float64 
+    # aritifical_bound::Float64 
 )
     model = this|>GetModel
     w = this |> Flattenw
@@ -387,7 +387,7 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.gamma
-    Σγ⁺ = aritifical_bound
+    # Σγ⁺ = aritifical_bound
 
     Γ = γ|>Diagonal             
     this.cut_count += 1
@@ -410,13 +410,13 @@ function IntroduceCut!(
     # fix.(model[:s][1:381], 0, force=true)
     # Infiltrator.@exfiltrate
     
-    if this.cut_count > 1
-        previuosArtificialBound = popat!(this.con, this.artificial_bound_at)
-        delete(model, previuosArtificialBound)
-    end
-    insert!(this.con, 
-        this.artificial_bound_at, @constraint(model, sum(γ) <= Σγ⁺)
-    )
+    # if this.cut_count > 1
+    #     previuosArtificialBound = popat!(this.con, this.artificial_bound_at)
+    #     delete(model, previuosArtificialBound)
+    # end
+    # insert!(this.con, 
+    #     this.artificial_bound_at, @constraint(model, sum(γ) <= Σγ⁺)
+    # )
 
     CutConstraints = @constraint(
         model, 

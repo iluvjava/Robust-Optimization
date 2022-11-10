@@ -18,8 +18,6 @@
     w::Vector{Float64}
     d_star::Vector{Float64} 
 
-    sparse_vee::Bool
-
     function FSP()
         @warn("This construction only exists for testing purposes!")
         return FSP(
@@ -36,20 +34,14 @@
             * γ̄::Number
             * d⋆::Vector{Float64}
             * model::Model=Model(HiGHS.Optimizer)
-        Parameters called by names: 
-            * sparse_vee::Bool=false
     """
     function FSP(
         w::Vector{Float64}, 
-       #  gamma::Vector{Float64},
         d_star::Vector{Float64}, 
-        model::Model=Model(HiGHS.Optimizer);
-        sparse_vee::Bool=false
+        model::Model=Model(HiGHS.Optimizer)
     )   
-        @warn("Sparse_vee option for FMP has been deprecated for the FSP, the option is now useless. ")
         this = new()
         this.model = model
-        # this.gamma = gamma
         this.w = w
         this.d_star = d_star
         this.con = Vector{JuMP.ConstraintRef}()
@@ -70,7 +62,6 @@
         this.u = PrepareVariablesForTheModel!(this|>GetModel, :u)
         this.q = PrepareVariablesForTheModel!(this|>GetModel, :q)
         this.v = @variable(this.model, v, lower_bound=0)
-
     return end
 
 
@@ -85,7 +76,6 @@
         H = MatrixConstruct.H
         B = MatrixConstruct.B
         G = MatrixConstruct.G
-        # @info "Preparing constraints for the FSP model. "
         push!(
             this.con, 
             @constraint(this.model, C*u + H*d + B*w + G*q .- v .<= h)...
@@ -124,13 +114,11 @@ end
         gamma::Vector,
         d_hat::Vector,
         model::Model=Model(HiGHS.Optimizer);
-        sparse_vee::Bool=false 
     )
         this = new()
         # Verify dimensions: 
         @assert length(w) == size(MatrixConstruct.B, 2) "w is having the wrong dimension when it's passed to the FMP. "
         @assert length(gamma) == size(MatrixConstruct.H, 2) "gamma, the demand interval vector should be the same length as the time horizon, but it's not. " 
-        @warn("Sparse Vee Feature has been DEPRECATED, this option is now useless. ")
         this.w = w
         this.gamma = gamma
         this.q = Vector{Vector}()
@@ -187,8 +175,6 @@ function IntroduceVariables!(
     end
 
     # Prepare for variable v, the violations for all k. 
-
-    # TODO: CHANGE HERE
     v = @variable(
         this.model, 
         lower_bound=0, 
@@ -196,10 +182,8 @@ function IntroduceVariables!(
     )
     push!(this.v, v)
     
-    
 
     # Parepare the variable lambda, the dual decision variables.
-    # TODO: CHANGE HERE
     λ = @variable(
         this.model, 
         [1:length(MatrixConstruct.h)], 
@@ -279,7 +263,6 @@ function PrepareConstraints!(this::FMP)
     IdxTuples = findall(!=(0), H).|>Tuple
     model = this.model
 
-    # TODO: CHANGE HERE
     @constraint(model, η <= v, base_name="eta objective: [$(k)]").|>addConstraints!
     # Dual constraints
     @constraint(model, λ'*C .<= 0, base_name="dual constraints: [$(k)]").|>addConstraints!
@@ -303,7 +286,6 @@ function PrepareConstraints!(this::FMP)
     @constraint(model, [b=1:size(H, 2)], ρ⁺[b] + ρ⁻[b] == 1, base_name="bin con:[$(k)]").|>addConstraints!
 
     # Bi-linear constraints
-    # TODO: CHANGE HERE
     @constraint(
         model,
         dot(λ, -H*d̂) + dot(-(H*Γ)[H.!=0], ξ⁺[:] .- ξ⁻[:]) + dot(λ, h - B*w - G*q) == v,

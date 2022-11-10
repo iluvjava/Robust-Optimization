@@ -65,7 +65,6 @@ SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the re
 """
 function MakeOptimizer(optimality_gap=0.001, time_out=180)
     model = Model(() -> Gurobi.Optimizer(GUROBI_ENV))
-    
     set_optimizer_attribute(model, "MIPGap", optimality_gap)
     set_optimizer_attribute(model, "TIME_LIMIT", time_out)
 return model end
@@ -143,7 +142,7 @@ function ProduceReport(this::CCGAInnerResults)::String
     for idx in length(string_list) + 1 :-1: 1
         insert!(string_list, idx, "\n")
     end
-    
+    write_to_file(this.fmp.model, RESULTS_DIRECTORY*"/"*"fmp$(TimeStamp()).mps")
 return join(string_list) end
 
 """
@@ -241,7 +240,7 @@ function ProduceReport(this::CCGAOuterResults)::String
     for idx in length(string_list) + 1 :-1: 1
         insert!(string_list, idx, "\n")
     end
-
+    # TODO: SAVE THE .mps FILE FOR MSP AND OTHERS. 
 return string_list|>join end
 
 
@@ -267,11 +266,11 @@ return fig1, fig2 end
 """
 function CCGAInnerLoop(
     gamma_bar::Vector{N1}, 
-    w_bar::Vector{N2}, 
+    w_bar::Vector{N2},
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
     max_iter::Int=8,
-    sparse_vee::Bool=false
+    # sparse_vee::Bool=false
 ) where {N1<:Number, N2<:Number, N3 <:Number}
     
     premise = "During executing CCGA Inner for loop: "
@@ -287,7 +286,7 @@ function CCGAInnerLoop(
     all_qs = Vector{Vector}()
     all_ds = Vector{Vector}()
     model_fmp = MakeOptimizer()
-    fmp = FMP(w̄, γ̄, d̂, model_fmp, sparse_vee=sparse_vee)
+    fmp = FMP(w̄, γ̄, d̂, model_fmp)
     @info "$(TimeStamp()) Inner loop is initialized with fmp, and we are solving the initial fmp. "|>SESSION_FILE1
     Solve!(fmp)
     if objective_value(fmp)|>isnan
@@ -302,7 +301,7 @@ function CCGAInnerLoop(
         d = GetDemandVertex(fmp); push!(all_ds, d)
         model_fsp = MakeOptimizer()
         @info "$(TimeStamp()) FSP is made and we are solving it. "|>SESSION_FILE1
-        fsp = FSP(w̄, d, model_fsp, sparse_vee=sparse_vee)
+        fsp = FSP(w̄, d, model_fsp)
         Solve!(fsp); push!(lowerbound_list, fsp |> objective_value)
         @info "(FSP Lower, FMP Upper) = $((lowerbound_list[end], upperbound_list[end])) at itr = $II"|>SESSION_FILE1
         if lowerbound_list[end] > ϵ
@@ -360,7 +359,6 @@ function CCGAOutterLoop(
     inner_max_itr::Int=15,
     outer_max_itr::Int=40,
     make_plot::Bool=true, 
-    smart_cut::Bool=false, 
     msp_objective_option::Int=2, 
     msp_block_demand_option::Int=1
 ) where {N1 <: Number, N2 <: Number, N3 <: Number, N4<:Number}
@@ -400,14 +398,13 @@ function CCGAOutterLoop(
     w̄ = Getw(mp)
     Solve!(msp)
     γ̄ = GetGamma(msp)
-    Σγ = objective_value(msp)
 
     OuterCounter = 0
     OuterResults = CCGAOuterResults()
     for _ in 1:outer_max_itr
         OuterCounter += 1
         @info "Outter Forloop itr=$OuterCounter" |> SESSION_FILE1
-        Results = CCGAInnerLoop(γ̄, w̄, d̂, epsilon=ϵ, sparse_vee=false)
+        Results = CCGAInnerLoop(γ̄, w̄, d̂, epsilon=ϵ)
         OuterResults(Results)
         
         # SHOULD FACTOR IT OUT AND MAKE IT AS PART OF THE OUTER LOOP STRUCT OBJECTIVE. 
@@ -433,7 +430,7 @@ function CCGAOutterLoop(
             msp, 
             GetRhoPlus(Results.fmp), 
             GetRhoMinus(Results.fmp), 
-            Σγ
+            # Σγ
         )
 
         Solve!(msp)
@@ -443,11 +440,6 @@ function CCGAOutterLoop(
         @info "Objective value of msp settled at: $(objective_value(msp)). "|>SESSION_FILE1
         @assert !isnan(objective_value(msp)) "$context objective value for msp is NaN. "
         @assert !isinf(objective_value(msp)) "$contex objective value of msp is inf. "
-        if objective_value(msp) < Σγ && OuterCounter > 1 && smart_cut
-            DeleteAllPreviousCut!(msp)
-            @info "SmartCut is deleting all previous cut due to strict decrease of the msp objective. "|>SESSION_FILE1
-        end
-        Σγ = objective_value(msp)
         
     end
 
@@ -482,9 +474,8 @@ d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
 Results = CCGAOutterLoop(
     d̂,
     γ_upper,
-    smart_cut=false, 
     inner_max_itr=10, 
-    outer_max_itr=3, 
+    outer_max_itr=10, 
     msp_objective_option=2
 );
 
