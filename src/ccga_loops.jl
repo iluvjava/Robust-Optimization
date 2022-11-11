@@ -4,13 +4,18 @@ include("matrix_construction_export.jl")
 include("ccga_modeling.jl")
 
 
-# Global solver settings. 
+"The global environment for the gurobi solver. "
 const GUROBI_ENV = Gurobi.Env()
+"The major directories where every session of the ccga results are going to output to. "
 const RESULTS_DIRECTORY = "./ccga_results"
+
 if !isdir(RESULTS_DIRECTORY)
     mkdir(RESULTS_DIRECTORY)
 end
 
+"""
+Get the current system time stamp up to milisec that can be interpolated within files names in most platforms. 
+"""
 function TimeStamp()
 return "["*(Date(now())|>string)*" "*(Time(now())|>string)*"]" end
 
@@ -18,6 +23,10 @@ return "["*(Date(now())|>string)*" "*(Time(now())|>string)*"]" end
 # stores the location of a file. And it will write to it and close the stream, one line at a time. 
 # If writing to the file is frequent then this will be slow. 
 
+"""
+Session files models an output files for the CCGA full iterations. 
+- `file_loc::String`: The location of the file that we are printing to. 
+"""
 struct SessionFile
     file_loc::String
     function SessionFile(file_loc::String)
@@ -26,8 +35,8 @@ struct SessionFile
 end
 
 """
-    A () operator for the type SessionFile so that it prints the content of the string to the file and then
-    return the string for other processing tasks. 
+A () operator for the type SessionFile so that it opens the file stream and prints the content of the string to the 
+file and then return the string for other processing tasks. 
 """
 function (this::SessionFile)(that::String)::String
     open(this.file_loc, "a+") do io
@@ -36,7 +45,7 @@ function (this::SessionFile)(that::String)::String
 return that end
 
 """
-    Pass a IO lambada function and apply that lamba that the underlying IOStream of the file. 
+Pass a IO lambada function and apply that lamba to the underlying IOStream of the file. 
 """
 function(this::SessionFile)(fxn::Function)::SessionFile
     open(this.file_loc, "a+") do io
@@ -45,28 +54,44 @@ function(this::SessionFile)(fxn::Function)::SessionFile
 return this end
 
 """
-    Close the IO for the internal file writing stream for the given FileSession instance. 
+Close the IO for the internal file writing stream for the given FileSession instance. 
 """
 function Close(this::SessionFile)
     close(this.file_stream)
 return end
 
 
-
-FILE_SESSTION_TIME_STAMP = replace(replace(TimeStamp(), r":|\."=>"-"), r"\[|\]"=>"")
+global FILE_SESSTION_TIME_STAMP = replace(replace(TimeStamp(), r":|\."=>"-"), r"\[|\]"=>"")
 mkdir(RESULTS_DIRECTORY*"/$FILE_SESSTION_TIME_STAMP")
-SESSION_DIR = RESULTS_DIRECTORY*"/"*FILE_SESSTION_TIME_STAMP
-SESSION_FILE1 = SessionFile(SESSION_DIR*"/"*"main_print_out.txt")       # The main console printout for the algorithm.
-SESSION_FILE2 = SessionFile(SESSION_DIR*"/"*"ccga_parameters.txt")      # the parameters that are used to run the algorithm. 
-SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the results from the ccga outer and inner iterations. 
+"The full directry ended without / for storing everything for the CCGA Full Run."
+global SESSION_DIR = RESULTS_DIRECTORY*"/"*FILE_SESSTION_TIME_STAMP
+"stores the main output for the Full CCGA Routine"
+global SESSION_FILE1 = SessionFile(SESSION_DIR*"/"*"main_print_out.txt")
+"stores the parameters that are used to run the algorithm."
+global SESSION_FILE2 = SessionFile(SESSION_DIR*"/"*"ccga_parameters.txt")
+"stores the results of the full CCGA. "
+global SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the results from the ccga outer and inner iterations. 
 
 """
-    Using the global environment variables to setup a model that has Gurobi optimzer attatched to it. 
+Make an optimizer. The default is gurobi. It's always gurobi. And all options can be tweaked 
+when calling this function which makes the process easier. all the parameters meaning about the 
+gurobi solver can be found here [here](https://www.gurobi.com/documentation/9.5/refman/parameters.html). 
+# Arguments
+- `optimality_gap`: The "MIPGap" for the gurobi solver. 
+- `time_out::=1`: Try to terminate the gurobi solver after a certain number of seconds has passed. 
+- `solver_name::String`: Give the solver a name, if this parameter is specified then a file with the 
+given solver name and a TimeStamp will be stored to the global SESSION_DIR. 
+- `mip_focus::Int`: Change the mode of focus for the GUROBI solver. 
+
 """
-function MakeOptimizer(optimality_gap=0.001, time_out=180, )
+function MakeOptimizer(;optimality_gap=0.001, time_out::Int=180, solver_name::String="", mip_focus::Int=0)
     model = Model(() -> Gurobi.Optimizer(GUROBI_ENV))
     set_optimizer_attribute(model, "MIPGap", optimality_gap)
     set_optimizer_attribute(model, "TIME_LIMIT", time_out)
+    set_optimizer_attribute(model, "MIPFocus", mip_focus)
+    if solver_name !== ""
+        set_optimizer_attribute(model, "LogFile", SESSION_DIR*"/$(solver_name)_$(TimeStamp())_gurobi_log.txt")
+    end
 return model end
 
 
@@ -75,17 +100,18 @@ return model end
 # ======================================================================================================================
 
 """
-    A struct that contains all the parameters involved for the CCGA inner forloop iterations. Let me explain 
-        all the fields it has: 
-    * fmp: the last instance of the fmp after the ccga inner forloop exited. 
-    * fsp: the last instance of the fsp after the ccga inner loop exited. 
-    * all_ds: all the d_star ths is being generated by the fmp during the iterations of the inner CCGA loop. 
-    * all_qs: all the q_star provided by the fsp in the CCGA inner loop. 
-    * upper_bounds: The objective values of fmp during the inner interations, stored in a list. 
-    * lower_bounds: The objective values of the fsp during the inner iterations, stored in a list. 
-    * terminaton_staus: A code representing different reasons that made the inner CCGA interminate: 
-        Status code  0: terminates because fsp is positive or because fmp and fsp converged to zero. 
-        Status code -1: terminates because max iteration counter is reached. 
+A struct that contains all the parameters involved for the CCGA inner forloop iterations. Let me explain 
+all the fields it has: 
+### Fields: 
+* `fmp`: the last instance of the fmp after the ccga inner forloop exited. 
+* `fsp`: the last instance of the fsp after the ccga inner loop exited. 
+* `all_ds`: all the d_star ths is being generated by the fmp during the iterations of the inner CCGA loop. 
+* `all_qs`: all the q_star provided by the fsp in the CCGA inner loop. 
+* `upper_bounds`: The objective values of fmp during the inner interations, stored in a list. 
+* `lower_bounds`: The objective values of the fsp during the inner iterations, stored in a list. 
+* `terminaton_staus`: A code representing different reasons that made the inner CCGA interminate: 
+    * Status code  `0`: terminates because fsp is positive or because fmp and fsp converged to zero. 
+    * Status code `-1`: terminates because max iteration counter is reached. 
 """
 mutable struct CCGAInnerResults
     fmp::AbsFMP
@@ -94,7 +120,6 @@ mutable struct CCGAInnerResults
     all_qs::Vector
     upper_bounds::Vector
     lower_bounds::Vector
-
     termination_status::Int 
 
     function CCGAInnerResults(
@@ -111,10 +136,12 @@ mutable struct CCGAInnerResults
 end
 
 """
-    We report the feasible solutions produced by the FSP. Here is a list of parameters we are 
-    interested in: 
-        p, p',sr, sr',regu, regu', regd, regd' ,nsp, nsp',g+, g-, rho+, rho-; 
+We report the feasible solutions produced by the FSP. Here is a list of parameters we are 
+interested in: 
+* `p, p',sr, sr',regu, regu', regd, regd' ,nsp, nsp',g+, g-, rho+, rho-`; 
     And the values of these parameters will be returned as a formatted multi-line text. 
+### Arguments
+- `this::CCGAInnerResults`: It's a member method of this type. 
 """
 function ProduceReport(this::CCGAInnerResults)::String
     string_list = Vector{String}()
@@ -146,9 +173,11 @@ function ProduceReport(this::CCGAInnerResults)::String
 return join(string_list) end
 
 """
-    Produce a figure that contains the objective values of the FMP and the FSP, plotted on the same graph. 
-    The x-axis is the number of iterations and the y-axis are the objective values of both FSP, FMP. 
-    The function will return a figure. 
+Produce a figure that contains the objective values of the FMP and the FSP, plotted on the same graph. 
+The x-axis is the number of iterations and the y-axis are the objective values of both FSP, FMP. 
+The function will return a figure. 
+### Arguments: 
+- `this::CCGAInnerResults`: A member method of this type. 
 """
 function ProducePlot(this::CCGAInnerResults)::Plots.Plot
     fig = plot(
@@ -172,17 +201,23 @@ return fig end
 
 
 """
-    Another struct that models the data exposed during the iterations of the full CCGA forloop. It will stores the 
-    following items: 
-    inner_loops: A list of CCGAInnerLoop that is obtained during the iterations of the outer CCGA loops. 
-    msp_objectives: All the objective values of the msp for each iterations of the CCGA, initial msp without any 
-        cut should also be introduced into the vector. 
-    msp_gamma: The vector of gammas from the msp is stored here. 
-    msp: final instance of the master problem is stored here, it has all the cuts made for outer CCGA iterations. 
-    termination_status: 
-        status code -1: max iteration is reached and it didn't break out of the forloop due to any conditions. 
-        status code -2: break out pre-maturally due to inner ccga forloop reaching max iterations counter. 
-        status code  0: Successfully finished all iterations without reaching the outer maximum iterations. 
+### CCGAOuterResults
+Another struct that models the data exposed during the iterations of the full CCGA forloop (Inner and Outter). 
+It will stores the following items: 
+
+* `inner_loops::Vector{CCGAInnerResults}`: A list of CCGAInnerLoop that is obtained during the iterations of the outer CCGA loops. 
+* `msp_objectives::Vector{Float64}`: All the objective values of the msp for each iterations of the CCGA, initial msp without any 
+    cut should also be introduced into the vector. 
+* `msp_gamma::Vector{Vector{Float64}}`: The vector of gammas from the msp is stored here. 
+* `msp::Union{MSP, Nothing}`: final instance of the master problem is stored here, it has all the cuts made for outer CCGA iterations. 
+* `termination_status::Int`: 
+    - `-1`: max iteration is reached and it didn't break out of the forloop due to any conditions. 
+    - `-2`: break out pre-maturally due to inner ccga forloop reaching max iterations counter. 
+    - `0`: Successfully finished all iterations without reaching the outer maximum iterations. 
+* `fmp_initial_objectives::Vector{Float64}`: The initial objective value for the fmp at the start of each of the inner 
+    CCGA for loops. 
+* `fsp_initial_objectives::Vector{Floats}`: The initial objective values for the fsp at the start of each of the inner 
+    CCGA for loops. 
 """
 mutable struct CCGAOuterResults
     inner_loops::Vector{CCGAInnerResults}
@@ -216,7 +251,8 @@ function (this::CCGAOuterResults)(that::CCGAInnerResults)::CCGAOuterResults
 return this end
 
 """
-    Given an instance of the msp, we record 
+    Call on an instance of `::MSP`, we will records all the gamma of the MSP instance, and then 
+    we will store the objective values of the current instance of **MSP**. 
 """
 function (this::CCGAOuterResults)(that::MSP)::CCGAOuterResults
     push!(this.msp_gamma, GetGamma(that))
@@ -224,11 +260,14 @@ function (this::CCGAOuterResults)(that::MSP)::CCGAOuterResults
 return this end
 
 """
-    return a string that is reporting all the results after the finishing the outer forloop iterations. We will be 
-    reporting the following important parameters: 
-    1. The initial objective values for the fmp, and fsp during each of the inner CCGA iterations. 
-    2. what are the upper bound and lower bound from the fmp and fsp during the last CCGA inner iteration. 
-    3. Make plots and return the figures if it's being asked to do it. 
+Returns a *string* that is reporting all the results 
+after the finishing the outer forloop iterations. We will be 
+reporting the following important parameters: 
+1. The initial objective values for the fmp, and fsp during each of the inner CCGA iterations. 
+2. what are the upper bound and lower bound from the fmp and fsp during the last CCGA inner iteration. 
+3. Make plots and return the figures if it's being asked to do it. 
+### Arguments
+- `this::CCGAOuterResults`: A member method for this type. 
 """
 function ProduceReport(this::CCGAOuterResults)::String
     string_list = Vector{String}()
@@ -243,7 +282,13 @@ function ProduceReport(this::CCGAOuterResults)::String
     
 return string_list|>join end
 
-function SaveAllModels(this::CCGAOuterResults)::String
+
+"""
+`SaveAllModels(this::CCGAOuterResults)` saves all the the models involved during the execution of the full CCGA 
+iterations. The files will be all the final version of *FMP*, *MSP* for the inner and outer iterations in the `MOI`
+file format compressed into `.gz`. 
+"""
+function SaveAllModels(this::CCGAOuterResults)
     for idx in eachindex(this.inner_loops)
         write_to_file(
             this.inner_loops[idx].fmp.model,
@@ -256,7 +301,10 @@ end
 
 
 """
-    Make 2 plots and returns 2 plots. 
+`ProducePlots(this::CCGAOuterResults)` makes plots, there are 2 plots: 
+1. All the final objective values of the FSP problems and the 
+    final values of the FMP problems. 
+2. The FSP and the MSP values for the last inner iterations of the CCGA.  
 """
 function ProducePlots(this::CCGAOuterResults)
     fig1 = this.inner_loops[end]|>ProducePlot
@@ -273,15 +321,23 @@ return fig1, fig2 end
 
 
 """
-    Performs the CCGA Inter forloops and returns the results for the cut. 
+Performs the CCGA Inter forloops and returns the results for making the cut for the *MSP*. 
+## Positional arguments: 
+- `gamma_bar::Vector{N1}`: The initial gamma bound for each of the demand decision variable, predicted by the MSP.
+- `w_bar::Vector{N2}`: The primary generator setup given by the *MSP*. 
+- `d_hat::Vector{N3}`: The center of the demand interval. 
+## Named arguments: 
+- `epsilon::Float64=0.1`: The absolute tolerance for terminating the inner CCGA for loop. 
+- `max_iter::Int=8`: The maximum number of iterations before the for loop terminates. 
+## Type Declarations
+where {N1<:Number, N2<:Number, N3 <:Number}
 """
 function CCGAInnerLoop(
     gamma_bar::Vector{N1}, 
     w_bar::Vector{N2},
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
-    max_iter::Int=8,
-    # sparse_vee::Bool=false
+    max_iter::Int=8
 ) where {N1<:Number, N2<:Number, N3 <:Number}
     
     premise = "During executing CCGA Inner for loop: "
@@ -296,7 +352,7 @@ function CCGAInnerLoop(
     upperbound_list = Vector{Float64}()
     all_qs = Vector{Vector}()
     all_ds = Vector{Vector}()
-    model_fmp = MakeOptimizer()
+    model_fmp = MakeOptimizer(solver_name="FMP", mip_focus=1)
     fmp = FMP(w̄, γ̄, d̂, model_fmp)
     @info "$(TimeStamp()) Inner loop is initialized with fmp, and we are solving the initial fmp. "|>SESSION_FILE1
     Solve!(fmp)
@@ -401,7 +457,7 @@ function CCGAOutterLoop(
     ϵ = epsilon_inner; γ⁺ = gamma_upper; d̂ = d_hat
     model_mp = MakeOptimizer()
     mp = MP(model_mp, γ⁺)
-    model_msp = MakeOptimizer()
+    model_msp = MakeOptimizer(solver_name="MSP")
     msp = MSP(model_msp, d̂, γ⁺, block_demands=msp_block_demand_option, objective_types=msp_objective_option)
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
     PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
