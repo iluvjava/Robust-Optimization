@@ -35,8 +35,9 @@ struct SessionFile
 end
 
 """
-A () operator for the type SessionFile so that it opens the file stream and prints the content of the string to the 
-file and then return the string for other processing tasks. 
+A () operator for the type SessionFile which **accepts** `String` and opens the file stream then print
+the content of the string to the file specified in the field of the type and then 
+**return** the string for other processing tasks. 
 """
 function (this::SessionFile)(that::String)::String
     open(this.file_loc, "a+") do io
@@ -55,6 +56,8 @@ return this end
 
 """
 Close the IO for the internal file writing stream for the given FileSession instance. 
+### Arguments
+* `this::SessionFile`: Method is a member method for this type. 
 """
 function Close(this::SessionFile)
     close(this.file_stream)
@@ -71,6 +74,7 @@ global SESSION_FILE1 = SessionFile(SESSION_DIR*"/"*"main_print_out.txt")
 global SESSION_FILE2 = SessionFile(SESSION_DIR*"/"*"ccga_parameters.txt")
 "stores the results of the full CCGA. "
 global SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the results from the ccga outer and inner iterations. 
+
 
 """
 Make an optimizer. The default is gurobi. It's always gurobi. And all options can be tweaked 
@@ -102,6 +106,7 @@ return model end
 """
 A struct that contains all the parameters involved for the CCGA inner forloop iterations. Let me explain 
 all the fields it has: 
+
 ### Fields: 
 * `fmp`: the last instance of the fmp after the ccga inner forloop exited. 
 * `fsp`: the last instance of the fsp after the ccga inner loop exited. 
@@ -140,6 +145,7 @@ We report the feasible solutions produced by the FSP. Here is a list of paramete
 interested in: 
 * `p, p',sr, sr',regu, regu', regd, regd' ,nsp, nsp',g+, g-, rho+, rho-`; 
     And the values of these parameters will be returned as a formatted multi-line text. 
+
 ### Arguments
 - `this::CCGAInnerResults`: It's a member method of this type. 
 """
@@ -176,6 +182,7 @@ return join(string_list) end
 Produce a figure that contains the objective values of the FMP and the FSP, plotted on the same graph. 
 The x-axis is the number of iterations and the y-axis are the objective values of both FSP, FMP. 
 The function will return a figure. 
+
 ### Arguments: 
 - `this::CCGAInnerResults`: A member method of this type. 
 """
@@ -266,6 +273,7 @@ reporting the following important parameters:
 1. The initial objective values for the fmp, and fsp during each of the inner CCGA iterations. 
 2. what are the upper bound and lower bound from the fmp and fsp during the last CCGA inner iteration. 
 3. Make plots and return the figures if it's being asked to do it. 
+
 ### Arguments
 - `this::CCGAOuterResults`: A member method for this type. 
 """
@@ -372,9 +380,9 @@ function CCGAInnerLoop(
         @info "$(TimeStamp()) FSP is made and we are solving it. "|>SESSION_FILE1
         fsp = FSP(w̄, d, model_fsp)
         Solve!(fsp); push!(lowerbound_list, fsp |> objective_value)
-        @info "(FSP Lower, FMP Upper) = $((lowerbound_list[end], upperbound_list[end])) at itr = $II"|>SESSION_FILE1
+        @info "$(TimeStamp()) (FSP Lower, FMP Upper) = $((lowerbound_list[end], upperbound_list[end])) at itr = $II"|>SESSION_FILE1
         if lowerbound_list[end] > ϵ
-            @info "Inner CCGA forloop terminated due to a positive lower of bound of"*
+            @info "$(TimeStamp()) Inner CCGA forloop terminated due to a positive lower of bound of"*
             ": $(lowerbound_list[end]) from FSP which is higher than: ϵ=$(ϵ)."|>SESSION_FILE1
             break
         end
@@ -385,7 +393,7 @@ function CCGAInnerLoop(
         @assert !(objective_value(fmp)|>isnan) "$(premise) FMP"*
             " is infeasible or unbounded DURING the inner CCGA iterations. "
         if abs(upperbound_list[end] - lowerbound_list[end]) < ϵ
-            @info "Inner CCGA forloop termminated due to convergence of"*
+            @info "$(TimeStamp()) Inner CCGA forloop termminated due to convergence of"*
                 " FSP and FMP on tolerance level ϵ=$(ϵ), new fmp returns: $(fmp|>objective_value)"|>SESSION_FILE1
             break
         end
@@ -475,7 +483,8 @@ function CCGAOuterLoop(
     outer_results = CCGAOuterResults()
     for _ in 1:outer_max_itr
         outer_counter += 1
-        @info "Outter Forloop itr=$outer_counter" |> SESSION_FILE1
+
+        @info "$(TimeStamp()) Outter Forloop itr=$outer_counter" |> SESSION_FILE1
         Results = CCGAInnerLoop(γ̄, w̄, d̂, epsilon=ϵ)
         outer_results(Results)
         
@@ -486,11 +495,11 @@ function CCGAOuterLoop(
         end
         if Results.termination_status == -1
             outer_results.termination_status = -2
-            @info "Outer loop terminated due to inner loop reaching maximum iterations without convergence."|>SESSION_FILE1
+            @info "$(TimeStamp()) Outer loop terminated due to inner loop reaching maximum iterations without convergence."|>SESSION_FILE1
             break
         end
         if Results.upper_bounds[end] < epsilon_outer
-            @info "Outer for loop terminated due to convergence of FMP, FSP to an objective value of zero."|>SESSION_FILE1
+            @info "$(TimeStamp()) Outer for loop terminated due to convergence of FMP, FSP to an objective value of zero."|>SESSION_FILE1
             break
         end
         @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "|>SESSION_FILE1
@@ -505,7 +514,7 @@ function CCGAOuterLoop(
         outer_results(msp)
         w̄ = Getw(msp)
         γ̄ = GetGamma(msp)
-        @info "Objective value of msp settled at: $(objective_value(msp)). "|>SESSION_FILE1
+        @info "$(TimeStamp()) Objective value of msp settled at: $(objective_value(msp)). "|>SESSION_FILE1
         @assert !isnan(objective_value(msp)) "$context objective value for msp is NaN. "
         @assert !isinf(objective_value(msp)) "$contex objective value of msp is inf. "
         

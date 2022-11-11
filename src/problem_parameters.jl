@@ -87,8 +87,6 @@ mutable struct Generators
 end
 
 
-# !!! currently storage system models a single instance. 
-# in general, each transmission has a storage system. 
 mutable struct StorageSystem
     Efficiency::Array{Number}  # nu 
     # Distfactor::Array{Number}  # mu
@@ -151,11 +149,12 @@ return m end
 
 
 """
-    Models a group of generators that are in the same busses. 
-    It has primary/secondary generator in it, and it maps the buses to a set of 
-    indices for generators in that bus. 
-    * The array could be empty. 
-    * CURRENTLY NO DATA IS PREPARE FOR THIS YET, SO IT'S HARD CODED IN. 
+Models a group of generators that are in the same busses. 
+It has primary/secondary generator in it, and it maps the buses to a set of 
+indices for generators in that bus. 
+
+* The array could be empty. 
+* CURRENTLY NO DATA IS PREPARE FOR THIS YET, SO IT'S HARD CODED IN. 
 """
 mutable struct Buses
     primary::Dict{Int, Set{Int}}
@@ -177,13 +176,21 @@ mutable struct Buses
     return this end
 end
 
+"The constant parameters for the problem. "
 CONST_PROBLEM_PARAMETERS = ConstParameters()
+"All the data related to the primary generators. "
 PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
+"All the data related to the secondary generators. "
 SECONDARY_GENERATORS = Generators(CSV_S_GEN, CSV_S_ALPHAS, CSV_S_BETAS)
+"All the data related to the storage system. "
 STORAGE_SYSTEM = StorageSystem()
+"All the data related to the transmission system for the model. "
 TRANSMISSION_SYSTEM = Transmission()
+"The sigma transmission coefficients between the powerline and the generators. "
 SIGMAS = DataMatrix(CSV_POWERFLOW_BUS)
+"The disfactor parameters. "
 DISFACTORS = DataMatrix(CSV_DISFACTOR)
+"Stores all the structures of the busses in different transmission line. "
 BUSES = Buses()
 
 @info "Problem Parameters Successfully Loaded"
