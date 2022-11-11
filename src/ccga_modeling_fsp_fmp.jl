@@ -5,8 +5,12 @@
 #   * Templates are in the preliminaries. 
 ### ====================================================================================================================
 """
-    Given demand from FMP, test how feasible it is to determine an Lower Bound
-    for the feasibility slack variables.
+Given demand vector from FMP that is within the uncertainty rainge, 
+*FSP* tests how feasible it is, which determines an Lower Bound for the 
+feasibility slack variable: `v`. 
+
+### Fields
+
 """
 @ProblemTemplate mutable struct FSP <: Problem
     # model::Model
@@ -152,12 +156,6 @@ function IntroduceVariables!(
 )
     k = this.k
 
-    # if this.sparse_vee
-    #     starting, ending = MatrixConstruct.CON_GROUPS["Demand Balance"]
-    # else
-    #     starting, ending = (1, size(MatrixConstruct.H, 1))
-    # end
-
     # Prepare variable u for the model.
     push!(this.u, PrepareVariablesForTheModel!(this|>GetModel, :u, k))
     
@@ -191,7 +189,6 @@ function IntroduceVariables!(
         base_name="λ[$(k)]"
     )
 
-    
     push!(this.lambda, λ[:])
 
 return this end
@@ -307,7 +304,7 @@ function PrepareConstraints!(this::FMP)
     ).|>addConstraints!
 
     # Additional constraints for the sparse vee conditions that might get applied here.
-    @constraint(model, sum(v) <= 500000)
+    # @constraint(model, sum(v) <= 500000)
 
 return this end
 

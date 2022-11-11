@@ -484,25 +484,21 @@ function CCGAOuterLoop(
             fig = Results|>ProducePlot
             fig|>display
         end
-
         if Results.termination_status == -1
             outer_results.termination_status = -2
             @info "Outer loop terminated due to inner loop reaching maximum iterations without convergence."|>SESSION_FILE1
             break
         end
-
         if Results.upper_bounds[end] < epsilon_outer
             @info "Outer for loop terminated due to convergence of FMP, FSP to an objective value of zero."|>SESSION_FILE1
             break
         end
-
         @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "|>SESSION_FILE1
         
         IntroduceCut!(
             msp, 
             GetRhoPlus(Results.fmp), 
             GetRhoMinus(Results.fmp), 
-            # Σγ
         )
 
         Solve!(msp)
