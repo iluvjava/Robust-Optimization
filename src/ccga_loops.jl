@@ -142,7 +142,7 @@ function ProduceReport(this::CCGAInnerResults)::String
     for idx in length(string_list) + 1 :-1: 1
         insert!(string_list, idx, "\n")
     end
-    write_to_file(this.fmp.model, RESULTS_DIRECTORY*"/"*"fmp$(TimeStamp()).mps")
+    
 return join(string_list) end
 
 """
@@ -240,7 +240,10 @@ function ProduceReport(this::CCGAOuterResults)::String
     for idx in length(string_list) + 1 :-1: 1
         insert!(string_list, idx, "\n")
     end
-    # TODO: SAVE THE .mps FILE FOR MSP AND OTHERS. 
+    for idx in eachindex(this.inner_loops)
+        write_to_file(this.inner_loops[idx].fmp.model, SESSION_DIR*"/"*"fmp_final_inner_$(idx).mps")
+    end
+    write_to_file(this.msp.model, SESSION_DIR*"/"*"msp_final.mps")
 return string_list|>join end
 
 
