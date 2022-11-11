@@ -301,10 +301,12 @@ end
 
 
 """
-`ProducePlots(this::CCGAOuterResults)` makes plots, there are 2 plots: 
+makes plots, there are 2 plots: 
 1. All the final objective values of the FSP problems and the 
     final values of the FMP problems. 
 2. The FSP and the MSP values for the last inner iterations of the CCGA.  
+### Arguments: 
+- `this::CCGAOuterResults`: It's a member method of this type. 
 """
 function ProducePlots(this::CCGAOuterResults)
     fig1 = this.inner_loops[end]|>ProducePlot
@@ -404,21 +406,24 @@ return CCGAInnerResults(
 
 
 """
-    Performs the outter forloop of the CCGA algorithm with initialized parameters. The list of parameters: 
-    d̂: 
-        the centered which the uncertainty interval is going to be based upon. 
-    gamma_upper: 
-        The initial scalar upper bound for all the γ in the uncertainty interval. 
-    epsilon: 
-        The tolerance for the lower bound and upper bound between FMP, FSP, and it's used for the termination 
-        conditions for the inner forloop. 
-    make_plot: 
-        Whether to make a plot for all the results obtain from the execution of the inner CCGA forloop. 
-    inner_max_itr: 
-        The maximum time s for executing the inner forloop of CCGA. 
-    outter_max_itr: 
+Performs the outter forloop of the CCGA algorithm with initialized parameters.
+
+### Positional Arguments
+- `d_hat::Vector{N1}`: The center of the demands uncertainty interval. 
+- `gamma_upper::N2`: The initial scalar upper bound for all the γ in the uncertainty interval. 
+
+### Keyword Arguments:
+- `epsilon`: The tolerance for the lower bound and upper bound between FMP, FSP, and it's used for the termination 
+    conditions for the inner forloop. 
+- `make_plot`: Whether to make a plot for all the results obtain from the execution of the inner CCGA forloop. 
+- `inner_max_itr`: The maximum time s for executing the inner forloop of CCGA. 
+- `outer_max_itr`: The maximum number of tiles for excuting the out forloop of CCGA. 
+- `make_plot::Bool=true`: Make plots for each of the inner CCGA iterations while running, also make plots after 
+    everything is finished. 
+- `msp_objective_option::Int=2`: See doc for *MSP* for more. 
+- `msp_block_demand_option::Int=1`: See doc for type *MSP* for more information. 
 """
-function CCGAOutterLoop(
+function CCGAOuterLoop(
     d_hat::Vector{N1}, 
     gamma_upper::N2;
     epsilon_inner::N3=0.1, 
@@ -521,8 +526,9 @@ function CCGAOutterLoop(
         write(io, outer_results.inner_loops[end]|>ProduceReport)
     end
     SaveAllModels(outer_results)
-
-    fig1, fig2 = outer_results|>ProducePlots
+    if make_plot
+        fig1, fig2 = outer_results|>ProducePlots
+    end
     savefig(fig1, SESSION_DIR*"/"*"last_fmp_fsp")
     savefig(fig2, SESSION_DIR*"/"*"initial_fmp_fsp")
     # END
@@ -539,7 +545,7 @@ return outer_results end
 ϵ = 0.1
 γ_upper = 50
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
-Results = CCGAOutterLoop(
+Results = CCGAOuterLoop(
     d̂,
     γ_upper,
     inner_max_itr=10, 
