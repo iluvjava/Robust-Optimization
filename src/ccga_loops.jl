@@ -63,7 +63,7 @@ SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the re
 """
     Using the global environment variables to setup a model that has Gurobi optimzer attatched to it. 
 """
-function MakeOptimizer(optimality_gap=0.001, time_out=180)
+function MakeOptimizer(optimality_gap=0.001, time_out=180, )
     model = Model(() -> Gurobi.Optimizer(GUROBI_ENV))
     set_optimizer_attribute(model, "MIPGap", optimality_gap)
     set_optimizer_attribute(model, "TIME_LIMIT", time_out)
@@ -240,11 +240,19 @@ function ProduceReport(this::CCGAOuterResults)::String
     for idx in length(string_list) + 1 :-1: 1
         insert!(string_list, idx, "\n")
     end
-    for idx in eachindex(this.inner_loops)
-        write_to_file(this.inner_loops[idx].fmp.model, SESSION_DIR*"/"*"fmp_final_inner_$(idx).mps")
-    end
-    write_to_file(this.msp.model, SESSION_DIR*"/"*"msp_final.mps")
+    
 return string_list|>join end
+
+function SaveAllModels(this::CCGAOuterResults)::String
+    for idx in eachindex(this.inner_loops)
+        write_to_file(
+            this.inner_loops[idx].fmp.model,
+            SESSION_DIR*"/"*"fmp_final_inner_$(idx).mof.json.gz",
+            )
+    end
+    write_to_file(this.msp.model, SESSION_DIR*"/"*"msp_final.mof.json.gz")
+    return nothing
+end
 
 
 """
@@ -402,13 +410,13 @@ function CCGAOutterLoop(
     Solve!(msp)
     γ̄ = GetGamma(msp)
 
-    OuterCounter = 0
-    OuterResults = CCGAOuterResults()
+    outer_counter = 0
+    outer_results = CCGAOuterResults()
     for _ in 1:outer_max_itr
-        OuterCounter += 1
-        @info "Outter Forloop itr=$OuterCounter" |> SESSION_FILE1
+        outer_counter += 1
+        @info "Outter Forloop itr=$outer_counter" |> SESSION_FILE1
         Results = CCGAInnerLoop(γ̄, w̄, d̂, epsilon=ϵ)
-        OuterResults(Results)
+        outer_results(Results)
         
         # SHOULD FACTOR IT OUT AND MAKE IT AS PART OF THE OUTER LOOP STRUCT OBJECTIVE. 
         if make_plot
@@ -417,7 +425,7 @@ function CCGAOutterLoop(
         end
 
         if Results.termination_status == -1
-            OuterResults.termination_status = -2
+            outer_results.termination_status = -2
             @info "Outer loop terminated due to inner loop reaching maximum iterations without convergence."|>SESSION_FILE1
             break
         end
@@ -437,7 +445,7 @@ function CCGAOutterLoop(
         )
 
         Solve!(msp)
-        OuterResults(msp)
+        outer_results(msp)
         w̄ = Getw(msp)
         γ̄ = GetGamma(msp)
         @info "Objective value of msp settled at: $(objective_value(msp)). "|>SESSION_FILE1
@@ -446,23 +454,24 @@ function CCGAOutterLoop(
         
     end
 
-    OuterResults.msp = msp
-    if OuterCounter == outer_max_itr 
-        OuterResults.termination_status = -1
+    outer_results.msp = msp
+    if outer_counter == outer_max_itr 
+        outer_results.termination_status = -1
     end
 
     # Print the results to files! 
     SESSION_FILE3() do io
-        write(io, OuterResults|>ProduceReport)
-        write(io, OuterResults.inner_loops[end]|>ProduceReport)
+        write(io, outer_results|>ProduceReport)
+        write(io, outer_results.inner_loops[end]|>ProduceReport)
     end
+    SaveAllModels(outer_results)
 
-    fig1, fig2 = OuterResults|>ProducePlots
+    fig1, fig2 = outer_results|>ProducePlots
     savefig(fig1, SESSION_DIR*"/"*"last_fmp_fsp")
     savefig(fig2, SESSION_DIR*"/"*"initial_fmp_fsp")
     # END
 
-return OuterResults end
+return outer_results end
 
 
 
