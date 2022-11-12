@@ -387,7 +387,7 @@ function CCGAInnerLoop(
             break
         end
         q = Getq(fsp); push!(all_qs, q)
-        Introduce!(fmp, q)
+        IntroduceCut!(fmp, q)
         @info "$(TimeStamp()) CCGA Inner loop continues, constraints is introduced to fmp and we are solving it. "|>SESSION_FILE1
         Solve!(fmp);push!(upperbound_list, objective_value(fmp))
         @assert !(objective_value(fmp)|>isnan) "$(premise) FMP"*

@@ -125,13 +125,13 @@ end
         @assert length(gamma) == size(MatrixConstruct.H, 2) "gamma, the demand interval vector should be the same length as the time horizon, but it's not. " 
         this.w = w
         this.gamma = gamma
+        this.k = 1
+        this.model = model
+        this.d_hat = d_hat
         this.q = Vector{Vector}()
         this.v = Vector()   
         this.u = Vector{Vector}()
         this.lambda = Vector{Vector}()
-        this.k = 1
-        this.model = model
-        this.d_hat = d_hat
         this.con = Vector{Vector}()
         this.xi_plus = Vector{Containers.DenseAxisArray}()
         this.xi_minus = Vector{Containers.DenseAxisArray}()
@@ -146,8 +146,18 @@ end
 
 # The adding of the constraints API methods for FMP
 """
-    THIS METHOD IS FOR POLYMORPHISM!!!
-    It's being inherited by subtypes of AbsFMP. 
+THIS METHOD IS FOR POLYMORPHISM!!!, It's being inherited by subtypes of AbsFMP. It sets up the following variables
+for the abstract FMP types: 
+* `q`: all zeros at the start, and then it's introduced by the FSP after the first iteration. If it's given, then it 
+will be assigned as a constant and stored in to the field of the type AbsFMP. 
+* `u`: this is created as decision variable vector for each cut. 
+as a constant parameter in the field of the sub type. 
+* `lambda`: The dual decision variable. 
+* `v`: The feasibility decision variable. 
+### Argument: 
+- `::Type{AbsFMP}`
+- `this::AbsFMP`
+- ` q_given::Union{Nothing, Vector{Float64}}`
 """
 function IntroduceVariables!(
     ::Type{AbsFMP},
@@ -180,7 +190,6 @@ function IntroduceVariables!(
     )
     push!(this.v, v)
     
-
     # Parepare the variable lambda, the dual decision variables.
     λ = @variable(
         this.model, 
@@ -188,7 +197,6 @@ function IntroduceVariables!(
         upper_bound=0, lower_bound=-1,
         base_name="λ[$(k)]"
     )
-
     push!(this.lambda, λ[:])
 
 return this end
@@ -196,14 +204,13 @@ return this end
 
 
 """
-    Prepare a new set of decision variables for the given instance of the problem.
-        * u[k]::The continuous decision variable, for the kth iterations of the CCGA Algorithm.
-            * u[k] will be a compositive decision variables for all the modeling decision variables in the original 
-            problem.
-        * v, λ follows a similar token.
-    NOTE:
-        * ALWAYS, run PrepareConstraints After a new constant "q[k]" is introduced to the system. 
-        * This method is for super type AbsFMP and it's sharing it downwards. 
+Prepare a new set of decision variables for the given instance of the *FMP* problem.
+### NOTE:
+* ALWAYS, run PrepareConstraints After a new constant "q[k]" is introduced to the system. 
+* This method is for super type AbsFMP and it's sharing it downwards. 
+### Arguments
+- `this::FMP`
+- `q_given::Union{Nothing, Vector{Float64}}=nothing`
 """
 function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}=nothing)
     @assert q_given !== nothing || this.k == 1 "The conditions \"if q is nothing, then k == 1 for FMP is not true. \""
@@ -229,9 +236,9 @@ return this end
 
 
 """
-    Prepare the constraints for the FMP problem, however, it will only add for all the most recent variables with
-    r = k.
-        * The class instance it keeping track of the interations count.
+Prepare the constraints for the FMP problem, however, it will only add for all the most recent variables with
+r = k.
+
 """
 function PrepareConstraints!(this::FMP)
 
@@ -339,12 +346,12 @@ return this.rho_minus.|>value end
 
 
 """
-    Introduce a new secondary binary decision variable as a fixed variable for the system.
-        * Introduces variable q[k] as a new configurations profile for the system. 
-        * It will automatically assign the index, make the variables, and add the constraints for thsi specific secondary
-        generator decision variables. 
+Introduce a cut figured out by the FSP instance. The cut is secondary decision variables. 
+* Introduces variable q[k] as a new configurations profile for the system. 
+* It will automatically assign the index, make the variables, and add the constraints for thsi specific secondary
+generator decision variables. 
 """
-function Introduce!(this::FMP, q::Vector{Float64})
+function IntroduceCut!(this::FMP, q::Vector{Float64})
     this.k += 1
     @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q."
     
@@ -359,3 +366,75 @@ function PrepareObjective!(this::AbsFMP)
     @objective(this.model, Max, this.eta)
 return this end
 
+
+# ======================================================================================================================
+# FMPH: FMP with the bilinear heuristic. 
+# ======================================================================================================================
+
+"""
+FMP with Bilinear search Heuristic. This is a super type of AbsFMP, it inherit all fields from it's super types 
+recursively. 
+### Fields
+
+
+"""
+@AbsFMPTemplate @ProblemTemplate mutable struct FMPH <: AbsFMP
+    
+    d::Vector{VariableRef}
+
+    function FMPH(
+        w::Vector,
+        gamma::Vector,
+        d_hat::Vector,
+        model::Model=Model(HiGHS.Optimizer);
+    )
+        this = new()
+        this.w = w
+        this.gamma = gamma
+        this.k = 1
+        this.model = model
+        this.d_hat = d_hat
+        this.q = Vector{Vector}()
+        this.v = Vector()   
+        this.u = Vector{Vector}()
+        this.lambda = Vector{Vector}()
+        this.con = Vector{Vector}()
+        # Construct the models 
+        
+        return this 
+    end
+
+
+end
+
+
+function IntroduceVariables!(this::FMPH, q_given::Union{Nothing, Vector{Float64}}=nothing)
+    @assert q_given !== nothing || this.k == 1 "The conditions \"if q is nothing, then k == 1 for FMP is not true. \""
+    IntroduceVariables!(AbsFMP, this, q_given)
+    # Variables that we are using for the reformulations for the bi-linear constraints via the corner point assumptions
+    # TODO: Force d to be a random starting value (on the boundary), and it's fixed. 
+    
+
+end
+
+
+function PrepareConstraints!(this::FMPH)
+
+    return 
+end
+
+
+function IntroduceCut!(this::FMPH)
+
+end
+
+"""
+Perform the binlinear heuristic search for the instance FMPH. 
+"""
+function Solve!(this::FMPH)
+
+end
+
+function GenerateFMP(this::FMPH)
+
+end

@@ -45,10 +45,10 @@ end
 
 
 """
-    Introduce variables to the model:
-        * Secondary continuous decision variables: u
-        * Secondary discrete decision variables: q
-        * demands variables: d
+Introduce variables to the model:
+    * Secondary continuous decision variables: u
+    * Secondary discrete decision variables: q
+    * demands variables: d
 """
 function IntroduceVariables!(this::MP)
     model = this |> GetModel
@@ -61,7 +61,7 @@ return this end
 
 
 """
-    Craete a constraints to check whether there exists an initial feasiblity solutions to the system.
+Craete a constraints to check whether there exists an initial feasiblity solutions to the system.
 """
 function AddMainProblemConstraints!(this::MP)
     model = this|>GetModel
@@ -82,11 +82,11 @@ return this end
 
 
 """
-    Test if a given demand vector is feasible for the main problem.
-        * Set the demands
-        * Solve
-        * Get results
-        * Unfix the demends vector.
+Test if a given demand vector is feasible for the main problem.
+    * Set the demands
+    * Solve
+    * Get results
+    * Unfix the demends vector.
 """
 function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
     d = this.d
@@ -98,8 +98,8 @@ function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
 return ToReturn end
 
 """
-    Adapting the function when the user decided to put into a number instead 
-    of a vector for the demand to test. 
+Adapting the function when the user decided to put into a number instead 
+of a vector for the demand to test. 
 """
 function DemandFeasible(this::MP, demand::N)  where {N<:Number}
 return DemandFeasible(this, demand*ones(size(this.d))) end
@@ -107,9 +107,9 @@ return DemandFeasible(this, demand*ones(size(this.d))) end
 
 
 """
-    Creates the main problem objectives:
-        * Find a maximum lower bound for demands on all buses, all time.
-        * Fix the slack variable to be zero.
+Creates the main problem objectives:
+    * Find a maximum lower bound for demands on all buses, all time.
+    * Fix the slack variable to be zero.
 """
 function MainProblemObjective!(this::MP)
     @warn "METHOD DEPRECATED. "
@@ -123,11 +123,11 @@ return end
 
 
 """
-    Establish the main problem, and then solving it will provide some suggestions for the
-    best average demands for the system.
-    * The constraints
-    * The objective
-    * The variables as well.
+Establish the main problem, and then solving it will provide some suggestions for the
+best average demands for the system.
+* The constraints
+* The objective
+* The variables as well.
 """
 function EstablishMainProblem!(this::MP)
     # Prepre Variables for the main problem.
@@ -216,9 +216,9 @@ end
 
 
 """
-    Create the upper bound for demands for the master problem.
-        * Adds the demands bounds constraints
-        * Adds the objective bounds maximizations objectives for the model.
+Create the upper bound for demands for the master problem.
+    * Adds the demands bounds constraints
+    * Adds the objective bounds maximizations objectives for the model.
 """
 function MasterProblemObjective!(this::MSP)
     model = GetModel(this)
@@ -238,9 +238,9 @@ return this end
 
 
 """
-    Introduce the binary decision variable w for the primary generator.
-        * w
-        * γ
+Introduce the binary decision variable w for the primary generator.
+    * w
+    * γ
 """
 function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
     model = this |> GetModel
@@ -275,8 +275,8 @@ return this end
 
 
 """
-    Prepare the constraints for the primary generator, the system
-        * Aw <= b
+Prepare the constraints for the primary generator, the system
+    * Aw <= b
 """
 function PreppareConstraintsPrimary!(this::Union{MP, MSP})
     model = this|>GetModel
@@ -361,20 +361,20 @@ return this end
 
 
 """
-    Introduce feasibility cut for the master problem from the CCGA results. 
-    rho_plus, rho_minus:
-        Results returned from fmp, the demand upperbound and lowerbound discrete decision variables for each of the 
-        demands decision variables. they should have the exat same dimension as the demand decision variables. 
-    artificial_bound: 
-        This is the artificial bound for the objective of the Master problem, it can be introduced to ensure decrease in 
-        master problems objectives related to the gamma decision variables. 
-        
+Introduce feasibility cut for the master problem from the CCGA results. 
+* rho_plus, rho_minus:
+    * Results returned from fmp, the demand upperbound and lowerbound discrete decision variables for each of the 
+    * demands decision variables. they should have the exat same dimension as the demand decision variables. 
+### Arguments
+- `this::MSP`
+- `rho_plus::Vector{float64}`: The rho plus solved from the FMP. 
+- `rho_minus::Vector{Float64}`: The rho minus from the FMP. 
+
 """
 function IntroduceCut!(
     this::MSP,
     rho_plus::Vector{Float64},
     rho_minus::Vector{Float64},
-    # aritifical_bound::Float64 
 )
     model = this|>GetModel
     w = this |> Flattenw
@@ -387,7 +387,6 @@ function IntroduceCut!(
     ρ⁺ = rho_plus
     ρ⁻ = rho_minus
     γ = this.gamma
-    # Σγ⁺ = aritifical_bound
 
     Γ = γ|>Diagonal             
     this.cut_count += 1
@@ -396,27 +395,6 @@ function IntroduceCut!(
     q = PrepareVariablesForTheModel!(model, :q, this.cut_count)
     push!(this.u, u)
     push!(this.q, q)
-
-    # if v === nothing
-    #     v = zeros(length(h))
-    # end
-    # model[:s] = s = @variable(
-    #     model, 
-    #     [1:length(h)], 
-    #     lower_bound=0, 
-    #     base_name="s"
-    # )
-    # fix.(model[:s][374:end], 0, force=true)
-    # fix.(model[:s][1:381], 0, force=true)
-    # Infiltrator.@exfiltrate
-    
-    # if this.cut_count > 1
-    #     previuosArtificialBound = popat!(this.con, this.artificial_bound_at)
-    #     delete(model, previuosArtificialBound)
-    # end
-    # insert!(this.con, 
-    #     this.artificial_bound_at, @constraint(model, sum(γ) <= Σγ⁺)
-    # )
 
     CutConstraints = @constraint(
         model, 
@@ -432,8 +410,8 @@ function IntroduceCut!(
 return CutConstraints end
 
 """
-    Delete all the previous cut introduced to the master problem. 
-    * There will be an error if no cut is introduced and we tried to delete them. 
+Delete all the previous cut introduced to the master problem. 
+* There will be an error if no cut is introduced and we tried to delete them. 
 """
 function DeleteAllPreviousCut!(this::MSP)
     startingAt = this.artificial_bound_at + 1
@@ -444,25 +422,25 @@ return this end
 
 
 """
-    Get the primary discrete decision variable as a vector of numbers for
-        the CCGA algorithm.
-    * It returns vector as decision variable
-    * The vector is w flattend into x, y, z, column major flattening.
-    * The returned type is Vector{VariableRef}
+Get the primary discrete decision variable as a vector of numbers for
+the CCGA algorithm.
+* It returns vector as decision variable
+* The vector is w flattend into x, y, z, column major flattening.
+* The returned type is Vector{VariableRef}
 
 """
 function Getw(this::Union{MP, MSP})
 return this|>Flattenw.|>value end
 
 """
-    Get the gamma vector from the master problem that is here. The gamma vector will be a float64 vector 
-    with the same length as the number of time horizon that is there. 
+Get the gamma vector from the master problem that is here. The gamma vector will be a float64 vector 
+with the same length as the number of time horizon that is there. 
 """
 function GetGamma(this::Union{MP, MSP})
 return this.gamma.|>value end
 
 """
-    Fletten the w decision variable. 
+Fletten the w decision variable. 
 """
 function Flattenw(this::Union{MP, MSP})
     Vec = Vector{JuMP.VariableRef}()

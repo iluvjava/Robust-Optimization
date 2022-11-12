@@ -75,7 +75,7 @@ function CCGAInnerLoop(
         Solve!(fsp); push!(lowerbound_list, fsp |> objective_value)
 
         q = Getq(fsp); push!(all_qs, q)
-        Introduce!(fmp, q)
+        IntroduceCut!(fmp, q)
 
         Solve!(fmp);push!(upperbound_list, objective_value(fmp))
         

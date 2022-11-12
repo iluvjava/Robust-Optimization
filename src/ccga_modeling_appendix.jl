@@ -5,14 +5,17 @@
 
 
 """
-    Solve the inner JuMP optimization problem by directly invoking `optimize!` in JuMP on the model.
+Solve the inner JuMP optimization problem by directly invoking `optimize!` in JuMP on the model. This 
+function is generic to the type `Problem`, and it will trigger the solve function for the underlying 
+problem type. 
+
 """
 function Solve!(this::Problem)
 return optimize!(this|>GetModel) end
 
 
 """
-    Get the JuMP instance from this model.
+Get the JuMP instance from this model.
 """
 function GetModel(this::Problem)
 return this.model end
