@@ -154,6 +154,7 @@ will be assigned as a constant and stored in to the field of the type AbsFMP.
 as a constant parameter in the field of the sub type. 
 * `lambda`: The dual decision variable. 
 * `v`: The feasibility decision variable. 
+* `η`: the lowerbound variable. 
 ### Argument: 
 - `::Type{AbsFMP}`
 - `this::AbsFMP`
@@ -194,9 +195,10 @@ function IntroduceVariables!(
     λ = @variable(
         this.model, 
         [1:length(MatrixConstruct.h)], 
-        upper_bound=0, lower_bound=-1,
+        upper_bound=0,
         base_name="λ[$(k)]"
     )
+
     push!(this.lambda, λ[:])
 
 return this end
@@ -368,21 +370,24 @@ return this end
 
 
 # ======================================================================================================================
-# FMPH: FMP with the bilinear heuristic. 
+# FMPH1, FMPH2: FMP with the bilinear heuristic. They are a "twin type". 
 # ======================================================================================================================
 
 """
 FMP with Bilinear search Heuristic. This is a super type of AbsFMP, it inherit all fields from it's super types 
 recursively. 
 ### Fields
-
-
+- `d::Vector{Float64}`: A fixed constant for the demands vector. 
+### Constructor: 
+- `w::Vector`
+- `gamma::Vector`
+- `d_hat::Vector`
 """
-@AbsFMPTemplate @ProblemTemplate mutable struct FMPH <: AbsFMP
+@AbsFMPTemplate @ProblemTemplate mutable struct FMPH1 <: AbsFMP
     
-    d::Vector{VariableRef}
+    d::Vector{Float64}   # decision variables: d. 
 
-    function FMPH(
+    function FMPH1(
         w::Vector,
         gamma::Vector,
         d_hat::Vector,
@@ -395,12 +400,14 @@ recursively.
         this.model = model
         this.d_hat = d_hat
         this.q = Vector{Vector}()
-        this.v = Vector()   
+        this.v = Vector()
         this.u = Vector{Vector}()
         this.lambda = Vector{Vector}()
         this.con = Vector{Vector}()
         # Construct the models 
-        
+        this.d = max.([rand((-1, 1)) for __ in 1:size(MatrixConstruct.H, 2)].*this.gamma .+ this.d_hat, 0)
+        IntroduceVariables!(this)
+        PrepareConstraints!(this)
         return this 
     end
 
@@ -408,33 +415,96 @@ recursively.
 end
 
 
-function IntroduceVariables!(this::FMPH, q_given::Union{Nothing, Vector{Float64}}=nothing)
-    @assert q_given !== nothing || this.k == 1 "The conditions \"if q is nothing, then k == 1 for FMP is not true. \""
-    IntroduceVariables!(AbsFMP, this, q_given)
-    # Variables that we are using for the reformulations for the bi-linear constraints via the corner point assumptions
-    # TODO: Force d to be a random starting value (on the boundary), and it's fixed. 
+@AbsFMPTemplate @ProblemTemplate mutable struct FMPH2 <: AbsFMP
+    lambda::Vector{Vector{Float64}}
     
-
+    function FMPH2(
+        w::Vector,
+        gamma::Vector,
+        d_hat::Vector,
+        fmph2::FMPH2,
+        model::Model=Model(HiGHS.Optimizer);
+    )
+        this = new()
+        return this
+    end
 end
 
 
-function PrepareConstraints!(this::FMPH)
+"""
+Introduce the JuMP variables to the FMPH model, no new variable are defined, all variables are the same as the abstract 
+`IntroduceVariables!` method for the AbsFMP
+### Arguments
+- `this::FMPHDFixed`
+- `q_given::Union{Nothing, Vector{Float64}}=nothing`
+"""
+function IntroduceVariables!(this::FMPH1, q_given::Union{Nothing, Vector{Float64}}=nothing)
+    @assert q_given !== nothing || this.k == 1 "The conditions \"if q is nothing, then k == 1 for FMP is not true. \""
+    IntroduceVariables!(AbsFMP, this, q_given)
+    
+    return
+end
 
+"""
+Prepare the constraints for the FMPHDFixed type. Function should be used each time when a cut is introduce to the 
+problem. 
+"""
+function PrepareConstraints!(this::FMPH1)
+    function AddConstraints!(cons::JuMP.ConstraintRef)
+        push!(this.con, cons)
+    end
+    k = this.k
+    η = this.eta
+    u = this.u[k]
+    v = this.v[k]
+    w = this.w
+    H = MatrixConstruct.H
+    B = MatrixConstruct.B
+    G = MatrixConstruct.G
+    C = MatrixConstruct.C
+    h = MatrixConstruct.h
+    λ = this.lambda[k]
+    d = this.d
+    d̂ = this.d_hat
+    γ = this.gamma
+    Γ = γ|>Diagonal
+    q = this.q[k]
+    # eta lower bound constraint for each k
+    @constraint(this.model, η <= v) .|> AddConstraints!
+    # operatorational constraints for reach k
+    @constraint(this.model, C*u .- v .<= H*d + h - B*w - G*q) .|> AddConstraints!
+    # Duality constraints
+    @constraint(this.model, λ'*C .<= 0) .|> AddConstraints!
+    @constraint(this.model, sum(λ) >= -1) .|> AddConstraints!
+    @constraint(this.model, dot(λ, H*d + h - B*w - G*q) == v) .|> AddConstraints!
     return 
 end
 
-
-function IntroduceCut!(this::FMPH)
+"""
+Introduce a new cut to the `FMPHDFixed` with variables passed from the FSP. 
+### Arguments
+- `this::FMPHDFixed`: The type this function acts on. 
+- `q::Vector{Float64}`: The q vector passed from the FSP instance. 
+"""
+function IntroduceCut!(this::FMPH1, q::Vector{Float64})
 
 end
+
 
 """
-Perform the binlinear heuristic search for the instance FMPH. 
+Pass in an instance of the `FMPH2`, and it will know to extract out the demands vector 
+solved by the FMPH2 and project it to the boundary and then use it as the 
+heurstic for solving the problem at hand. 
+
 """
-function Solve!(this::FMPH)
+function (::FMPH1)(this::FMPH1, that::FMPH2)
+end
+
+
+"""
+Solve the system call on the JuMP model. 
+"""
+function Solve!(this::FMPH1)
 
 end
 
-function GenerateFMP(this::FMPH)
-
-end
