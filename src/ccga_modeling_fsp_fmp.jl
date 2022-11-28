@@ -94,10 +94,10 @@ end
 
 
 """
-    Given the primary parameters and the secondary discrete decision variables
-    meshed into a giant feasible set of many many constraints, we are
-    searching for adversarial demands that can break our delivery system.
-        * Determines the upper bound for the feasibility slack.
+Given the primary parameters and the secondary discrete decision variables
+meshed into a giant feasible set of many many constraints, we are
+searching for adversarial demands that can break our delivery system.
+    * Determines the upper bound for the feasibility slack.
 
 """
 @AbsFMPTemplate @ProblemTemplate mutable struct FMP <: AbsFMP
@@ -106,6 +106,7 @@ end
     rho_minus::Vector{VariableRef}                        # binary decision variables for the bilinear demands
     xi_plus::Vector{Containers.DenseAxisArray}            # The binary decision variable for the extreme demands, vertices of the demands cube. 
     xi_minus::Vector{Containers.DenseAxisArray}           # The binary decision variable for the extreme demands. 
+    lambda::Vector{Vector{VariableRef}}               # The dual decision variable for each cut, lambda. 
     
    
     function FMP()
@@ -149,12 +150,12 @@ end
 THIS METHOD IS FOR POLYMORPHISM!!!, It's being inherited by subtypes of AbsFMP. It sets up the following variables
 for the abstract FMP types: 
 * `q`: all zeros at the start, and then it's introduced by the FSP after the first iteration. If it's given, then it 
-will be assigned as a constant and stored in to the field of the type AbsFMP. 
+    will be assigned as a constant and stored in to the field of the type AbsFMP. 
 * `u`: this is created as decision variable vector for each cut. 
-as a constant parameter in the field of the sub type. 
-* `lambda`: The dual decision variable. 
+    as a constant parameter in the field of the sub type. 
 * `v`: The feasibility decision variable. 
 * `η`: the lowerbound variable. 
+
 ### Argument: 
 - `::Type{AbsFMP}`
 - `this::AbsFMP`
@@ -190,16 +191,6 @@ function IntroduceVariables!(
         base_name="v[$(k)]"
     )
     push!(this.v, v)
-    
-    # Parepare the variable lambda, the dual decision variables.
-    λ = @variable(
-        this.model, 
-        [1:length(MatrixConstruct.h)], 
-        upper_bound=0,
-        base_name="λ[$(k)]"
-    )
-
-    push!(this.lambda, λ[:])
 
 return this end
 
@@ -222,10 +213,18 @@ function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}
     model = this.model
     k = this.k
     B̄ = size(MatrixConstruct.H, 2)
+    # Parepare the variable lambda, the dual decision variables.
+    λ = @variable(
+        this.model, 
+        [1:length(MatrixConstruct.h)], 
+        upper_bound=0,
+        base_name="λ[$(k)]"
+    )
     IdxTuples = findall(!=(0), MatrixConstruct.H).|>Tuple
     push!(this.xi_plus, @variable(model, [IdxTuples], base_name="Ξ⁺[$(k)]"))
     push!(this.xi_minus, @variable(model, [IdxTuples], base_name="Ξ⁻[$(k)]"))
-
+    
+    push!(this.lambda, λ[:])
     # Demand corner points decision variables: 
     if k == 1
         this.rho_plus = @variable(model, [1:B̄], Bin, base_name="ρ⁺")
@@ -386,12 +385,13 @@ recursively.
 @AbsFMPTemplate @ProblemTemplate mutable struct FMPH1 <: AbsFMP
     
     d::Vector{Float64}   # decision variables: d. 
+    lambda::Vector{Vector{VariableRef}}
 
     function FMPH1(
         w::Vector,
         gamma::Vector,
         d_hat::Vector,
-        model::Model=Model(HiGHS.Optimizer);
+        model::Model=Model(HiGHS.Optimizer)
     )
         this = new()
         this.w = w
@@ -411,21 +411,52 @@ recursively.
         return this 
     end
 
-
 end
 
+"""
+FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant and the d vector is now a continuous 
+    decision varaibles. 
 
+### Fields
+- `const_lambdas::Vector{Vector{Float64}}``
+- `d::Vector{VariableRef}`
+
+### Constructors
+#### Args
+- `w::Vector`
+- `gamma::Vector`
+- `d_hat::Vector`
+- `lambdas::Vector{Vector}`
+- `model::Model=Model(HiGHS.Optimizer)`
+"""
 @AbsFMPTemplate @ProblemTemplate mutable struct FMPH2 <: AbsFMP
-    lambda::Vector{Vector{Float64}}
     
+    lambda::Vector{Vector{Float64}}
+    d::Vector{VariableRef}
+
     function FMPH2(
         w::Vector,
         gamma::Vector,
         d_hat::Vector,
-        fmph2::FMPH2,
-        model::Model=Model(HiGHS.Optimizer);
+        lambda::Vector,
+        model::Model=Model(HiGHS.Optimizer)
     )
         this = new()
+        this.w = w
+        this.gamma = gamma
+        this.k = 1
+        this.model = model
+        this.d_hat = d_hat
+        this.q = Vector{Vector}()
+        this.v = Vector()
+        this.u = Vector{Vector}()
+        this.lambda = Vector()
+        @assert length(lambda) == size(MatrixConstruct.H, 1)
+        push!(this.lambda, lambda)
+        this.con = Vector{Vector}()
+        IntroduceVariables!(this)
+        PrepareConstraints!(this)
+
         return this
     end
 end
@@ -435,12 +466,28 @@ end
 Introduce the JuMP variables to the FMPH model, no new variable are defined, all variables are the same as the abstract 
 `IntroduceVariables!` method for the AbsFMP
 ### Arguments
-- `this::FMPHDFixed`
-- `q_given::Union{Nothing, Vector{Float64}}=nothing`
+- `this::Union{FMPH1, FMPH2}`: an instance of either FMP1, or FMP2. 
+- `q_given::Union{Nothing, Vector{Float64}}=nothing`: An instance of `q_given`, either nothing whic is always 
+that when k = 1 or something returned from the *FMP* when k is not 1. 
 """
-function IntroduceVariables!(this::FMPH1, q_given::Union{Nothing, Vector{Float64}}=nothing)
+function IntroduceVariables!(this::Union{FMPH1, FMPH2}, q_given::Union{Nothing, Vector{Float64}}=nothing)
     @assert q_given !== nothing || this.k == 1 "The conditions \"if q is nothing, then k == 1 for FMP is not true. \""
     IntroduceVariables!(AbsFMP, this, q_given)
+    k = this.k
+    if isa(this, FMPH1)
+        # Parepare the variable lambda, the dual decision variables.
+        λ = @variable(
+            this.model, 
+            [1:length(MatrixConstruct.h)], 
+            upper_bound=0,
+            base_name="λ[$(k)]"
+        )
+        push!(this.lambda, λ)
+    else
+        if k == 1
+            this.d = @variable(this.model, d[1:size(MatrixConstruct.H, 2)], lower_bound=0)
+        end
+    end
     
     return
 end
@@ -448,8 +495,9 @@ end
 """
 Prepare the constraints for the FMPHDFixed type. Function should be used each time when a cut is introduce to the 
 problem. 
+
 """
-function PrepareConstraints!(this::FMPH1)
+function PrepareConstraints!(this::Union{FMPH1, FMPH2})
     function AddConstraints!(cons::JuMP.ConstraintRef)
         push!(this.con, cons)
     end
@@ -463,6 +511,7 @@ function PrepareConstraints!(this::FMPH1)
     G = MatrixConstruct.G
     C = MatrixConstruct.C
     h = MatrixConstruct.h
+
     λ = this.lambda[k]
     d = this.d
     d̂ = this.d_hat
@@ -477,27 +526,43 @@ function PrepareConstraints!(this::FMPH1)
     @constraint(this.model, λ'*C .<= 0) .|> AddConstraints!
     @constraint(this.model, sum(λ) >= -1) .|> AddConstraints!
     @constraint(this.model, dot(λ, H*d + h - B*w - G*q) == v) .|> AddConstraints!
+    if isa(this, FMPH2)
+        @constraint(this.model, -this.gamma .<= this.d - this.d_hat .<= this.gamma) .|> AddConstraints!
+    end
+
     return 
 end
 
+
+
 """
-Introduce a new cut to the `FMPHDFixed` with variables passed from the FSP. 
+Introduce a new cut to the `FMPH1` with variables passed from the FSP. 
 ### Arguments
 - `this::FMPHDFixed`: The type this function acts on. 
 - `q::Vector{Float64}`: The q vector passed from the FSP instance. 
 """
 function IntroduceCut!(this::FMPH1, q::Vector{Float64})
-
+    @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q."
+    this.k += 1
+    IntroduceVariables!(this, q)
+    PrepareConstraints!(this)
+    return this 
 end
 
 
 """
-Pass in an instance of the `FMPH2`, and it will know to extract out the demands vector 
-solved by the FMPH2 and project it to the boundary and then use it as the 
-heurstic for solving the problem at hand. 
-
+Introduce a new cut to the `FMPH2` with variables passed from the *FSP* and *FMPH1*
+### Arguments
+- `this::FMPHDFixed`: The type this function acts on. 
+- `q::Vector{Float64}`: The q vector passed from the FSP instance. 
 """
-function (::FMPH1)(this::FMPH1, that::FMPH2)
+function IntroduceCut!(this::FMPH2, lambda::Vector{Float64}, q::Vector{Float64})
+    @assert size(H, 1) == length(lambda)
+    push!(lambda, this.lambda)
+    this.k += 1
+    IntroduceVariables!(this, q)
+    PrepareConstraints!(this)
+    return this 
 end
 
 
@@ -506,5 +571,13 @@ Solve the system call on the JuMP model.
 """
 function Solve!(this::FMPH1)
 
+end
+
+
+"""
+
+"""
+function SolveBoth!(this::FMPH1, that::FMPH2)
+    # TODO:Impelment this Later. 
 end
 

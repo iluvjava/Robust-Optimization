@@ -155,7 +155,7 @@ end
     u::Vector{Vector{VariableRef}}                # The secondary continuous decision variables.
     # d::Vector{VariableRef}                      # The demand decision variable, as a giant vector.
     eta::VariableRef                              # The eta lower bound for all feasibility.
-    lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
+    # lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
     
     k::Int                                        # The iteration number from the ccga.
 
