@@ -28,20 +28,16 @@ $$
     \quad 
     &\forall r = 1,\cdots, k
     \\
-    \lambda^{(r)} &\le \mathbf 0 \quad &\forall r = 1, \cdots k
+    \lambda^{(r)} &\le \mathbf 0 \quad &\forall r = 1, \cdots, k
     \\
      \hat d - \vec{\gamma} &\le d \le \hat d + \vec \gamma \quad &\forall i = 1, \cdots, k
 \end{aligned}
 $$
 
+Defines 
 
-1. Make the model, set $d$ to be the boundary of their interval, randomly. 
-* while wihtin a certain iteration limit: `N`  and `eta == 0`
-   1. Solve the system (keep an eye for $λ$). 
-   2. If objective is positive then give the results to FSP. 
-   3. Set $λ^{(r)}$ to be a constant the equal so to the solution from previous solve. Change $d$ back to a continuous decision variables. 
-   4. Solve it again with $\lambda^{(r)}$ 
-   5. Project $d$ to the boundary.  
+- FMPH1: $d$ is a constant and $\lambda$ is a decision variables. 
+- FMPH2: $\lambda$ is a constant from FMPH1 and $d$ is a continuous decision variables. 
 
 **Warm Start**: 
 

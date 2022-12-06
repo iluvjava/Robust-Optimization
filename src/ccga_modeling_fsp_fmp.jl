@@ -106,7 +106,7 @@ searching for adversarial demands that can break our delivery system.
     rho_minus::Vector{VariableRef}                        # binary decision variables for the bilinear demands
     xi_plus::Vector{Containers.DenseAxisArray}            # The binary decision variable for the extreme demands, vertices of the demands cube. 
     xi_minus::Vector{Containers.DenseAxisArray}           # The binary decision variable for the extreme demands. 
-    lambda::Vector{Vector{VariableRef}}               # The dual decision variable for each cut, lambda. 
+    lambda::Vector{Vector{VariableRef}}                   # The dual decision variable for each cut, lambda. 
     
    
     function FMP()
@@ -405,9 +405,11 @@ recursively.
         this.lambda = Vector{Vector}()
         this.con = Vector{Vector}()
         # Construct the models 
-        this.d = max.([rand((-1, 1)) for __ in 1:size(MatrixConstruct.H, 2)].*this.gamma .+ this.d_hat, 0)
+        ort = [rand((-1, 1)) for __ in 1:size(MatrixConstruct.H, 2)]
+        this.d = max.(ort.*this.gamma .+ this.d_hat, 0)
         IntroduceVariables!(this)
         PrepareConstraints!(this)
+        PrepareObjective!(this)
         return this 
     end
 
@@ -456,7 +458,7 @@ FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant a
         this.con = Vector{Vector}()
         IntroduceVariables!(this)
         PrepareConstraints!(this)
-
+        PrepareObjective!(this)
         return this
     end
 end
@@ -526,11 +528,21 @@ function PrepareConstraints!(this::Union{FMPH1, FMPH2})
     @constraint(this.model, λ'*C .<= 0) .|> AddConstraints!
     @constraint(this.model, sum(λ) >= -1) .|> AddConstraints!
     @constraint(this.model, dot(λ, H*d + h - B*w - G*q) == v) .|> AddConstraints!
-    if isa(this, FMPH2)
+
+    if isa(this, FMPH2) && k == 1
         @constraint(this.model, -this.gamma .<= this.d - this.d_hat .<= this.gamma) .|> AddConstraints!
     end
 
     return 
+end
+
+"""
+Maximizes eta. 
+"""
+function PrepareObjective!(this::Union{FMPH1, FMPH2})
+    model = this.model
+    @objective(model, Max, this.eta)
+    return this
 end
 
 
@@ -566,12 +578,7 @@ function IntroduceCut!(this::FMPH2, lambda::Vector{Float64}, q::Vector{Float64})
 end
 
 
-"""
-Solve the system call on the JuMP model. 
-"""
-function Solve!(this::FMPH1)
 
-end
 
 
 """

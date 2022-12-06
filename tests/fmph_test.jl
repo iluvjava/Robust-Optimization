@@ -5,6 +5,9 @@ include("../src/ccga_modeling.jl")
 
 N = 3*4*6
 fmph1 = FMPH1(zeros(N), 10*ones(24), 100*ones(24))
-IntroduceCut!(fmph1, zeros(size(MatrixConstruct.G, 2)))
-fmph2 = FMPH2(zeros(N), 10*ones(24), 100*ones(24), zeros(size(MatrixConstruct.H, 1)))
+Solve!(fmph1)
+# IntroduceCut!(fmph1, zeros(size(MatrixConstruct.G, 2)))
+Solve!(fmph1)
+fmph2 = FMPH2(zeros(N), 10*ones(24), 100*ones(24), fmph1.lambda[1].|>value)
+Solve!(fmph2)
 
