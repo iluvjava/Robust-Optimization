@@ -547,14 +547,16 @@ return outer_results end
 ### Trying to executing the CCGA Inner forloops and see what could be causing the infeasibility to the cut to the master 
 ### problem. 
 
-ϵ = 0.1
+ϵ = 10.0
 γ_upper = 50
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
 Results = CCGAOuterLoop(
     d̂,
     γ_upper,
-    inner_max_itr=10, 
-    outer_max_itr=10, 
-    msp_objective_option=2
+    inner_max_itr=3, 
+    outer_max_itr=2, 
+    msp_objective_option=2, 
+    epsilon_inner=ϵ, 
+    epsilon_outer=ϵ
 );
 

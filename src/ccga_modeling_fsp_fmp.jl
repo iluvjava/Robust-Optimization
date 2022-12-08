@@ -300,7 +300,7 @@ function PrepareConstraints!(this::FMP)
     # Duality constraints
     @constraint(
         model, 
-        sum(v) >= -1,
+        sum(λ) >= -1,
         base_name="duality con:[$(k)]"
     ).|>addConstraints!
 
