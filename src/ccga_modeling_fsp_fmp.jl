@@ -520,6 +520,7 @@ function PrepareConstraints!(this::Union{FMPH1, FMPH2})
     γ = this.gamma
     Γ = γ|>Diagonal
     q = this.q[k]
+
     # eta lower bound constraint for each k
     @constraint(this.model, η <= v) .|> AddConstraints!
     # operatorational constraints for reach k
@@ -569,8 +570,10 @@ Introduce a new cut to the `FMPH2` with variables passed from the *FSP* and *FMP
 - `q::Vector{Float64}`: The q vector passed from the FSP instance. 
 """
 function IntroduceCut!(this::FMPH2, lambda::Vector{Float64}, q::Vector{Float64})
-    @assert size(H, 1) == length(lambda)
-    push!(lambda, this.lambda)
+    @assert size(MatrixConstruct.H, 1) == length(lambda)
+    @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q."
+
+    push!(this.lambda, lambda)
     this.k += 1
     IntroduceVariables!(this, q)
     PrepareConstraints!(this)
@@ -579,12 +582,30 @@ end
 
 
 
-
-
 """
-
+Try the binlinear search heuristic. 
 """
-function SolveBoth!(this::FMPH1, that::FMPH2)
-    # TODO:Impelment this Later. 
+function TryHeuristic!(this::FMPH1, that::FMPH2, q::Vector{Float64})
+    IntroduceCut!(this, q)
+    Solve!(this)
+    new_lambda = this.lambda[end].|>value  # new lambda from fmph1. 
+    IntroduceCut!(that, new_lambda, q)
+    Solve!(that)
+    return that.eta|>value
 end
 
+
+
+function FirstHeuristic!(
+    w::Vector, 
+    gamma::Vector, 
+    d_hat::Vector, 
+    model::Model=Model(HiGHS.Optimizer)
+)
+    fmph1 = FMPH1(w, gamma, d_hat, model)
+    Solve!(fmph1)
+    fmph2 = FMPH2(w, gamma, d_hat, fmph1.lambda[1].|>value)
+    Solve!(fmph2)
+    
+    return fmph2.eta|>value, fmph1, fmph2
+end

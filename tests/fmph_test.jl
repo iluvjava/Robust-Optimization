@@ -4,10 +4,138 @@ include("../src/matrix_construction_export.jl")
 include("../src/ccga_modeling.jl")
 
 N = 3*4*6
-fmph1 = FMPH1(zeros(N), 10*ones(24), 100*ones(24))
-Solve!(fmph1)
-# IntroduceCut!(fmph1, zeros(size(MatrixConstruct.G, 2)))
-Solve!(fmph1)
-fmph2 = FMPH2(zeros(N), 10*ones(24), 100*ones(24), fmph1.lambda[1].|>value)
-Solve!(fmph2)
+# fmph1 = FMPH1(zeros(N), 10*ones(24), 100*ones(24))
+# Solve!(fmph1)
+# fmph2 = FMPH2(zeros(N), 10*ones(24), 100*ones(24), fmph1.lambda[1].|>value)
+# Solve!(fmph2)
+# d_star = fmph2.d.|>value
+fmph_vals = Vector()
+fsp_vals = Vector()
+d_stars = Vector()
+w = [1.0
+    1.0
+    0.0
+    1.0
+    1.0
+    1.0
+    -0.0
+    -0.0
+    1.0
+    -0.0
+    0.0
+    0.0
+    -0.0
+    -0.0
+    0.0
+    0.0
+    0.0
+    1.0
+    -0.0
+    -0.0
+    1.0
+    -0.0
+    0.0
+    0.0
+    1.0
+    1.0
+    0.0
+    1.0
+    1.0
+    1.0
+    1.0
+    1.0
+    1.0
+    1.0
+    1.0
+    0.0
+    1.0
+    1.0
+    0.0
+    1.0
+    1.0
+    1.0
+    1.0
+    1.0
+    1.0
+    1.0
+    1.0
+    0.0
+    0.0
+    0.0
+    0.0
+    0.0
+    0.0
+    0.0
+    -0.0
+    -0.0
+    -0.0
+    -0.0
+    -0.0
+    1.0
+    0.0
+    0.0
+    1.0
+    -0.0
+    0.0
+    -0.0
+    -0.0
+    -0.0
+    -0.0
+    -0.0
+    -0.0
+    1.0]
+
+gamma = [20.71732623725273
+20.71732623725273
+20.71732623725273
+20.71732623725273
+20.71732623725273
+20.71732623725273
+33.34961358193237
+33.34961358193237
+33.34961358193237
+33.34961358193237
+33.34961358193237
+33.34961358193237
+27.871636682742572
+27.871636682742572
+27.871636682742572
+27.871636682742572
+27.871636682742572
+27.871636682742572
+29.74697779275455
+29.74697779275455
+29.74697779275455
+29.74697779275455
+29.74697779275455
+29.74697779275455]
+gamma = round.(gamma)
+
+FmpVal, fmph1, fmph2 = FirstHeuristic!(w, gamma , 200*ones(24))
+push!(fmph_vals, FmpVal)
+
+d_star = fmph2.d.|>value
+push!(d_stars, d_star)
+fsp = FSP(w, d_star)
+Solve!(fsp)
+push!(fsp_vals, fsp.v|>value)
+q = fsp.q.|>value
+@info "$(TryHeuristic!(fmph1, fmph2, q))"
+
+d_star = fmph2.d.|>value
+push!(d_stars, d_star)
+fsp = FSP(w, d_star)
+Solve!(fsp)
+push!(fsp_vals, fsp.v|>value)
+q = fsp.q.|>value
+@info "$(TryHeuristic!(fmph1, fmph2, q))"
+
+d_star = fmph2.d.|>value
+push!(d_stars, d_star)
+fsp = FSP(w, d_star)
+Solve!(fsp)
+push!(fsp_vals, fsp.v|>value)
+q = fsp.q.|>value
+@info "$(TryHeuristic!(fmph1, fmph2, q))"
+
 
