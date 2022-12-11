@@ -97,8 +97,14 @@ end
 Given the primary parameters and the secondary discrete decision variables
 meshed into a giant feasible set of many many constraints, we are
 searching for adversarial demands that can break our delivery system.
-    * Determines the upper bound for the feasibility slack.
 
+### Constructor Arguments. 
+- `w::Vector`: Where the length of the vector equals to the number of columns of B in the matrix construct module. 
+This parameter should be determined by the master problem or the main problem, and it's a vector of binary value. 
+- `gamma::Vector`: The uncertainty interval expressed as a vector. This gamma vector should be determined by the master problem. 
+- `d_hat::Vector`: The center of the uncertainty interval. This vector should be none negative. 
+- `model::Model=Model(HiGHS.Optimizer)`: The motimizer that FMP should be using. This model is an optimizer for solving the linear programming 
+problem created for the FMP. 
 """
 @AbsFMPTemplate @ProblemTemplate mutable struct FMP <: AbsFMP
     
@@ -522,13 +528,13 @@ function PrepareConstraints!(this::Union{FMPH1, FMPH2})
     q = this.q[k]
 
     # eta lower bound constraint for each k
-    @constraint(this.model, η <= v) .|> AddConstraints!
+    @constraint(this.model, η <= v, base_name="eta con [$k]: ") .|> AddConstraints!
     # operatorational constraints for reach k
-    @constraint(this.model, C*u .- v .<= H*d + h - B*w - G*q) .|> AddConstraints!
+    @constraint(this.model, C*u + H*d .- v .<= h - B*w - G*q, base_name="opt con [$k]: ") .|> AddConstraints!
     # Duality constraints
-    @constraint(this.model, λ'*C .<= 0) .|> AddConstraints!
-    @constraint(this.model, sum(λ) >= -1) .|> AddConstraints!
-    @constraint(this.model, dot(λ, H*d + h - B*w - G*q) == v) .|> AddConstraints!
+    @constraint(this.model, λ'*C .<= 0, base_name="dual [$k]: ") .|> AddConstraints!
+    @constraint(this.model, sum(λ) >= -1, base_name="dual [$k]: ") .|> AddConstraints!
+    @constraint(this.model, dot(λ, -H*d + h - B*w - G*q) == v, base_name="strong dual [$k]") .|> AddConstraints!
 
     if isa(this, FMPH2) && k == 1
         @constraint(this.model, -this.gamma .<= this.d - this.d_hat .<= this.gamma) .|> AddConstraints!
@@ -583,7 +589,9 @@ end
 
 
 """
-Try the binlinear search heuristic. 
+Try the binlinear search heuristic. Given the parameter for the FMP, return 2 instances of FMPH1, FMPH2, where 
+FMPH1 has the demand variable as a constant randomly generated, and a q vector that is all zeros for both FMPH1, 2. 
+FMPH1 solves for a value of lambda and then pass it to FMPH2 which then solves a demand vector.  
 """
 function TryHeuristic!(this::FMPH1, that::FMPH2, q::Vector{Float64})
     IntroduceCut!(this, q)

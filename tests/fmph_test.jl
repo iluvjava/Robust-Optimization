@@ -85,7 +85,8 @@ w = [1.0
 -0.0
 0.0]
 
-gamma = [34.17861212077394
+gamma = [
+    34.17861212077394
     34.17861212077394
     34.17861212077394
     34.17861212077394
@@ -122,20 +123,5 @@ push!(fsp_vals, fsp.v|>value)
 q = fsp.q.|>value
 @info "$(TryHeuristic!(fmph1, fmph2, q))"
 
-d_star = fmph2.d.|>value
-push!(d_stars, d_star)
-fsp = FSP(w, d_star)
-Solve!(fsp)
-push!(fsp_vals, fsp.v|>value)
-q = fsp.q.|>value
-@info "$(TryHeuristic!(fmph1, fmph2, q))"
-
-d_star = fmph2.d.|>value
-push!(d_stars, d_star)
-fsp = FSP(w, d_star)
-Solve!(fsp)
-push!(fsp_vals, fsp.v|>value)
-q = fsp.q.|>value
-@info "$(TryHeuristic!(fmph1, fmph2, q))"
 
 

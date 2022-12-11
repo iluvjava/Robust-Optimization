@@ -131,3 +131,13 @@ function all_variables(this::Problem) return this|>GetModel|>JuMP.all_variables 
 """
 function Base.getindex(this::Problem, param::Any)
 return GetModel(this)[param] end
+
+### ====================================================================================================================
+### Methods that doesn't fit into any of the above category
+### ====================================================================================================================
+
+function PrintoutVariables(v::Vector{VariableRef})
+    for (v, val) in zip(v, v.|>value)
+        println("$v=$val")
+    end
+end
