@@ -358,10 +358,14 @@ function CCGAInnerLoop(
     @assert !(0 in (gamma_bar .>= 0)) "$(premise)γ̄ should be non-negative. "
     
     γ̄ = gamma_bar; d̂ = d_hat; ϵ=epsilon; w̄ = w_bar
+    # fill in these containers to return
     lowerbound_list = Vector{Float64}()
     upperbound_list = Vector{Float64}()
     all_qs = Vector{Vector}()
     all_ds = Vector{Vector}()
+    termination_status = 0
+    # ----------------------------------
+    # Preparing solvers
     model_fmp = MakeOptimizer(solver_name="FMP", mip_focus=1)
     fmp = FMP(w̄, γ̄, d̂, model_fmp)
     @info "$(TimeStamp()) Inner loop is initialized with fmp, and we are solving the initial fmp. "|>SESSION_FILE1
@@ -371,9 +375,7 @@ function CCGAInnerLoop(
         @assert false "$(premise) FMP is either unbounded or unfeasible on the first solve of FMP. "
     end
     push!(upperbound_list, objective_value(fmp))
-    
     fsp = nothing
-    termination_status = 0
     for II in 1:max_iter
         d = GetDemandVertex(fmp); push!(all_ds, d)
         model_fsp = MakeOptimizer()
@@ -413,6 +415,51 @@ return CCGAInnerResults(
 ) end
 
 
+
+"""
+This inner CCGA. 
+"""
+function CCGAInnerLoopHeuristic(
+    gamma_bar::Vector{N1},
+    w_bar::Vector{N2},
+    d_hat::Vector{N3};
+    epsilon::Float64=0.1,
+    max_iter::Int=8
+) where {N1<:Number, N2<:Number, N3 <:Number}
+    premise = "During executing CCGA Inner for loop: "
+    @assert length(w_bar) == size(MatrixConstruct.B, 2) "$(premis)w̄ has the wrong size. please verify."
+    @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(premise)d̂ has the wrong size, please check the code. "
+    @assert epsilon >= 0 "$(premise)ϵ for terminating should be non-negative. "
+    @assert max_iter >= 0 "$(premise)Maximum iterations for the inner CCGA forloop should be non-negative. "
+    @assert !(0 in (gamma_bar .>= 0)) "$(premise)γ̄ should be non-negative. "
+
+    γ̄ = gamma_bar; d̂ = d_hat; ϵ=epsilon; w̄ = w_bar
+    lowerbound_list = Vector{Float64}()
+    upperbound_list = Vector{Float64}()
+    all_qs = Vector{Vector}()
+    all_ds = Vector{Vector}()
+    model_fmp = MakeOptimizer(solver_name="FMP", mip_focus=1)
+    fmph_val, fmph1, fmph2 = FirstHeuristic!(w̄, γ̄, d̂, model_fmp)
+    push!(upperbound_list, fmph_val)
+    termination_status = 0
+    fsp = nothing
+    for II in 1:max_iter
+        # if FMPH is > 0, then use FSP to introduce cut and solve again until convergence. 
+    end
+
+
+return CCGAInnerResults(
+    fmph2,
+    fsp,
+    all_ds,
+    all_qs,
+    upperbound_list,
+    lowerbound_list, 
+    termination_status
+) end
+
+
+
 """
 Performs the outter forloop of the CCGA algorithm with initialized parameters.
 
@@ -440,7 +487,8 @@ function CCGAOuterLoop(
     outer_max_itr::Int=40,
     make_plot::Bool=true, 
     msp_objective_option::Int=2, 
-    msp_block_demand_option::Int=1
+    msp_block_demand_option::Int=1, 
+    inner_routine::Function,
 ) where {N1 <: Number, N2 <: Number, N3 <: Number, N4<:Number}
 
     context = "During the execution of the outter loop of CCGA: "

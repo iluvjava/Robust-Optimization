@@ -112,16 +112,21 @@ gamma = [
     49.168537538745795]
 gamma = round.(gamma)
 
-FmpVal, fmph1, fmph2 = FirstHeuristic!(w, gamma , 200*ones(24))
+fmp = FMP(w, gamma, 200*ones(24))
+Solve!(fmp)
+
+FmpVal, fmph1, fmph2 = FirstHeuristic!(w, gamma , 200*ones(24), initial_demands=GetDemandVertex(fmp))
 push!(fmph_vals, FmpVal)
 
-d_star = fmph2.d.|>value
-push!(d_stars, d_star)
-fsp = FSP(w, d_star)
-Solve!(fsp)
-push!(fsp_vals, fsp.v|>value)
-q = fsp.q.|>value
-@info "$(TryHeuristic!(fmph1, fmph2, q))"
+# d_star = fmph2.d.|>value
+# push!(d_stars, d_star)
+# fsp = FSP(w, d_star)
+# Solve!(fsp)
+# push!(fsp_vals, fsp.v|>value)
+# q = fsp.q.|>value
+
+# @info "$(TryHeuristic!(fmph1, fmph2, q))"
+
 
 
 

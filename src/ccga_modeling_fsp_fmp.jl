@@ -11,6 +11,15 @@ feasibility slack variable: `v`.
 
 ### Fields
 
+* constructed fields
+    - `u::Vector{VariableRef}`: The continuous secondary decision variables. 
+    - `v::VariableRef`: The slack variables for all the constraints. 
+    - `q::Vector{VariableRef}`: The secondary discrete decision variable. 
+
+* Given parameters
+    - `w::Vector{Float64}`: The primary binary decision variables, from the master problem. 
+    - `d_star::Vector{Float64} `: The adversarial demand suggested by the fmp algorithm. 
+
 """
 @ProblemTemplate mutable struct FSP <: Problem
     # model::Model
@@ -106,6 +115,7 @@ This parameter should be determined by the master problem or the main problem, a
 - `model::Model=Model(HiGHS.Optimizer)`: The motimizer that FMP should be using. This model is an optimizer for solving the linear programming 
 problem created for the FMP. 
 """
+
 @AbsFMPTemplate @ProblemTemplate mutable struct FMP <: AbsFMP
     
     rho_plus::Vector{VariableRef}                         # binary decision variables for the bilinear demands
@@ -204,6 +214,7 @@ return this end
 
 """
 Prepare a new set of decision variables for the given instance of the *FMP* problem.
+
 ### NOTE:
 * ALWAYS, run PrepareConstraints After a new constant "q[k]" is introduced to the system. 
 * This method is for super type AbsFMP and it's sharing it downwards. 
@@ -397,7 +408,8 @@ recursively.
         w::Vector,
         gamma::Vector,
         d_hat::Vector,
-        model::Model=Model(HiGHS.Optimizer)
+        model::Model=Model(HiGHS.Optimizer);
+        initial_demands::Union{Vector, Nothing}=nothing
     )
         this = new()
         this.w = w
@@ -411,8 +423,13 @@ recursively.
         this.lambda = Vector{Vector}()
         this.con = Vector{Vector}()
         # Construct the models 
-        ort = [rand((-1, 1)) for __ in 1:size(MatrixConstruct.H, 2)]
-        this.d = max.(ort.*this.gamma .+ this.d_hat, 0)
+        if initial_demands === nothing
+            ort = [rand((-1, 1)) for __ in 1:size(MatrixConstruct.H, 2)]
+            this.d = max.(ort.*this.gamma .+ this.d_hat, 0)
+        else
+            # TODO: ASSERT DIMENSIONS 
+            this.d = initial_demands
+        end
         IntroduceVariables!(this)
         PrepareConstraints!(this)
         PrepareObjective!(this)
@@ -592,6 +609,11 @@ end
 Try the binlinear search heuristic. Given the parameter for the FMP, return 2 instances of FMPH1, FMPH2, where 
 FMPH1 has the demand variable as a constant randomly generated, and a q vector that is all zeros for both FMPH1, 2. 
 FMPH1 solves for a value of lambda and then pass it to FMPH2 which then solves a demand vector.  
+
+### Positional Arguments
+- `this::FMPH1` 
+- `that::FMPH2`
+- `q::Vector{Float64}`
 """
 function TryHeuristic!(this::FMPH1, that::FMPH2, q::Vector{Float64})
     IntroduceCut!(this, q)
@@ -608,9 +630,11 @@ function FirstHeuristic!(
     w::Vector, 
     gamma::Vector, 
     d_hat::Vector, 
-    model::Model=Model(HiGHS.Optimizer)
+    model::Model=Model(HiGHS.Optimizer); 
+    initial_demands::Union{Vector, Nothing}=nothing
 )
-    fmph1 = FMPH1(w, gamma, d_hat, model)
+    
+    fmph1 = FMPH1(w, gamma, d_hat, model, initial_demands=initial_demands)
     Solve!(fmph1)
     fmph2 = FMPH2(w, gamma, d_hat, fmph1.lambda[1].|>value)
     Solve!(fmph2)
