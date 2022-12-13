@@ -347,14 +347,14 @@ function CCGAInnerLoop(
     w_bar::Vector{N2},
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
-    max_iter::Int=8
+    max_itr::Int=8
 ) where {N1<:Number, N2<:Number, N3 <:Number}
     
     premise = "During executing CCGA Inner for loop: "
     @assert length(w_bar) == size(MatrixConstruct.B, 2) "$(premis)w̄ has the wrong size. please verify."
     @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(premise)d̂ has the wrong size, please check the code. "
     @assert epsilon >= 0 "$(premise)ϵ for terminating should be non-negative. "
-    @assert max_iter >= 0 "$(premise)Maximum iterations for the inner CCGA forloop should be non-negative. "
+    @assert max_itr >= 0 "$(premise)Maximum iterations for the inner CCGA forloop should be non-negative. "
     @assert !(0 in (gamma_bar .>= 0)) "$(premise)γ̄ should be non-negative. "
     
     γ̄ = gamma_bar; d̂ = d_hat; ϵ=epsilon; w̄ = w_bar
@@ -376,7 +376,7 @@ function CCGAInnerLoop(
     end
     push!(upperbound_list, objective_value(fmp))
     fsp = nothing
-    for II in 1:max_iter
+    for II in 1:max_itr
         d = GetDemandVertex(fmp); push!(all_ds, d)
         model_fsp = MakeOptimizer()
         @info "$(TimeStamp()) FSP is made and we are solving it. "|>SESSION_FILE1
@@ -399,7 +399,7 @@ function CCGAInnerLoop(
                 " FSP and FMP on tolerance level ϵ=$(ϵ), new fmp returns: $(fmp|>objective_value)"|>SESSION_FILE1
             break
         end
-        if II == max_iter
+        if II == max_itr
             termination_status = -1
         end
     end
@@ -417,14 +417,16 @@ return CCGAInnerResults(
 
 
 """
-This inner CCGA. 
+This inner CCGA, but this time we are using the alternating heuristic. 
 """
 function CCGAInnerLoopHeuristic(
     gamma_bar::Vector{N1},
     w_bar::Vector{N2},
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
-    max_iter::Int=8
+    max_iter::Int=8, 
+    N::Int=10
+    M::Int=10
 ) where {N1<:Number, N2<:Number, N3 <:Number}
     premise = "During executing CCGA Inner for loop: "
     @assert length(w_bar) == size(MatrixConstruct.B, 2) "$(premis)w̄ has the wrong size. please verify."
@@ -433,7 +435,7 @@ function CCGAInnerLoopHeuristic(
     @assert max_iter >= 0 "$(premise)Maximum iterations for the inner CCGA forloop should be non-negative. "
     @assert !(0 in (gamma_bar .>= 0)) "$(premise)γ̄ should be non-negative. "
 
-    γ̄ = gamma_bar; d̂ = d_hat; ϵ=epsilon; w̄ = w_bar
+    γ̄ = gamma_bar; d̂ = d_hat; ϵ = epsilon; w̄ = w_bar
     lowerbound_list = Vector{Float64}()
     upperbound_list = Vector{Float64}()
     all_qs = Vector{Vector}()
@@ -443,9 +445,16 @@ function CCGAInnerLoopHeuristic(
     push!(upperbound_list, fmph_val)
     termination_status = 0
     fsp = nothing
-    for II in 1:max_iter
-        # if FMPH is > 0, then use FSP to introduce cut and solve again until convergence. 
+    function AlternatingDirections()    # capture fmph1, fmph2 and perform alternating direction. 
+
     end
+    n = 1
+    m = 1
+    for II in 1:max_iter
+        
+
+    end
+
 
 
 return CCGAInnerResults(
@@ -533,7 +542,7 @@ function CCGAOuterLoop(
         outer_counter += 1
 
         @info "$(TimeStamp()) Outter Forloop itr=$outer_counter" |> SESSION_FILE1
-        Results = CCGAInnerLoop(γ̄, w̄, d̂, epsilon=ϵ)
+        Results = CCGAInnerLoop(γ̄, w̄, d̂, epsilon=ϵ, max_itr=inner_max_itr)
         outer_results(Results)
         
         # SHOULD FACTOR IT OUT AND MAKE IT AS PART OF THE OUTER LOOP STRUCT OBJECTIVE. 

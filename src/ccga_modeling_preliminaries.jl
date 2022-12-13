@@ -126,6 +126,7 @@ end
 
 """
 An abstract FMP should model some type of FMP, the upper bound searcher for the feasibility problems. 
+
 ### Fields
 - `w::Vector{Float64}`:Primary Generator decision variables, (GIVEN CONSTANT)
 - `gamma::Vector{Float64}` The bound for the demands on all the buses during a specific time, (GIVEN CONSTANT)

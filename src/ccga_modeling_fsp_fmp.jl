@@ -394,6 +394,11 @@ FMP with Bilinear search Heuristic. This is a super type of AbsFMP, it inherit a
 recursively. 
 ### Fields
 - `d::Vector{Float64}`: A fixed constant for the demands vector. 
+- `lambda::Vector{Vector{VariableRef}}`: The constants, lambda dual decision variable. It should be suggested 
+by some instances of FMPH1. 
+- `dual_con_idx::Vector{Int}`: A list of indices storing exactly where the constraints for the strong duality is inside 
+of the constraint vector. 
+
 ### Constructor: 
 - `w::Vector`
 - `gamma::Vector`
@@ -403,6 +408,7 @@ recursively.
     
     d::Vector{Float64}   # decision variables: d. 
     lambda::Vector{Vector{VariableRef}}
+   
 
     function FMPH1(
         w::Vector,
@@ -446,8 +452,7 @@ FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant a
 - `const_lambdas::Vector{Vector{Float64}}``
 - `d::Vector{VariableRef}`
 
-### Constructors
-#### Args
+### Constructors Args
 - `w::Vector`
 - `gamma::Vector`
 - `d_hat::Vector`
@@ -458,6 +463,7 @@ FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant a
     
     lambda::Vector{Vector{Float64}}
     d::Vector{VariableRef}
+    dual_con_idx::Vector{Int}
 
     function FMPH2(
         w::Vector,
@@ -479,6 +485,7 @@ FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant a
         @assert length(lambda) == size(MatrixConstruct.H, 1)
         push!(this.lambda, lambda)
         this.con = Vector{Vector}()
+        this.dual_con_idx = Vector{Int}()
         IntroduceVariables!(this)
         PrepareConstraints!(this)
         PrepareObjective!(this)
@@ -517,6 +524,7 @@ function IntroduceVariables!(this::Union{FMPH1, FMPH2}, q_given::Union{Nothing, 
     return
 end
 
+
 """
 Prepare the constraints for the FMPHDFixed type. Function should be used each time when a cut is introduce to the 
 problem. 
@@ -541,20 +549,24 @@ function PrepareConstraints!(this::Union{FMPH1, FMPH2})
     d = this.d
     d̂ = this.d_hat
     γ = this.gamma
-    Γ = γ|>Diagonal
+    # Γ = γ|>Diagonal
     q = this.q[k]
 
     # eta lower bound constraint for each k
-    @constraint(this.model, η <= v, base_name="eta con [$k]: ") .|> AddConstraints!
+    @constraint(this.model, η <= v, base_name="eta con [$k]") .|> AddConstraints!
     # operatorational constraints for reach k
-    @constraint(this.model, C*u + H*d .- v .<= h - B*w - G*q, base_name="opt con [$k]: ") .|> AddConstraints!
+    @constraint(this.model, C*u .- v .<= h - B*w - G*q - H*d, base_name="opt con [$k]") .|> AddConstraints!
     # Duality constraints
-    @constraint(this.model, λ'*C .<= 0, base_name="dual [$k]: ") .|> AddConstraints!
-    @constraint(this.model, sum(λ) >= -1, base_name="dual [$k]: ") .|> AddConstraints!
+    if isa(this, FMPH1)
+        @constraint(this.model, λ'*C .<= 0, base_name="dual [$k]") .|> AddConstraints!
+        @constraint(this.model, sum(λ) >= -1, base_name="dual [$k]") .|> AddConstraints!
+    end
     @constraint(this.model, dot(λ, -H*d + h - B*w - G*q) == v, base_name="strong dual [$k]") .|> AddConstraints!
-
-    if isa(this, FMPH2) && k == 1
-        @constraint(this.model, -this.gamma .<= this.d - this.d_hat .<= this.gamma) .|> AddConstraints!
+    if isa(this, FMPH2)
+        push!(this.dual_con_idx, this.con|>length)
+        if k == 1
+            @constraint(this.model, -γ .<= this.d - d̂ .<= γ) .|> AddConstraints!
+        end
     end
 
     return 
@@ -626,6 +638,19 @@ end
 
 
 
+"""
+The FIRST Heuristic function accepts necessary parameters and then returns the instances of FMPH1, 2. We 
+can also suggest good initial demands for it to speed things up. 
+
+### Positional Arguments
+- `w::Vector`
+- `gamma::Vector`
+- `d_hat::Vector`
+- `model::Model=Model(HiGHS.Optimizer)`
+### Keyword Arguments
+- `initial_demands::Union{Vector, Nothing}=nothing`
+
+"""
 function FirstHeuristic!(
     w::Vector, 
     gamma::Vector, 
@@ -640,4 +665,39 @@ function FirstHeuristic!(
     Solve!(fmph2)
     
     return fmph2.eta|>value, fmph1, fmph2
+end
+
+
+"""
+Given the lambds values for all cut, change the values of lambda in the underlying JuMP model using the new 
+set of lambds, update the lambda references in this model. 
+"""
+function ChangeLambdas!(this::FMPH2, lambdas::Vector{Vector{Float64}})
+    @assert this.k == length(lambdas) "The set of lambdas suggested for FMPH2 is has length $(lambdas|>length), and the fmph2 has k=$(this.k). "
+    
+    H = MatrixConstruct.H    
+    h = MatrixConstruct.h
+    B = MatrixConstruct.B
+    G = MatrixConstruct.G
+
+    d = this.d
+    w = this.w
+    q = this.q
+    v = this.v
+
+    # find the duality constraints and delete them. 
+    for idx in sort(this.dual_con_idx, rev=true)
+        delete(this.model, this.con[idx])
+        popat!(this.con, idx)
+    end
+    this.dual_con_idx = Vector{this.dual_con_idx|>typeof}()
+    for k in 1:this.k
+        push!(
+            this.con, 
+            @constraint(this.model, dot(lambdas[k], -H*d + h - B*w - G*q[k]) == v[k], base_name="strong dual [$k]")
+        )
+        push!(this.dual_con_idx, this.con|>length)
+    end
+    
+    return this
 end
