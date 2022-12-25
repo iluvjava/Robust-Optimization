@@ -19,6 +19,13 @@ Get the current system time stamp up to milisec that can be interpolated within 
 function TimeStamp()
 return "["*(Date(now())|>string)*" "*(Time(now())|>string)*"]" end
 
+"""
+
+"""
+function TimeStampConvert()
+    return replace(replace(TimeStamp(), r":|\."=>"-"), r"\[|\]"=>"")
+end
+
 ### SESSION_FILE =======================================================================================================
 # stores the location of a file. And it will write to it and close the stream, one line at a time. 
 # If writing to the file is frequent then this will be slow. 
@@ -64,7 +71,7 @@ function Close(this::SessionFile)
 return end
 
 
-global FILE_SESSTION_TIME_STAMP = replace(replace(TimeStamp(), r":|\."=>"-"), r"\[|\]"=>"")
+global FILE_SESSTION_TIME_STAMP = TimeStampConvert()
 mkdir(RESULTS_DIRECTORY*"/$FILE_SESSTION_TIME_STAMP")
 "The full directry ended without / for storing everything for the CCGA Full Run."
 global SESSION_DIR = RESULTS_DIRECTORY*"/"*FILE_SESSTION_TIME_STAMP
@@ -95,7 +102,7 @@ function MakeOptimizer(;optimality_gap=0.001, time_out::Int=180, solver_name::St
     set_optimizer_attribute(model, "TIME_LIMIT", time_out)
     set_optimizer_attribute(model, "MIPFocus", mip_focus)
     if solver_name !== ""
-        set_optimizer_attribute(model, "LogFile", SESSION_DIR*"/$(solver_name)_$(FILE_SESSTION_TIME_STAMP)_gurobi_log.txt")
+        set_optimizer_attribute(model, "LogFile", SESSION_DIR*"/$(solver_name)_$(TimeStampConvert)_gurobi_log.txt")
     end
 return model end
 
@@ -212,7 +219,7 @@ return fig end
 ### CCGAOuterResults
 Another struct that models the data exposed during the iterations of the full CCGA forloop (Inner and Outter). 
 It will stores the following items: 
-
+------
 * `inner_loops::Vector{CCGAInnerResults}`: A list of CCGAInnerLoop that is obtained during the iterations of the outer CCGA loops. 
 * `msp_objectives::Vector{Float64}`: All the objective values of the msp for each iterations of the CCGA, initial msp without any 
     cut should also be introduced into the vector. 
@@ -226,6 +233,8 @@ It will stores the following items:
     CCGA for loops. 
 * `fsp_initial_objectives::Vector{Floats}`: The initial objective values for the fsp at the start of each of the inner 
     CCGA for loops. 
+
+The constructor takes no parameters, it's just a mutable struct. 
 """
 mutable struct CCGAOuterResults
     inner_loops::Vector{CCGAInnerResults}

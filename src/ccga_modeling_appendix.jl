@@ -20,13 +20,22 @@ Get the JuMP instance from this model.
 function GetModel(this::Problem)
 return this.model end
 
+"""
+Get a list of references to the constraints of the model. These constraints should be 
+adhere to the same order when they are being added when the model is constructed. 
+"""
+function GetConstraints(this::Problem)
+    return this.con
+end
+
 
 
 """
-    Produce a report for the MP (master problem), which also checks feasibility of the original problem and stuff.
-        * Print out the string representation of the model.
-        * Print out the constraints for the model.
-        * Print out the objective for the model.
+Produce a report for the MP (master problem), which also checks feasibility of the original problem and stuff.
+---
+* Print out the string representation of the model.
+* Print out the constraints for the model.
+* Print out the objective for the model.
 """
 function DebugReport(this::Problem, filename="debug_report")
     open("$(filename).txt", "w") do io
@@ -40,6 +49,9 @@ function DebugReport(this::Problem, filename="debug_report")
 return this end
 
 
+"""
+Print out the constraints, the `.con`, and stream them to a file. 
+"""
 function PrintConstraintsGroup(con::Vector{JuMP.ConstraintRef}, filename::String="Constraints_report")
     open("$(filename).txt", "w") do io
         con.|>repr.|>(to_print) -> println(io, to_print)

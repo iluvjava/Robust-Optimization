@@ -9,7 +9,7 @@ Given demand vector from FMP that is within the uncertainty rainge,
 *FSP* tests how feasible it is, which determines an Lower Bound for the 
 feasibility slack variable: `v`. 
 
-### Fields
+# Fields
 
 * constructed fields
     - `u::Vector{VariableRef}`: The continuous secondary decision variables. 
@@ -20,14 +20,18 @@ feasibility slack variable: `v`.
     - `w::Vector{Float64}`: The primary binary decision variables, from the master problem. 
     - `d_star::Vector{Float64} `: The adversarial demand suggested by the fmp algorithm. 
 
+# Constructor
+    FSP(w::Vector{Float64}, 
+        d_star::Vector{Float64}, 
+        model::Model=Model(HiGHS.Optimizer))
+
 """
 @ProblemTemplate mutable struct FSP <: Problem
-    # model::Model
+    
     u::Vector{VariableRef}
     v::VariableRef
     q::Vector{VariableRef}
 
-    # Given parameters
     w::Vector{Float64}
     d_star::Vector{Float64} 
 
@@ -40,14 +44,6 @@ feasibility slack variable: `v`.
         )
     end
 
-    """
-        Constrct the FSP. 
-        Parameter: 
-            * w̄::Vector{Float64}
-            * γ̄::Number
-            * d⋆::Vector{Float64}
-            * model::Model=Model(HiGHS.Optimizer)
-    """
     function FSP(
         w::Vector{Float64}, 
         d_star::Vector{Float64}, 
@@ -63,20 +59,11 @@ feasibility slack variable: `v`.
         @objective(this.model, Min, this.v)
     return this end
 
-    """
-        Prepare all the variables for the FSP model, decision variables:
-            * u
-            * v
-            * q
-        As a list of flattened JuMP variable refs, it will store the flatten
-        variables to the field of this struct.
-    """
     function IntroduceVariables!(this::FSP)
         this.u = PrepareVariablesForTheModel!(this|>GetModel, :u)
         this.q = PrepareVariablesForTheModel!(this|>GetModel, :q)
         this.v = @variable(this.model, v, lower_bound=0)
     return end
-
 
     function AddConstraints!(this::FSP)
         u = this.u
@@ -95,7 +82,6 @@ feasibility slack variable: `v`.
         )
     return end
 
-
     function Base.getindex(this::FSP, index::Symbol)
     return this.model[index] end
 
@@ -103,11 +89,13 @@ end
 
 
 """
+    FMP(w::Vector,gamma::Vector,d_hat::Vector,model::Model=Model(HiGHS.Optimizer);)
+
 Given the primary parameters and the secondary discrete decision variables
 meshed into a giant feasible set of many many constraints, we are
 searching for adversarial demands that can break our delivery system.
 
-### Constructor Arguments. 
+# Arguments 
 - `w::Vector`: Where the length of the vector equals to the number of columns of B in the matrix construct module. 
 This parameter should be determined by the master problem or the main problem, and it's a vector of binary value. 
 - `gamma::Vector`: The uncertainty interval expressed as a vector. This gamma vector should be determined by the master problem. 
@@ -115,21 +103,25 @@ This parameter should be determined by the master problem or the main problem, a
 - `model::Model=Model(HiGHS.Optimizer)`: The motimizer that FMP should be using. This model is an optimizer for solving the linear programming 
 problem created for the FMP. 
 """
-
 @AbsFMPTemplate @ProblemTemplate mutable struct FMP <: AbsFMP
     
-    rho_plus::Vector{VariableRef}                         # binary decision variables for the bilinear demands
-    rho_minus::Vector{VariableRef}                        # binary decision variables for the bilinear demands
-    xi_plus::Vector{Containers.DenseAxisArray}            # The binary decision variable for the extreme demands, vertices of the demands cube. 
-    xi_minus::Vector{Containers.DenseAxisArray}           # The binary decision variable for the extreme demands. 
-    lambda::Vector{Vector{VariableRef}}                   # The dual decision variable for each cut, lambda. 
+    "binary decision variables for the bilinear demands: ρ⁺"
+    rho_plus::Vector{VariableRef}
+    "binary decision variables for the bilinear demands: ρ⁻"                        
+    rho_minus::Vector{VariableRef}
+    "The binary decision variable for the extreme demands, vertices of the demands cube: Ξ⁺"
+    xi_plus::Vector{Containers.DenseAxisArray}
+    "The binary decision variable for the extreme demands: Ξ⁻"
+    xi_minus::Vector{Containers.DenseAxisArray}           
+    "The dual decision variable for each cut, lambda: λ"
+    lambda::Vector{Vector{VariableRef}}                   
     
-   
     function FMP()
         @warn("This constructor shouldn't be called except for debugging purposes. ")
         d̂ = 100.0*ones(size(MatrixConstruct.H, 2))
     return FMP(zeros(size(MatrixConstruct.B, 2)), 10.0, d̂) end
 
+    
     function FMP(
         w::Vector,
         gamma::Vector,
@@ -163,6 +155,11 @@ end
 
 # The adding of the constraints API methods for FMP
 """
+    IntroduceVariables!(
+        ::Type{AbsFMP},
+        this::AbsFMP, 
+        q_given::Union{Nothing, Vector{Float64}}
+    )
 THIS METHOD IS FOR POLYMORPHISM!!!, It's being inherited by subtypes of AbsFMP. It sets up the following variables
 for the abstract FMP types: 
 * `q`: all zeros at the start, and then it's introduced by the FSP after the first iteration. If it's given, then it 
@@ -172,7 +169,7 @@ for the abstract FMP types:
 * `v`: The feasibility decision variable. 
 * `η`: the lowerbound variable. 
 
-### Argument: 
+# Arguments
 - `::Type{AbsFMP}`
 - `this::AbsFMP`
 - ` q_given::Union{Nothing, Vector{Float64}}`
@@ -213,14 +210,18 @@ return this end
 
 
 """
-Prepare a new set of decision variables for the given instance of the *FMP* problem.
+    IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}=nothing)
+
+Prepare a new set of decision variables for the given instance of the `FMP` problem.
+
+# Arguments
+- `this::FMP`
+- `q_given::Union{Nothing, Vector{Float64}}=nothing`
 
 ### NOTE:
 * ALWAYS, run PrepareConstraints After a new constant "q[k]" is introduced to the system. 
 * This method is for super type AbsFMP and it's sharing it downwards. 
-### Arguments
-- `this::FMP`
-- `q_given::Union{Nothing, Vector{Float64}}=nothing`
+
 """
 function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}=nothing)
     @assert q_given !== nothing || this.k == 1 "The conditions \"if q is nothing, then k == 1 for FMP is not true. \""
@@ -254,9 +255,7 @@ return this end
 
 
 """
-Prepare the constraints for the FMP problem, however, it will only add for all the most recent variables with
-r = k.
-
+Prepare the constraints for the initial FMP problem, without any cut. 
 """
 function PrepareConstraints!(this::FMP)
 
@@ -364,10 +363,17 @@ return this.rho_minus.|>value end
 
 
 """
-Introduce a cut figured out by the FSP instance. The cut is secondary decision variables. 
+    IntroduceCut!(this::FMP, q::Vector{Float64}) 
+
+Introduce a cut figured out by the FMP instance. The cut is secondary decision variables. 
+---
 * Introduces variable q[k] as a new configurations profile for the system. 
 * It will automatically assign the index, make the variables, and add the constraints for thsi specific secondary
 generator decision variables. 
+
+# Arguments
+- `this::FMP`: 
+- `q::Vector{Float64}`: 
 """
 function IntroduceCut!(this::FMP, q::Vector{Float64})
     this.k += 1
@@ -378,7 +384,9 @@ function IntroduceCut!(this::FMP, q::Vector{Float64})
 return this end
 
 """
-    Prepare the objective for the FMP problem, it's the sum of all v for all system configurations. 
+    PrepareObjective!(this::AbsFMP)
+
+Prepare the objective for the FMP problem, it's the sum of all v for all system configurations. 
 """
 function PrepareObjective!(this::AbsFMP)
     @objective(this.model, Max, this.eta)
@@ -399,17 +407,20 @@ by some instances of FMPH1.
 - `dual_con_idx::Vector{Int}`: A list of indices storing exactly where the constraints for the strong duality is inside 
 of the constraint vector. 
 
-### Constructor: 
+### Constructor Positional Args: 
 - `w::Vector`
 - `gamma::Vector`
 - `d_hat::Vector`
+
+### Constructors Named Args: 
+- `initial_demands::Union{Vector, Nothing}=nothing`: The initial demands with not cut added yet. 
+
 """
 @AbsFMPTemplate @ProblemTemplate mutable struct FMPH1 <: AbsFMP
     
     d::Vector{Float64}   # decision variables: d. 
     lambda::Vector{Vector{VariableRef}}
    
-
     function FMPH1(
         w::Vector,
         gamma::Vector,
@@ -433,7 +444,7 @@ of the constraint vector.
             ort = [rand((-1, 1)) for __ in 1:size(MatrixConstruct.H, 2)]
             this.d = max.(ort.*this.gamma .+ this.d_hat, 0)
         else
-            # TODO: ASSERT DIMENSIONS 
+            @assert length(initial_demands) = size(MatrixConstruct.H, 2) "The size of the demands passed to FMPH2 is not in the right size."
             this.d = initial_demands
         end
         IntroduceVariables!(this)
@@ -649,7 +660,6 @@ can also suggest good initial demands for it to speed things up.
 - `model::Model=Model(HiGHS.Optimizer)`
 ### Keyword Arguments
 - `initial_demands::Union{Vector, Nothing}=nothing`
-
 """
 function FirstHeuristic!(
     w::Vector, 
@@ -674,17 +684,14 @@ set of lambds, update the lambda references in this model.
 """
 function ChangeLambdas!(this::FMPH2, lambdas::Vector{Vector{Float64}})
     @assert this.k == length(lambdas) "The set of lambdas suggested for FMPH2 is has length $(lambdas|>length), and the fmph2 has k=$(this.k). "
-    
     H = MatrixConstruct.H    
     h = MatrixConstruct.h
     B = MatrixConstruct.B
     G = MatrixConstruct.G
-
     d = this.d
     w = this.w
     q = this.q
     v = this.v
-
     # find the duality constraints and delete them. 
     for idx in sort(this.dual_con_idx, rev=true)
         delete(this.model, this.con[idx])
@@ -704,10 +711,20 @@ end
 
 
 """
+    BuildFMPH1(fmph1::FMPH1, d::Vector)
+
 This function is going build another instance of the FMPH1 given the demands vector provided by another FMPH2 
-instance. 
-
-
+instance, and an existing instance of FMPH1 that we wish to replace the its demand vectors. 
+------
+# Arguments
+- `fmph1::FMPH1`
+- `d::Vector`
 """
-function BuildFMPH1(fmph1::FMPH1, d::Vector{Vector})
+function BuildFMPH1(fmph1::FMPH1, d::Vector)
+    @assert the length(d) == size(MatrixConstruct.H, 2) "The d used to build fmph1 is having a size of less than 2. "
+    fmph1_new = FMPH1(fmph1.w, fmph1.gamma, fmph1.d_hat, d)
+    for idx = 2:length(fmph1.q)
+        IntroduceCut!(fmph1_new, fmph1.q[idx])
+    end
+    return fmph1_new
 end

@@ -6,23 +6,38 @@
 ###     * Is able to produce report.
 ### ====================================================================================================================
 
+"""
+MP: Master problem. 
+
+# Constructor 
+    MP(M::Model, gamma_upper=1e4)
+
+"""
 @ProblemTemplate mutable struct MP <: Problem
     
     w::Array{VariableRef, 3}
     gamma::Vector{VariableRef}
-    gamma_upper::Number         # an upper bound for the gamma variable.
-    u::Vector{VariableRef}      # secondary continuous decision variables.
-    q::Vector{VariableRef}      # secondary discrete decision variables.
-    d::Vector{VariableRef}      # the demand variables, continuous in the case of master problem.
-    v::Vector{VariableRef}      # The slack decision variable.
-    
-    G::Int64; T::Int64          # Given number of generators and time horizon for the problem.
-    Tmind::Array{Int}           # Min up down for primary generators
-    Tminu::Array{Int}           # Min up time for primary generators
+    "an upper bound for the gamma variable: γ⁺"
+    gamma_upper::Number         
+    "secondary continuous decision variables: u"
+    u::Vector{VariableRef}      
+    "secondary discrete decision variables."
+    q::Vector{VariableRef}
+    "the demand variables, continuous in the case of master problem."
+    d::Vector{VariableRef}      
+    "The slack decision variable."
+    v::Vector{VariableRef} 
+    "Given number of generators. "
+    G::Int64
+    "The time horizon parameter. "
+    T::Int64
+    "Min down time for primary generators. "
+    Tmind::Array{Int}           
+    "Min up time for the primary generators. "
+    Tminu::Array{Int}
 
     # settings and options stuff:
     Verbose::Bool
-
 
     function MP(M::Model, gamma_upper=1e4)
         this = new(M)
@@ -45,10 +60,12 @@ end
 
 
 """
-Introduce variables to the model:
-    * Secondary continuous decision variables: u
-    * Secondary discrete decision variables: q
-    * demands variables: d
+    IntroduceVariables!(this::MP)
+
+Introduce variables to the MP's model:
+* Secondary continuous decision variables: u
+* Secondary discrete decision variables: q
+* demands variables: d
 """
 function IntroduceVariables!(this::MP)
     model = this |> GetModel
@@ -61,6 +78,8 @@ return this end
 
 
 """
+    AddMainProblemConstraints!(this::MP)
+
 Craete a constraints to check whether there exists an initial feasiblity solutions to the system.
 """
 function AddMainProblemConstraints!(this::MP)
@@ -82,11 +101,13 @@ return this end
 
 
 """
+    DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
+
 Test if a given demand vector is feasible for the main problem.
-    * Set the demands
-    * Solve
-    * Get results
-    * Unfix the demends vector.
+* Set the demands
+* Solve
+* Get results
+* Unfix the demends vector.
 """
 function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
     d = this.d
@@ -98,6 +119,8 @@ function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
 return ToReturn end
 
 """
+    DemandFeasible(this::MP, demand::N)  where {N<:Number}
+
 Adapting the function when the user decided to put into a number instead 
 of a vector for the demand to test. 
 """
@@ -238,9 +261,12 @@ return this end
 
 
 """
-Introduce the binary decision variable w for the primary generator.
-    * w
-    * γ
+    IntroduceMasterProblemVariables!(this::Union{MP, MSP})
+
+Introduce the binary decision variable w for the primary generator. For instance of both `MP`, `MSP`, it constructs: 
+* w
+* γ
+* γmin, a lower bound for block/max min type of objective for the MSP problem. 
 """
 function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
     model = this |> GetModel
@@ -361,11 +387,15 @@ return this end
 
 
 """
+    IntroduceCut!(
+        this::MSP,
+        rho_plus::Vector{Float64},
+        rho_minus::Vector{Float64},
+    )
+
 Introduce feasibility cut for the master problem from the CCGA results. 
-* rho_plus, rho_minus:
-    * Results returned from fmp, the demand upperbound and lowerbound discrete decision variables for each of the 
-    * demands decision variables. they should have the exat same dimension as the demand decision variables. 
-### Arguments
+
+# Arguments
 - `this::MSP`
 - `rho_plus::Vector{float64}`: The rho plus solved from the FMP. 
 - `rho_minus::Vector{Float64}`: The rho minus from the FMP. 
@@ -409,30 +439,34 @@ function IntroduceCut!(
     
 return CutConstraints end
 
-"""
-Delete all the previous cut introduced to the master problem. 
-* There will be an error if no cut is introduced and we tried to delete them. 
-"""
-function DeleteAllPreviousCut!(this::MSP)
-    startingAt = this.artificial_bound_at + 1
-    endingAt = length(this.con)
-    delete.(this.model, this.con[startingAt: endingAt])
-    deleteat!(this.con, startingAt: endingAt)
-return this end
+
+# """
+# Delete all the previous cut introduced to the master problem. 
+# * There will be an error if no cut is introduced and we tried to delete them. 
+# """
+# function DeleteAllPreviousCut!(this::MSP)
+#     startingAt = this.artificial_bound_at + 1
+#     endingAt = length(this.con)
+#     delete.(this.model, this.con[startingAt: endingAt])
+#     deleteat!(this.con, startingAt: endingAt)
+# return this end
 
 
 """
+    function Getw(this::Union{MP, MSP})
+
 Get the primary discrete decision variable as a vector of numbers for
 the CCGA algorithm.
 * It returns vector as decision variable
 * The vector is w flattend into x, y, z, column major flattening.
 * The returned type is Vector{VariableRef}
-
 """
 function Getw(this::Union{MP, MSP})
 return this|>Flattenw.|>value end
 
 """
+    GetGamma(this::Union{MP, MSP})
+
 Get the gamma vector from the master problem that is here. The gamma vector will be a float64 vector 
 with the same length as the number of time horizon that is there. 
 """
@@ -440,6 +474,8 @@ function GetGamma(this::Union{MP, MSP})
 return this.gamma.|>value end
 
 """
+    Flattenw(this::Union{MP, MSP})
+
 Fletten the w decision variable. 
 """
 function Flattenw(this::Union{MP, MSP})
