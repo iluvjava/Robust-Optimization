@@ -15,7 +15,9 @@ MP: Master problem.
 """
 @ProblemTemplate mutable struct MP <: Problem
     
+    "The discrete primary decision variable. "
     w::Array{VariableRef, 3}
+    "The gamma bound decision variables for the bounds on the demands. "
     gamma::Vector{VariableRef}
     "an upper bound for the gamma variable: γ⁺"
     gamma_upper::Number         
@@ -35,9 +37,6 @@ MP: Master problem.
     Tmind::Array{Int}           
     "Min up time for the primary generators. "
     Tminu::Array{Int}
-
-    # settings and options stuff:
-    Verbose::Bool
 
     function MP(M::Model, gamma_upper=1e4)
         this = new(M)
@@ -74,7 +73,6 @@ function IntroduceVariables!(this::MP)
     this.d = @variable(model, d[1:size(MatrixConstruct.H, 2)] >= 0)
     this.v = @variable(model, v[1:size(MatrixConstruct.H, 1)] >= 0)
 return this end
-
 
 
 """
@@ -118,6 +116,7 @@ function DemandFeasible(this::MP, demand::Vector{N}) where {N<:Number}
     unfix.(d)
 return ToReturn end
 
+
 """
     DemandFeasible(this::MP, demand::N)  where {N<:Number}
 
@@ -128,6 +127,40 @@ function DemandFeasible(this::MP, demand::N)  where {N<:Number}
 return DemandFeasible(this, demand*ones(size(this.d))) end
 
 
+"""
+    Configurations(this::MP, demand::Vector{N}) where {N<:Number} :: Vector{Float64}
+
+Given a demand vector that the system tries to satisfies. If it does, then the primary discrete decision variables 
+are returned as vector, if it doesn't, nothing is returned. It will forces the demand decision variable in the main
+problem equal to the given demand and forces all elements of the slack vector v to be the zero. It then solves it and 
+decide what to return depending on the feasibility of the system. 
+
+"""
+function FeasibleConfig(this::MP, demand::Vector{N})::Union{Vector{Float64}, Nothing} where {N<:Number}
+    d = this.d 
+    v = this.v
+    fix.(d, demand; force=true)
+    @objective(this.model, Min, sum(v))
+    Solve!(this)
+    if this|>objective_value|>isnan
+        unfix.(d)
+        return nothing 
+    end
+    to_return = this|>Getw|>copy
+    unfix.(d)
+    return to_return
+end
+
+"""
+    FeasibleConfigurations(this::MP, demand::Number)::Union{Vector{Float64}, Nothing}
+
+Give it a single number representing the size of the uncertainty interval, it will try to bound all the demands 
+using this single number instead. 
+""" 
+function FeasibleConfig(this::MP, demand::N)::Union{Vector{Float64}, Nothing} where {N <: Number}
+    @assert demand > 0 "The demand cannot be negatieve for the main problem. "
+    return FeasibleConfig(this, demand*(this.d|>length|>ones))
+end
 
 """
 Creates the main problem objectives:
@@ -140,8 +173,8 @@ function MainProblemObjective!(this::MP)
     γ = m[:γ]
     v = this.v
     d = this.d
-    # @objective(m, Max, γ)
-    # fix.(v, 0; force=true)
+    @objective(m, Max, γ)
+    fix.(v, 0; force=true)
 return end
 
 
@@ -166,37 +199,57 @@ function EstablishMainProblem!(this::MP)
 return this end
 
 
+"""
+# Constructor
 
-### ====================================================================================================================
-#   Master Problem:
-#       * Determine primary decision variables only.
-#       * Similar format compare to the Main Problem.
-# Options and settings
-#   objective_types: 
-#       1. maximize gamma min.
-#       2. maximize sum of all gamma.
-#   block_demands_types
-#       0. no restriction on demand interval variable gamma. 
-#       1. restrict all generator at different time to have the same demand intervals. 
-### ====================================================================================================================
+    MSP(model::Model, 
+        d_hat::Vector{T}, 
+        gamma_upper;
+        block_demands::Int = 0, 
+        objective_types::Int = 1) where {T<:AbstractFloat}
 
+# Arguments
+* `d_hat`: A vector representing the center of the demand interval. 
+* `gamma_upper`: The upper bound for the gamma bound decision variable. 
+* `block_demands`: An integers representing the type of setup apply for the demand uncertainty interval. Query it with `?MSP.block_demands`
+on julia REPL for more information. 
+* `objective_types`: The type of objective switched by an value of int. query `?MSP.objective_types` in REPL for more info. 
+"""
 @ProblemTemplate mutable struct MSP <: Problem
 
+    "w: The primary discrete decision variable, paired up with matrix B. "
     w::Array{VariableRef, 3}
+    "The center for the demand interval. "
     d_hat::Array{Float64}
+    "gamma: The decision variable for the uncertainty bound on the demand. "
     gamma::Vector{VariableRef}
-    gamma_upper::Number         # an upper bound for the gamma variable.
-    gamma_min::VariableRef       # A minimum bound for gamma. 
-    G::Int64; T::Int64          # Given number of generators and time horizon for the problem.
-    Tmind::Array{Int}           # Min up down for primary generators
-    Tminu::Array{Int}           # Min up time for primary generators
-
+    "gamma_upper: The upper bound on all the gamma upper bound. "
+    gamma_upper::Number
+    "gamma_min: A minimum upper bound for block of uncertainty bounds, or all the uncertainty bound. "
+    gamma_min::VariableRef
+    "The number of generators. "
+    G::Int64
+    "The number of time horizon. "
+    T::Int64
+    "The minimum down time for the primary generators. "
+    Tmind::Array{Int}
+    "The minimum up time for the primary generators. "
+    Tminu::Array{Int}
+    "A counter for the number of cuts introduced to the current master problem. "
     cut_count::Int
-    u::Vector{Vector{VariableRef}}  # Decision variables from the cut introduced to the master problem. 
+    "A secondary continous decision variables, indexed by the number of cuts introduced. "
+    u::Vector{Vector{VariableRef}}
+    "A secondary discrete decision variables, indexed by the number of cuts introduced. "
     q::Vector{Vector{VariableRef}}
-    # artificial_bound_at::Int        # an artificla bounds for the objective, it's undefined before adding any cuts 
-    
-    block_demands_types::Int    # whether to lock the group of demand uncertainty interval gamma to the same value. 
+    """ 
+        0. no restriction on demand interval variable gamma. 
+        1. restrict all generator at different time to have the same demand intervals. 
+    """
+    block_demands_types::Int
+    """
+        1. maximize gamma min, the lower bound for all gammas. 
+        2. maximize sum of all gammas.
+    """
     objective_types::Int            # a integer that switches between different type of objectives for the msp problem. 
 
     function MSP(
@@ -223,9 +276,9 @@ return this end
         this.cut_count = 0
         this.u = Vector{Vector{VariableRef}}()
         this.q = Vector{Vector{VariableRef}}()
-        this.block_demands_types = block_demands;
-        this.objective_types = objective_types;
-    
+        this.block_demands_types = block_demands
+        this.objective_types = objective_types
+
         IntroduceMasterProblemVariables!(this)
         PreppareConstraintsPrimary!(this)
         MasterProblemObjective!(this)
@@ -292,7 +345,7 @@ function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
         this.gamma_min = @variable(
             model, 
             γmin,
-            lower_bound = 0
+            lower_bound=0
         )
     end
 

@@ -12,6 +12,7 @@ include("../src/ccga_modeling.jl")
 The minimal amount of code to test to make sure the newly introduce code are not breaking the old 
 code. 
 """
+    
     C = MatrixConstruct.C
     B = MatrixConstruct.B
     H = MatrixConstruct.H
@@ -23,6 +24,10 @@ code.
     w_len = w.|>length|>sum
     q = MatrixConstruct.q
     q_len = q.|>length|>sum
+
+    local w̄
+    γ̄ = 20
+    d̂ = 50*ones(size(MatrixConstruct.H, 2))
 
     """
     Verifying that the matrices: C,B,H,G and the vector u, w, q are all having 
@@ -41,11 +46,23 @@ code.
     Using the main problem to solve for a configurations to establish the variable 
     w̄, γ̄ for the system. 
     """
-    function MainProblem()
-        mp = MainProblem()
+    function SetupMainProblem()
+        mp = MP(Gurobi.Optimizer|>Model, γ̄)
+        w = FeasibleConfig(mp, d̂)
+        println("solution value w solved by the main problem is: ")
+        w|>println
+        return w !== nothing
+    end
+    
+    """
+    Using the established w̄ solved from the main problem to setup the master problem. 
+    """
+    function SetupMasterProblem()
+
         return true
     end
-
+    
     # actually running these tests. 
     @test VerifyMatrices()
+    @test SetupMainProblem()
 end

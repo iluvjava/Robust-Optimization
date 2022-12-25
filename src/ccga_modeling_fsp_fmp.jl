@@ -378,7 +378,6 @@ generator decision variables.
 function IntroduceCut!(this::FMP, q::Vector{Float64})
     this.k += 1
     @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q."
-    
     IntroduceVariables!(this, q)
     PrepareConstraints!(this)
 return this end
