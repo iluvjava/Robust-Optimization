@@ -80,7 +80,8 @@ global SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         #
 Make an optimizer. The default is gurobi. It's always gurobi. And all options can be tweaked 
 when calling this function which makes the process easier. all the parameters meaning about the 
 gurobi solver can be found here [here](https://www.gurobi.com/documentation/9.5/refman/parameters.html). 
-# Arguments
+
+# Named Arguments
 - `optimality_gap`: The "MIPGap" for the gurobi solver. 
 - `time_out::=1`: Try to terminate the gurobi solver after a certain number of seconds has passed. 
 - `solver_name::String`: Give the solver a name, if this parameter is specified then a file with the 
@@ -94,7 +95,7 @@ function MakeOptimizer(;optimality_gap=0.001, time_out::Int=180, solver_name::St
     set_optimizer_attribute(model, "TIME_LIMIT", time_out)
     set_optimizer_attribute(model, "MIPFocus", mip_focus)
     if solver_name !== ""
-        set_optimizer_attribute(model, "LogFile", SESSION_DIR*"/$(solver_name)_$(TimeStamp())_gurobi_log.txt")
+        set_optimizer_attribute(model, "LogFile", SESSION_DIR*"/$(solver_name)_$(FILE_SESSTION_TIME_STAMP)_gurobi_log.txt")
     end
 return model end
 
@@ -425,7 +426,7 @@ function CCGAInnerLoopHeuristic(
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
     max_iter::Int=8, 
-    N::Int=10
+    N::Int=10,
     M::Int=10
 ) where {N1<:Number, N2<:Number, N3 <:Number}
     premise = "During executing CCGA Inner for loop: "
@@ -497,7 +498,7 @@ function CCGAOuterLoop(
     make_plot::Bool=true, 
     msp_objective_option::Int=2, 
     msp_block_demand_option::Int=1, 
-    inner_routine::Function,
+    inner_routine::Function=CCGAInnerLoop,
 ) where {N1 <: Number, N2 <: Number, N3 <: Number, N4<:Number}
 
     context = "During the execution of the outter loop of CCGA: "
