@@ -701,3 +701,13 @@ function ChangeLambdas!(this::FMPH2, lambdas::Vector{Vector{Float64}})
     
     return this
 end
+
+
+"""
+This function is going build another instance of the FMPH1 given the demands vector provided by another FMPH2 
+instance. 
+
+
+"""
+function BuildFMPH1(fmph1::FMPH1, d::Vector{Vector})
+end
