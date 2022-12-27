@@ -31,6 +31,7 @@ function MakeEmptyModel(;optimality_gap=0.001, time_out::Int=180, solver_name::S
 return model end
 
 """
+perform the binlinear heuristic for a certain number of steps. 
 
 """
 function AlternatingSolve(fmph1, fmph2)
