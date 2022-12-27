@@ -5,12 +5,16 @@
 #   * Templates are in the preliminaries. 
 ### ====================================================================================================================
 """
+# Constructor
+    FSP(w::Vector{Float64}, 
+        d_star::Vector{Float64}, 
+        model::Model=Model(HiGHS.Optimizer))
+
 Given demand vector from FMP that is within the uncertainty rainge, 
 *FSP* tests how feasible it is, which determines an Lower Bound for the 
 feasibility slack variable: `v`. 
 
 # Fields
-
 * constructed fields
     - `u::Vector{VariableRef}`: The continuous secondary decision variables. 
     - `v::VariableRef`: The slack variables for all the constraints. 
@@ -19,11 +23,6 @@ feasibility slack variable: `v`.
 * Given parameters
     - `w::Vector{Float64}`: The primary binary decision variables, from the master problem. 
     - `d_star::Vector{Float64} `: The adversarial demand suggested by the fmp algorithm. 
-
-# Constructor
-    FSP(w::Vector{Float64}, 
-        d_star::Vector{Float64}, 
-        model::Model=Model(HiGHS.Optimizer))
 
 """
 @ProblemTemplate mutable struct FSP <: Problem
@@ -396,63 +395,7 @@ return this end
 # FMPH1, FMPH2: FMP with the bilinear heuristic. They are a "twin type". 
 # ======================================================================================================================
 
-"""
-FMP with Bilinear search Heuristic. This is a super type of AbsFMP, it inherit all fields from it's super types 
-recursively. 
-### Fields
-- `d::Vector{Float64}`: A fixed constant for the demands vector. 
-- `lambda::Vector{Vector{VariableRef}}`: The constants, lambda dual decision variable. It should be suggested 
-by some instances of FMPH1. 
-- `dual_con_idx::Vector{Int}`: A list of indices storing exactly where the constraints for the strong duality is inside 
-of the constraint vector. 
 
-### Constructor Positional Args: 
-- `w::Vector`
-- `gamma::Vector`
-- `d_hat::Vector`
-
-### Constructors Named Args: 
-- `initial_demands::Union{Vector, Nothing}=nothing`: The initial demands with not cut added yet. 
-
-"""
-@AbsFMPTemplate @ProblemTemplate mutable struct FMPH1 <: AbsFMP
-    
-    d::Vector{Float64}   # decision variables: d. 
-    lambda::Vector{Vector{VariableRef}}
-   
-    function FMPH1(
-        w::Vector,
-        gamma::Vector,
-        d_hat::Vector,
-        model::Model=Model(HiGHS.Optimizer);
-        initial_demands::Union{Vector, Nothing}=nothing
-    )
-        this = new()
-        this.w = w
-        this.gamma = gamma
-        this.k = 1
-        this.model = model
-        this.d_hat = d_hat
-        this.q = Vector{Vector}()
-        this.v = Vector()
-        this.u = Vector{Vector}()
-        this.lambda = Vector{Vector}()
-        this.con = Vector{Vector}()
-        # Construct the models 
-        if initial_demands === nothing
-            ort = [rand((-1, 1)) for __ in 1:size(MatrixConstruct.H, 2)]
-            this.d = max.(ort.*this.gamma .+ this.d_hat, 0)
-        else
-            @assert length(initial_demands) = size(MatrixConstruct.H, 2) "The size of the demands passed to FMPH2 is not in the right size."
-            this.d = initial_demands
-        end
-        IntroduceVariables!(this)
-        PrepareConstraints!(this)
-        PrepareObjective!(this)
-        return this 
-    end
-
-end
 
 """
 FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant and the d vector is now a continuous 
@@ -469,11 +412,16 @@ FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant a
 - `lambdas::Vector{Vector}`
 - `model::Model=Model(HiGHS.Optimizer)`
 """
-@AbsFMPTemplate @ProblemTemplate mutable struct FMPH2 <: AbsFMP
+@ProblemTemplate @AbsFMPTemplate mutable struct FMPH2 <: AbsFMP
     
+    "The dual for FMPH2, it's a constant. "
     lambda::Vector{Vector{Float64}}
+    "The demand decision vector for FMPH2. "
     d::Vector{VariableRef}
-    dual_con_idx::Vector{Int}
+    
+    "The contain for the dualiy constraints where the constant lambds are involved here. "
+    dual_cons::Vector{ConstraintRef}
+
 
     function FMPH2(
         w::Vector,
@@ -482,6 +430,9 @@ FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant a
         lambda::Vector,
         model::Model=Model(HiGHS.Optimizer)
     )
+        @assert length(w) == size(MatrixConstruct.B, 2) "w is having the wrong dimension when it's passed to the FMPH2."
+        @assert length(gamma) == size(MatrixConstruct.H, 2) "The uncertaity bound gamma vector is not having the compatible length with matrix B for FMPH2."
+        @assert length(d_hat) == size(MatrixConstruct.H, 2) "The size of the d̂ is not compatible with the matrix for FMPH2. "
         this = new()
         this.w = w
         this.gamma = gamma
@@ -495,7 +446,8 @@ FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant a
         @assert length(lambda) == size(MatrixConstruct.H, 1)
         push!(this.lambda, lambda)
         this.con = Vector{Vector}()
-        this.dual_con_idx = Vector{Int}()
+        # this.dual_con_idx = Vector{Int}()
+        this.dual_cons = Vector{ConstraintRef}()
         IntroduceVariables!(this)
         PrepareConstraints!(this)
         PrepareObjective!(this)
@@ -503,6 +455,70 @@ FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant a
     end
 end
 
+
+"""
+FMP with Bilinear search Heuristic. This is a super type of AbsFMP, it inherit all fields from it's super types 
+recursively. 
+### Fields
+- `d::Vector{Float64}`: A fixed constant for the demands vector. 
+- `lambda::Vector{Vector{VariableRef}}`: The constants, lambda dual decision variable. It should be suggested 
+by some instances of FMPH1. 
+- `dual_con_idx::Vector{Int}`: A list of indices storing exactly where the constraints for the strong duality is inside 
+of the constraint vector. 
+
+### Constructor Positional Args: 
+- `w::Vector`
+- `gamma::Vector`
+- `d_hat::Vector`
+- `model::Model=Model(HiGHS.Optimizer)`
+
+### Constructors Named Args: 
+- `initial_demands::Union{Vector, Nothing}=nothing`: The initial demands with not cut added yet. 
+
+"""
+@ProblemTemplate @AbsFMPTemplate mutable struct FMPH1 <: AbsFMP
+    
+    d::Vector{Float64}   # decision variables: d. 
+    lambda::Vector{Vector{VariableRef}}
+   
+    function FMPH1(
+        w::Vector,
+        gamma::Vector,
+        d_hat::Vector,
+        model::Model=Model(HiGHS.Optimizer);
+        initial_demands::Union{Vector, Nothing}=nothing
+    )
+        @assert length(w) == size(MatrixConstruct.B, 2) "w is having the wrong dimension when it's passed to the FMPH1."
+        @assert length(gamma) == size(MatrixConstruct.H, 2) "The uncertaity bound gamma vector is not having the compatible length with matrix B for FMPH1."
+        @assert length(d_hat) == size(MatrixConstruct.H, 2) "The size of the d̂ is not compatible with the matrix for FMPH1. "
+       
+        this = new()
+        this.w = w
+        this.gamma = gamma
+        this.k = 1
+        this.model = model
+        this.d_hat = d_hat
+        this.q = Vector{Vector}()
+        this.v = Vector()
+        this.u = Vector{Vector}()
+        this.lambda = Vector{Vector}()
+        this.con = Vector{Vector}()
+        # Construct the models 
+        if initial_demands === nothing
+            ort = [1 for __ in 1:size(MatrixConstruct.H, 2)]
+            this.d = max.(ort.*this.gamma .+ this.d_hat, 0)
+        else
+            @assert length(initial_demands) == size(MatrixConstruct.H, 2) "The size of the demands passed to FMPH2 is not in the right size."
+            this.d = initial_demands
+        end
+        IntroduceVariables!(this)
+        PrepareConstraints!(this)
+        PrepareObjective!(this)
+        
+        return this 
+    end
+
+end
 
 """
 Introduce the JuMP variables to the FMPH model, no new variable are defined, all variables are the same as the abstract 
@@ -565,22 +581,44 @@ function PrepareConstraints!(this::Union{FMPH1, FMPH2})
     # eta lower bound constraint for each k
     @constraint(this.model, η <= v, base_name="eta con [$k]") .|> AddConstraints!
     # operatorational constraints for reach k
-    @constraint(this.model, C*u .- v .<= h - B*w - G*q - H*d, base_name="opt con [$k]") .|> AddConstraints!
+    @constraint(this.model, C*u + B*w + G*q + H*d .- v .<= h, base_name="opt con [$k]") .|> AddConstraints!
     # Duality constraints
     if isa(this, FMPH1)
         @constraint(this.model, λ'*C .<= 0, base_name="dual [$k]") .|> AddConstraints!
         @constraint(this.model, sum(λ) >= -1, base_name="dual [$k]") .|> AddConstraints!
     end
-    @constraint(this.model, dot(λ, -H*d + h - B*w - G*q) == v, base_name="strong dual [$k]") .|> AddConstraints!
+    
+    #TODO: Change the way that the dual con is handled here. 
     if isa(this, FMPH2)
-        push!(this.dual_con_idx, this.con|>length)
+        if length(this.lambda) >= k  # if there is no enough lambda, just ignore this constraint for now. 
+            push!(this.dual_cons, @constraint(this.model, dot(λ, -H*d + h - B*w - G*q) == v, base_name="strong dual [$k]"))
+        end
         if k == 1
             @constraint(this.model, -γ .<= this.d - d̂ .<= γ) .|> AddConstraints!
         end
+    else
+        @constraint(this.model, dot(λ, -H*d + h - B*w - G*q) == v, base_name="strong dual [$k]") .|> AddConstraints!
     end
 
     return 
 end
+
+
+"""
+Get the demand decision variable by its value from the instance of FMPH2. If it's not yet solved, there will be an error. 
+"""
+function GetDemands(this::FMPH2)
+    return this.d.|>value
+end
+
+
+"""
+Get the value for all the decision variable lambds in the instance of FMPH1, if it's not yet solved, an error will occur. 
+"""
+function GetLambdas(this::FMPH1)
+    return this.lambda.|>(l)->(l.|>value)
+end
+
 
 """
 Maximizes eta. 
@@ -610,15 +648,14 @@ end
 
 """
 Introduce a new cut to the `FMPH2` with variables passed from the *FSP* and *FMPH1*
-### Arguments
+# Arguments
 - `this::FMPHDFixed`: The type this function acts on. 
 - `q::Vector{Float64}`: The q vector passed from the FSP instance. 
 """
-function IntroduceCut!(this::FMPH2, lambda::Vector{Float64}, q::Vector{Float64})
+function IntroduceCut!(this::FMPH2, q::Vector{Float64})
     @assert size(MatrixConstruct.H, 1) == length(lambda)
     @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q."
 
-    push!(this.lambda, lambda)
     this.k += 1
     IntroduceVariables!(this, q)
     PrepareConstraints!(this)
@@ -626,13 +663,14 @@ function IntroduceCut!(this::FMPH2, lambda::Vector{Float64}, q::Vector{Float64})
 end
 
 
-
 """
+    TryHeuristic!(this::FMPH1, that::FMPH2, q::Vector{Float64})
+
 Try the binlinear search heuristic. Given the parameter for the FMP, return 2 instances of FMPH1, FMPH2, where 
 FMPH1 has the demand variable as a constant randomly generated, and a q vector that is all zeros for both FMPH1, 2. 
 FMPH1 solves for a value of lambda and then pass it to FMPH2 which then solves a demand vector.  
 
-### Positional Arguments
+# Positional Arguments
 - `this::FMPH1` 
 - `that::FMPH2`
 - `q::Vector{Float64}`
@@ -640,49 +678,75 @@ FMPH1 solves for a value of lambda and then pass it to FMPH2 which then solves a
 function TryHeuristic!(this::FMPH1, that::FMPH2, q::Vector{Float64})
     IntroduceCut!(this, q)
     Solve!(this)
-    new_lambda = this.lambda[end].|>value  # new lambda from fmph1. 
-    IntroduceCut!(that, new_lambda, q)
+    IntroduceCut!(that, q)
+    ChangeLambdas!(that, GetLambdas(this))
     Solve!(that)
     return that.eta|>value
 end
 
 
+"""
+    TryHeuristic!(this::FMPH1, that::FMPH2)
+
+Perform one exchange of the heurstic value. FMPH1 solves the system to obtain a lambda value, and pass the 
+lambda value to FMPH2 to solve for the demand. 
+"""
+function TryHeuristic!(this::FMPH1, that::FMPH2)
+    Solve!(this)
+    ChangeLambdas!(that, GetLambdas(this))
+    Solve!(that)
+    return that|>objective_value
+end
+
+
 
 """
+    FirstHeuristic!(
+        w::Vector, 
+        gamma::Vector, 
+        d_hat::Vector, 
+        model1::Model=Model(HiGHS.Optimizer), 
+        model2::Model=Model(HiGHS.Optimizer); 
+        initial_demands::Union{Vector, Nothing}=nothing
+    )
+
 The FIRST Heuristic function accepts necessary parameters and then returns the instances of FMPH1, 2. We 
 can also suggest good initial demands for it to speed things up. 
 
-### Positional Arguments
+# Positional Arguments
 - `w::Vector`
 - `gamma::Vector`
 - `d_hat::Vector`
-- `model::Model=Model(HiGHS.Optimizer)`
-### Keyword Arguments
+- `model1::Model=Model(HiGHS.Optimizer)`: The empty model prepared for FMPH1. 
+- `model2::Model=Model(HiGHS.Optimizer)`: The empty model prepared for FMPH2. 
+# Keyword Arguments
 - `initial_demands::Union{Vector, Nothing}=nothing`
 """
 function FirstHeuristic!(
     w::Vector, 
     gamma::Vector, 
     d_hat::Vector, 
-    model::Model=Model(HiGHS.Optimizer); 
+    model1::Model=Model(HiGHS.Optimizer), 
+    model2::Model=Model(HiGHS.Optimizer); 
     initial_demands::Union{Vector, Nothing}=nothing
 )
-    
-    fmph1 = FMPH1(w, gamma, d_hat, model, initial_demands=initial_demands)
+    fmph1 = FMPH1(w, gamma, d_hat, model1, initial_demands=initial_demands)
     Solve!(fmph1)
-    fmph2 = FMPH2(w, gamma, d_hat, fmph1.lambda[1].|>value)
-    Solve!(fmph2)
-    
-    return fmph2.eta|>value, fmph1, fmph2
+    fmph2 = FMPH2(w, gamma, d_hat, fmph1.lambda[1].|>value, model2)
+    Solve!(fmph2)   
+    return fmph2|>objective_value, fmph1, fmph2
 end
 
 
 """
+    ChangeLambdas!(this::FMPH2, lambdas::Vector{Vector{Float64}})
+
 Given the lambds values for all cut, change the values of lambda in the underlying JuMP model using the new 
 set of lambds, update the lambda references in this model. 
 """
 function ChangeLambdas!(this::FMPH2, lambdas::Vector{Vector{Float64}})
-    @assert this.k == length(lambdas) "The set of lambdas suggested for FMPH2 is has length $(lambdas|>length), and the fmph2 has k=$(this.k). "
+    # TODO: Change the way that dual con is handled here. 
+    @assert this.k <= length(lambdas) "The set of lambdas suggested for FMPH2 is has length $(lambdas|>length), and the fmph2 has k=$(this.k). "
     H = MatrixConstruct.H    
     h = MatrixConstruct.h
     B = MatrixConstruct.B
@@ -691,20 +755,20 @@ function ChangeLambdas!(this::FMPH2, lambdas::Vector{Vector{Float64}})
     w = this.w
     q = this.q
     v = this.v
+    λ = this.lambda
+    
     # find the duality constraints and delete them. 
-    for idx in sort(this.dual_con_idx, rev=true)
-        delete(this.model, this.con[idx])
-        popat!(this.con, idx)
+    for idx in 1:length(this.dual_cons)
+        delete(this.model, this.dual_cons[idx])
     end
-    this.dual_con_idx = Vector{this.dual_con_idx|>typeof}()
+    this.dual_cons = Vector{ConstraintRef}()
     for k in 1:this.k
         push!(
-            this.con, 
-            @constraint(this.model, dot(lambdas[k], -H*d + h - B*w - G*q[k]) == v[k], base_name="strong dual [$k]")
+            this.dual_cons, 
+            @constraint(this.model, dot(λ[k], -H*d + h - B*w - G*q[k]) == v[k], base_name="strong dual [$k]")
         )
-        push!(this.dual_con_idx, this.con|>length)
     end
-    
+    this.lambda = lambdas
     return this
 end
 
@@ -712,16 +776,16 @@ end
 """
     BuildFMPH1(fmph1::FMPH1, d::Vector)
 
-This function is going build another instance of the FMPH1 given the demands vector provided by another FMPH2 
+This function is going build another instance of the FMPH1 given the demands vector provided by FMPH2 
 instance, and an existing instance of FMPH1 that we wish to replace the its demand vectors. 
 ------
 # Arguments
 - `fmph1::FMPH1`
 - `d::Vector`
 """
-function BuildFMPH1(fmph1::FMPH1, d::Vector)
-    @assert the length(d) == size(MatrixConstruct.H, 2) "The d used to build fmph1 is having a size of less than 2. "
-    fmph1_new = FMPH1(fmph1.w, fmph1.gamma, fmph1.d_hat, d)
+function RebuildFMPH1(fmph1::FMPH1, d::Vector; model::Model=HiGHS.Optimizer)
+    @assert length(d) == size(MatrixConstruct.H, 2) "The d used to build fmph1 is having a size of less than 2. "
+    fmph1_new = FMPH1(fmph1.w, fmph1.gamma, fmph1.d_hat, model, initial_demands=d)
     for idx = 2:length(fmph1.q)
         IntroduceCut!(fmph1_new, fmph1.q[idx])
     end

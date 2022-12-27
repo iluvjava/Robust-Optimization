@@ -209,6 +209,7 @@ return this end
         objective_types::Int = 1) where {T<:AbstractFloat}
 
 # Arguments
+* `model::Model`: An empty JumpMP model together with an optimizer. 
 * `d_hat`: A vector representing the center of the demand interval. 
 * `gamma_upper`: The upper bound for the gamma bound decision variable. 
 * `block_demands`: An integers representing the type of setup apply for the demand uncertainty interval. Query it with `?MSP.block_demands`
@@ -242,8 +243,8 @@ on julia REPL for more information.
     "A secondary discrete decision variables, indexed by the number of cuts introduced. "
     q::Vector{Vector{VariableRef}}
     """ 
-        0. no restriction on demand interval variable gamma. 
-        1. restrict all generator at different time to have the same demand intervals. 
+        0. The decision variable gamma, for the demand interval is indexed by both t, and i, time horizon and the generator index. 
+        1. The demand variable gamma is now just index by t, meaing that the demand interval is the same for all generator at a given time.  
     """
     block_demands_types::Int
     """
@@ -256,8 +257,8 @@ on julia REPL for more information.
         model::Model, 
         d_hat::Vector{T}, 
         gamma_upper;
-        block_demands::Int = 0, 
-        objective_types::Int = 1
+        block_demands::Int=0, 
+        objective_types::Int=1
     ) where {T<:AbstractFloat}
         this = new()
         this.model= model
@@ -433,7 +434,7 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
 
         # this constraint has to be the LAST constraints to be added to avoid any type of errors. 
         # this.artificial_bound_at = length(this.con) + 1   # an index to locate the artificial bound introduced. 
-        # push!(this.con, @constraint(model, this.gamma_min .<= this.gamma)...)
+        push!(this.con, @constraint(model, this.gamma_min .<= this.gamma)...)
     end
 return this end
 

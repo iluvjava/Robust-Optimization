@@ -216,7 +216,9 @@ return fig end
 
 
 """
-### CCGAOuterResults
+    CCGAOuterResults()
+
+# CCGAOuterResults
 Another struct that models the data exposed during the iterations of the full CCGA forloop (Inner and Outter). 
 It will stores the following items: 
 ------
@@ -237,6 +239,7 @@ It will stores the following items:
 The constructor takes no parameters, it's just a mutable struct. 
 """
 mutable struct CCGAOuterResults
+
     inner_loops::Vector{CCGAInnerResults}
     msp_objectives::Vector{Float64}
     msp_gamma::Vector{Vector{Float64}}
@@ -341,16 +344,22 @@ return fig1, fig2 end
 
 
 """
+    CCGAInnerLoop(
+        gamma_bar::Vector{N1}, 
+        w_bar::Vector{N2},
+        d_hat::Vector{N3};
+        epsilon::Float64=0.1,
+        max_itr::Int=8
+    ) where {N1<:Number, N2<:Number, N3 <:Number}
+
 Performs the CCGA Inter forloops and returns the results for making the cut for the *MSP*. 
-## Positional arguments: 
+# Positional arguments: 
 - `gamma_bar::Vector{N1}`: The initial gamma bound for each of the demand decision variable, predicted by the MSP.
 - `w_bar::Vector{N2}`: The primary generator setup given by the *MSP*. 
 - `d_hat::Vector{N3}`: The center of the demand interval. 
-## Named arguments: 
+# Named arguments: 
 - `epsilon::Float64=0.1`: The absolute tolerance for terminating the inner CCGA for loop. 
 - `max_iter::Int=8`: The maximum number of iterations before the for loop terminates. 
-## Type Declarations
-where {N1<:Number, N2<:Number, N3 <:Number}
 """
 function CCGAInnerLoop(
     gamma_bar::Vector{N1}, 
@@ -480,6 +489,20 @@ return CCGAInnerResults(
 
 
 """
+
+    function CCGAOuterLoop(
+        d_hat::Vector{N1}, 
+        gamma_upper::N2;
+        epsilon_inner::N3=0.1, 
+        epsilon_outer::N4=0.1,
+        inner_max_itr::Int=15,
+        outer_max_itr::Int=40,
+        make_plot::Bool=true, 
+        msp_objective_option::Int=2, 
+        msp_block_demand_option::Int=1, 
+        inner_routine::Function=CCGAInnerLoop,
+    ) where {N1 <: Number, N2 <: Number, N3 <: Number, N4<:Number}
+
 Performs the outter forloop of the CCGA algorithm with initialized parameters.
 
 ### Positional Arguments
@@ -620,8 +643,8 @@ d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
 Results = CCGAOuterLoop(
     d̂,
     γ_upper,
-    inner_max_itr=3, 
-    outer_max_itr=2, 
+    inner_max_itr=10, 
+    outer_max_itr=5, 
     msp_objective_option=2, 
     epsilon_inner=ϵ, 
     epsilon_outer=ϵ

@@ -28,6 +28,12 @@ function GetConstraints(this::Problem)
     return this.con
 end
 
+"""
+return the list of the constraints made for an instance of the FMPH1
+"""
+function GetConstraints(this::FMPH1)
+    return hcat(this.con, this.dual_cons)
+end
 
 
 """
@@ -41,8 +47,8 @@ function DebugReport(this::Problem, filename="debug_report")
     open("$(filename).txt", "w") do io
         write(io, this|>GetModel|>repr)
         write(io, "\n")
-        this.con.|>(to_print) -> println(io, to_print)
-        if !(this|>objective_value|>isnan)
+        this|>GetConstraints.|>(to_print) -> println(io, to_print)
+        if !(this|>objective_value|>isnan)  # it's solved. 
             ["$(t[1]) = $(t[2])" for t in zip(this|>all_variables, this|>all_variables.|>value)].|>(to_print) -> println(io, to_print)
         end
     end

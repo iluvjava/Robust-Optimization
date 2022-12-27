@@ -7,7 +7,7 @@ include("../src/matrix_construction_export.jl")
 include("../src/ccga_modeling.jl")
 
 
-@testset "Testing Basics" begin 
+@testset "Testing Basics" begin
 """
 The minimal amount of code to test to make sure the newly introduce code are not breaking the old 
 code. 
@@ -25,9 +25,9 @@ code.
     q = MatrixConstruct.q
     q_len = q.|>length|>sum
 
-    local w̄
-    γ̄ = 20
-    d̂ = 50*ones(size(MatrixConstruct.H, 2))
+    global w̄
+    global γ⁺ = 50
+    global d̂ = 100*ones(size(MatrixConstruct.H, 2))
 
     """
     Verifying that the matrices: C,B,H,G and the vector u, w, q are all having 
@@ -47,7 +47,7 @@ code.
     w̄, γ̄ for the system. 
     """
     function SetupMainProblem()
-        mp = MP(Gurobi.Optimizer|>Model, γ̄)
+        mp = MP(Gurobi.Optimizer|>Model, γ⁺)
         w = FeasibleConfig(mp, d̂)
         println("solution value w solved by the main problem is: ")
         w|>println
@@ -55,14 +55,28 @@ code.
     end
     
     """
-    Using the established w̄ solved from the main problem to setup the master problem. 
+    Using the established w̄ solved from the main problem to setup the master problem, several different 
+    parameter config will be used to see if the master problem is working ok. 
     """
     function SetupMasterProblem()
+        @info "Settingup and solving master problem: "
+        mp = MSP(Model(Gurobi.Optimizer), d̂, γ⁺, block_demands=1, objective_types=1)
+        Solve!(mp)
+        @info "gamma upper:"
+        println(mp|>GetGamma)
+        return !(objective_value(mp)|>isnan)
+    end
 
+    """
+    Using the constructor of FSP and testing it. 
+    """
+    function SetupFSP()
         return true
     end
     
     # actually running these tests. 
     @test VerifyMatrices()
     @test SetupMainProblem()
+    @test SetupMasterProblem()
+
 end

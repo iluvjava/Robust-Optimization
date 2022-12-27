@@ -524,4 +524,4 @@ u = [c, c′, p, p′, regu, regu′, regd, regd′, sr, sr′, h, g_plus, g_min
 q = [x′, y′, z′]
 # d is it's own vector.
 
-@info "Matrices for robust oprimizations successfully constructed. "
+@info "Matrices for robust optimizations successfully constructed. "
