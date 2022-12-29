@@ -30,14 +30,6 @@ function MakeEmptyModel(;optimality_gap=0.001, time_out::Int=180, solver_name::S
     end
 return model end
 
-"""
-    AlternatingSolve(fmph1, fmph2, itr_max::Int=100)
-perform the binlinear heuristic for a certain number of steps. 
-
-"""
-function AlternatingSolve(fmph1, fmph2, itr_max::Int=100)
-    
-end
 
 C = MatrixConstruct.C
 B = MatrixConstruct.B
@@ -54,10 +46,10 @@ q_len = q.|>length|>sum
 
 @testset "FMPH Basic Testing " begin 
     
-    # testing parameters. 
+    # testing parameters, for testing things in the interactive REPL. 
     global fmph1
     global fmph2
-    global fmph
+    global fmphs
     global fsp
     global d_star
     
@@ -91,12 +83,23 @@ q_len = q.|>length|>sum
         return obj_fsp <= obj_value2
     end
 
-
+    """
+    Test the basic functionality of the FMPHstepper. 
+    """
     function FMPHStepperBasic()
         """
         Testing out the functionality of the stepper for the FMPH instances. 
         """|>println
-        
+        fmphs = FMPHStepper(w̄, γ, d̂, MakeEmptyModel)
+        fmphs()
+        fmphs()
+        local fsp = FSP(w̄, GetDemands(fmphs), MakeEmptyModel())
+        Solve!(fsp)
+        q = Getq(fsp)
+        fmphs(q)
+        fmphs(q)
+        @info "The list of demands for the FMPH stepper is: $(fmphs.obj2). "
+        @info "The objective value of fsp was: $(fsp|>objective_value). "
         return true
     end
 

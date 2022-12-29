@@ -180,8 +180,8 @@ for the abstract FMP types:
 function IntroduceVariables!(
     ::Type{AbsFMP},
     this::AbsFMP, 
-    q_given::Union{Nothing, Vector{Float64}}
-)
+    q_given::Union{Nothing, Vector{N}}
+) where {N <: Number}
     k = this.k
 
     # Prepare variable u for the model.
@@ -226,7 +226,7 @@ Prepare a new set of decision variables for the given instance of the `FMP` prob
 * This method is for super type AbsFMP and it's sharing it downwards. 
 
 """
-function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{Float64}}=nothing)
+function IntroduceVariables!(this::FMP, q_given::Union{Nothing, Vector{N}}=nothing) where {N<:Number}
     @assert q_given !== nothing || this.k == 1 "The conditions \"if q is nothing, then k == 1 for FMP is not true. \""
     IntroduceVariables!(AbsFMP, this, q_given)
     # Variables that we are using for the reformulations for the bi-linear constraints via the corner point assumptions
@@ -401,7 +401,6 @@ return this end
 # ======================================================================================================================
 
 
-
 """
 FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant and the d vector is now a continuous 
     decision varaibles. 
@@ -534,7 +533,7 @@ Introduce the JuMP variables to the FMPH model, no new variable are defined, all
 - `q_given::Union{Nothing, Vector{Float64}}=nothing`: An instance of `q_given`, either nothing whic is always 
 that when k = 1 or something returned from the *FMP* when k is not 1. 
 """
-function IntroduceVariables!(this::Union{FMPH1, FMPH2}, q_given::Union{Nothing, Vector{Float64}}=nothing)
+function IntroduceVariables!(this::Union{FMPH1, FMPH2}, q_given::Union{Nothing, Vector{N}}=nothing) where {N<:Number}
     @assert q_given !== nothing || this.k == 1 "The conditions \"if q is nothing, then k == 1 for FMP is not true. \""
     IntroduceVariables!(AbsFMP, this, q_given)
     k = this.k
@@ -666,7 +665,7 @@ Introduce a new cut to the `FMPH1` with variables passed from the FSP.
 - `this::FMPHDFixed`: The type this function acts on. 
 - `q::Vector{Float64}`: The q vector passed from the FSP instance. 
 """
-function IntroduceCut!(this::FMPH1, q::Vector{Float64})
+function IntroduceCut!(this::FMPH1, q::Vector{N}) where {N <: Number}
     @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q."
     this.k += 1
     IntroduceVariables!(this, q)
@@ -681,7 +680,7 @@ Introduce a new cut to the `FMPH2` with variables passed from the *FSP* and *FMP
 - `this::FMPHDFixed`: The type this function acts on. 
 - `q::Vector{Float64}`: The q vector passed from the FSP instance. 
 """
-function IntroduceCut!(this::FMPH2, q::Vector{Float64})
+function IntroduceCut!(this::FMPH2, q::Vector{N}) where {N <: Number}
     @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q."
     this.k += 1
     IntroduceVariables!(this, q)
@@ -708,7 +707,7 @@ function TryHeuristic!(this::FMPH1, that::FMPH2, q::Vector{Float64})
     IntroduceCut!(that, q)
     ChangeLambdas!(that, GetLambdas(this))
     Solve!(that)
-    return that.eta|>value
+    return this|>objective_value, that|>objective_value
 end
 
 
@@ -724,8 +723,6 @@ function TryHeuristic!(this::FMPH1, that::FMPH2)
     Solve!(that)
     return this|>objective_value, that|>objective_value
 end
-
-
 
 """
     FirstHeuristic!(
@@ -887,6 +884,7 @@ mutable struct FMPHStepper
         this.obj2 = Vector{Float64}()
         push!(this.obj1, obj1)
         push!(this.obj2, obj2)
+        this.make_model_func=make_model_func
         this.k = 0
         return this
     end
@@ -897,10 +895,10 @@ end
 Perform one step of the heuristic search and return the objective value of FMPH2. 
 """
 function (this::FMPHStepper)()
-    this.fmph1 = RebuildFMPH1(this.fmph1, GetDemands(this.fmph2))
+    this.fmph1 = RebuildFMPH1(this.fmph1, GetDemands(this.fmph2); model=this.make_model_func())
     obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2)
-    push!(this.fmph1, obj1)
-    push!(this.fmph2, obj2)
+    push!(this.obj1, obj1)
+    push!(this.obj2, obj2)
     return this
 end
 
@@ -909,10 +907,10 @@ Introduce a cut to the FMPH1 and get the objective value of FMPH2 after the cut.
 one cycle of heuristic search. 
 """
 function (this::FMPHStepper)(q::Vector{Float64})
-    this.fmph1 = RebuildFMPH1(this.fmph1, GetDemands(this.fmph2))
+    this.fmph1 = RebuildFMPH1(this.fmph1, GetDemands(this.fmph2); model=this.make_model_func())
     obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2, q)
-    push!(this.fmph1, obj1) 
-    push!(this.fmph2, obj2)
+    push!(this.obj1, obj1) 
+    push!(this.obj2, obj2)
     return this
 end
 

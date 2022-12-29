@@ -29,6 +29,8 @@ code.
     global γ⁺ = 50
     global d̂ = 100*ones(size(MatrixConstruct.H, 2))
     global mp 
+    global fmp
+    global fsp
 
     """
     Verifying that the matrices: C,B,H,G and the vector u, w, q are all having 
@@ -72,6 +74,7 @@ code.
     Test out the FMP, the FMP with the bilinear reformulations. 
     """
     function SetupFMP()
+        @info "Trying to initial solve on the instance of FMP with bilinear reformulations. "
         
         return true 
     end
