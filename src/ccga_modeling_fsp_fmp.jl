@@ -899,7 +899,7 @@ function (this::FMPHStepper)()
     obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2)
     push!(this.obj1, obj1)
     push!(this.obj2, obj2)
-    return this
+    return this.fmph2|>objective_value
 end
 
 
@@ -912,7 +912,7 @@ function (this::FMPHStepper)(q::Vector{Float64})
     obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2, q)
     push!(this.obj1, obj1) 
     push!(this.obj2, obj2)
-    return this
+    return this.fmph2|>objective_value
 end
 
 
