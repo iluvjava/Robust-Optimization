@@ -1,9 +1,16 @@
-function fn(a, b; kwargs...)
-    return fn2(a, b; kwargs...)
+function fn1(a, b; kwargs...)
+    fn2(a, b; kwargs...)
+    fn3(a, b; kwargs...)
 end
 
-function fn2(a, b; c=0)
-    return a, b, c
+function fn2(a, b;c=0, kwargs...)
+    println(a, b, c)
 end
 
-fn(1, 1, c=1)
+function fn3(a, b; d=0, kwargs...)
+    println(a, b, d)
+end
+
+fn1(1, 1, a=1, b=1, c=1)
+
+

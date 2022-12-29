@@ -6,8 +6,7 @@
 
 """
 Solve the inner JuMP optimization problem by directly invoking `optimize!` in JuMP on the model. This 
-function is generic to the type `Problem`, and it will trigger the solve function for the underlying 
-problem type. 
+function is generic to the type `Problem`. It returns `optimize!(this|>GetModel)`
 
 """
 function Solve!(this::Problem)

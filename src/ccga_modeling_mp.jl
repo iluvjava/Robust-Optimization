@@ -202,11 +202,14 @@ return this end
 """
 # Constructor
 
-    MSP(model::Model, 
+    MSP(
+        model::Model, 
         d_hat::Vector{T}, 
         gamma_upper;
-        block_demands::Int = 0, 
-        objective_types::Int = 1) where {T<:AbstractFloat}
+        block_demands::Int=0, 
+        objective_types::Int=1, 
+        kwargs...
+    ) where {T<:AbstractFloat}
 
 # Arguments
 * `model::Model`: An empty JumpMP model together with an optimizer. 
@@ -258,7 +261,8 @@ on julia REPL for more information.
         d_hat::Vector{T}, 
         gamma_upper;
         block_demands::Int=0, 
-        objective_types::Int=1
+        objective_types::Int=1, 
+        kwargs...
     ) where {T<:AbstractFloat}
         this = new()
         this.model= model

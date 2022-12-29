@@ -43,13 +43,15 @@ code.
     q = MatrixConstruct.q
     q_len = q.|>length|>sum
 
-    global w̄
-    global γ⁺ = 50
-    global γ̄
+    global γ⁺ = 50  # initial parameters
     global d̂ = 100*ones(size(MatrixConstruct.H, 2))
-    global mp 
-    global fmp
+    global w̄    # solved by msp 
+    global γ̄    # solved by msp 
+    global mp   
+    global fmp  
     global fsp
+    global d⁺   # solved by fmp 
+    global q    # solved by fsp
 
     """
     Verifying that the matrices: C,B,H,G and the vector u, w, q are all having 
@@ -96,7 +98,8 @@ code.
         @info "Trying to initial solve on the instance of FMP with bilinear reformulations. "
         fmp = FMP(w̄, γ̄, d̂, MakeEmptyModel())
         Solve!(fmp)
-        @info "The objective value is set to be: $(fmp|>objective_value). "
+        @info "The objective value for initial fmp: $(fmp|>objective_value). "
+        d⁺ = GetDemandVertex(fmp)
         return !isnan(fmp|>objective_value)
     end
 
@@ -105,6 +108,22 @@ code.
     """
     function SetupFSP()
         @info "Testing the FSP problem using parameters from the master problem and FMP. "
+        fsp = FSP(w̄, d⁺, MakeEmptyModel())
+        Solve!(fsp)
+        @info "The fsp has objective value of:\n$(fsp|>objective_value). "
+        q = Getq(fsp)
+        return true
+    end
+    
+    function FSPLessThanFMP()
+        return (fsp|>objective_value) <= (fmp|>objective_value)
+    end
+
+    function IntroducingCutToFMP()
+        @info "Introducing cut to the instance of FMP. "
+        IntroduceCut!(fmp, q)
+        Solve!(fmp)
+        @info "Solving fmp with the cut"
         return true
     end
     
@@ -113,5 +132,9 @@ code.
     @test SetupMainProblem()
     @test SetupMasterProblem()
     @test SetupFMP()
+    @test SetupFSP()
+    @test FSPLessThanFMP()
+    @test IntroducingCutToFMP()
+
 
 end
