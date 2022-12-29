@@ -10,9 +10,8 @@
         d_star::Vector{Float64}, 
         model::Model=Model(HiGHS.Optimizer))
 
-Given demand vector from FMP that is within the uncertainty rainge, 
-*FSP* tests how feasible it is, which determines an Lower Bound for the 
-feasibility slack variable: `v`. 
+Given demand vector from FMP that is within the uncertainty rainge, *FSP* tests how feasible it is,
+which determines an Lower Bound for the feasibility slack variable: `v`. 
 
 # Fields
 
@@ -163,6 +162,7 @@ end
         this::AbsFMP, 
         q_given::Union{Nothing, Vector{Float64}}
     )
+
 THIS METHOD IS FOR POLYMORPHISM!!!, It's being inherited by subtypes of AbsFMP. It sets up the following variables
 for the abstract FMP types: 
 * `q`: all zeros at the start, and then it's introduced by the FSP after the first iteration. If it's given, then it 
@@ -282,7 +282,6 @@ function PrepareConstraints!(this::FMP)
     γ = this.gamma
     Γ = γ|>Diagonal
     q = this.q[k]
-    
     
     IdxTuples = findall(!=(0), H).|>Tuple
     model = this.model
@@ -891,6 +890,7 @@ mutable struct FMPHStepper
 
 end
 
+
 """
 Perform one step of the heuristic search and return the objective value of FMPH2. 
 """
@@ -901,6 +901,7 @@ function (this::FMPHStepper)()
     push!(this.obj2, obj2)
     return this
 end
+
 
 """
 Introduce a cut to the FMPH1 and get the objective value of FMPH2 after the cut. This will perform 
@@ -913,6 +914,7 @@ function (this::FMPHStepper)(q::Vector{Float64})
     push!(this.obj2, obj2)
     return this
 end
+
 
 """
 Get the demands vector's value from the current solved instance of FMPH2. 

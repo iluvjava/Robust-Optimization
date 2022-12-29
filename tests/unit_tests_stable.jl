@@ -6,6 +6,24 @@ include("../src/utilities.jl")
 include("../src/matrix_construction_export.jl")
 include("../src/ccga_modeling.jl")
 
+"""
+    MakeOptimizer(;optimality_gap=0.001, time_out::Int=180, solver_name::String="", mip_focus::Int=0)
+
+Make an gurobi optimizer with all the correct default settings. 
+"""
+function MakeEmptyModel(;optimality_gap=0.001, time_out::Int=180, solver_name::String="", mip_focus::Int=0)
+    model = Model(() -> Gurobi.Optimizer(GUROBI_ENV))
+    set_optimizer_attribute(model, "LogToConsole", 0)
+    set_optimizer_attribute(model, "OutputFlag", 0)
+    set_optimizer_attribute(model, "MIPGap", optimality_gap)
+    set_optimizer_attribute(model, "TIME_LIMIT", time_out)
+    set_optimizer_attribute(model, "MIPFocus", mip_focus)
+    
+    if solver_name !== ""
+        set_optimizer_attribute(model, "LogFile", SESSION_DIR*"/$(solver_name)_$(TimeStampConvert)_gurobi_log.txt")
+    end
+return model end
+
 
 @testset "Testing Basics" begin
 """
@@ -27,6 +45,7 @@ code.
 
     global w̄
     global γ⁺ = 50
+    global γ̄
     global d̂ = 100*ones(size(MatrixConstruct.H, 2))
     global mp 
     global fmp
@@ -50,7 +69,7 @@ code.
     w̄, γ̄ for the system. 
     """
     function SetupMainProblem()
-        mp = MP(Gurobi.Optimizer|>Model, γ⁺)
+        mp = MP(MakeEmptyModel(), γ⁺)
         w = FeasibleConfig(mp, d̂)
         println("solution value w solved by the main problem is: ")
         w|>println
@@ -63,10 +82,10 @@ code.
     """
     function SetupMasterProblem()
         @info "Setting up and solving master problem: "
-        mp = MSP(Model(Gurobi.Optimizer), d̂, γ⁺, block_demands=1, objective_types=1)
+        mp = MSP(MakeEmptyModel(), d̂, γ⁺, block_demands=1, objective_types=1)
         Solve!(mp)
-        @info "gamma upper:"
-        println(mp|>GetGamma)
+        γ̄ = mp|>GetGamma
+        @info "gamma upper:\n$(γ̄)"
         return !(objective_value(mp)|>isnan)
     end
 
@@ -75,8 +94,10 @@ code.
     """
     function SetupFMP()
         @info "Trying to initial solve on the instance of FMP with bilinear reformulations. "
-        
-        return true 
+        fmp = FMP(w̄, γ̄, d̂, MakeEmptyModel())
+        Solve!(fmp)
+        @info "The objective value is set to be: $(fmp|>objective_value). "
+        return !isnan(fmp|>objective_value)
     end
 
     """
@@ -91,5 +112,6 @@ code.
     @test VerifyMatrices()
     @test SetupMainProblem()
     @test SetupMasterProblem()
+    @test SetupFMP()
 
 end
