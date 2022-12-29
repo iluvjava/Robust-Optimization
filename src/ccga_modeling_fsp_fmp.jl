@@ -901,7 +901,6 @@ function (this::FMPHStepper)()
     obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2)
     push!(this.fmph1, obj1)
     push!(this.fmph2, obj2)
-
     return this
 end
 
@@ -909,12 +908,17 @@ end
 Introduce a cut to the FMPH1 and get the objective value of FMPH2 after the cut. This will perform 
 one cycle of heuristic search. 
 """
-function Cut!(this::FMPHStepper, q::Vector{Float64})
-
-
+function (this::FMPHStepper)(q::Vector{Float64})
+    this.fmph1 = RebuildFMPH1(this.fmph1, GetDemands(this.fmph2))
+    obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2, q)
+    push!(this.fmph1, obj1) 
+    push!(this.fmph2, obj2)
     return this
 end
 
+"""
+Get the demands vector's value from the current solved instance of FMPH2. 
+"""
 function GetDemands(this::FMPHStepper)
     return GetDemands(this.fmph2)
 end
