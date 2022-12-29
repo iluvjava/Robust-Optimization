@@ -31,10 +31,12 @@ function MakeEmptyModel(;optimality_gap=0.001, time_out::Int=180, solver_name::S
 return model end
 
 """
+    AlternatingSolve(fmph1, fmph2, itr_max::Int=100)
 perform the binlinear heuristic for a certain number of steps. 
 
 """
-function AlternatingSolve(fmph1, fmph2)
+function AlternatingSolve(fmph1, fmph2, itr_max::Int=100)
+    
 end
 
 C = MatrixConstruct.C
@@ -60,20 +62,22 @@ q_len = q.|>length|>sum
     global d_star
     
     function FMPHBasicRun()
-        @info "Setting up the FMPH1, 2 with some basic parameters. "
-        obj_value1, fmph1, fmph2 = FirstHeuristic!(w̄, γ, d̂, MakeEmptyModel(), MakeEmptyModel())
+        @info "Setting up the FMPH1, 2 with some basic parameters. We are looking at FSP, and the objective value of FMPH2. "
+        _, obj_value1, fmph1, fmph2 = FirstHeuristic!(w̄, γ, d̂, MakeEmptyModel)
         d1 = GetDemands(fmph2)
         l1 = GetLambdas(fmph1)
         fmph1 = RebuildFMPH1(fmph1, GetDemands(fmph2), model=MakeEmptyModel())
-        obj_value2 = TryHeuristic!(fmph1, fmph2)
+        _, obj_value2 = TryHeuristic!(fmph1, fmph2)
         d2 = GetDemands(fmph2)
-        l2 = GetLambds(fmph1)
+        l2 = GetLambdas(fmph1)
         fmp = FMP(w̄, γ, d̂, MakeEmptyModel())
         Solve!(fmp)
         obj_value3 = fmp|>objective_value
         @info "2 runs of objective value: [$obj_value1, $obj_value2]"
         @info "Classic discrete FMP objective is $obj_value3"
-        
+        "2 runs of the lambdas are the same: $((abs.(hcat(l1...) - hcat(l2...)))|>sum <= Float64|>eps)"|>println
+        "2 runs of the demands are the same: $((abs.(d1 - d2))|>sum <= Float64|>eps)"|>println
+
         d_star = GetDemands(fmph2)
         fsp = FSP(w̄, d_star, MakeEmptyModel())
         Solve!(fsp)
@@ -87,26 +91,16 @@ q_len = q.|>length|>sum
         return obj_fsp <= obj_value2
     end
 
-    function FMPHRunsWithCut()
-        @info "FMPHRuns while introducing a cut from the FSP to it. "
-        obj_value1, fmph1, fmph2 = FirstHeuristic!(w̄, γ, d̂, MakeEmptyModel(), MakeEmptyModel())
-        d_star = GetDemands(fmph2)
-        fsp = FSP(w̄, d_star, MakeEmptyModel())
-        Solve!(fsp)
-        @info "q value obtained for FSP. "
-        Getq(fsp)|>println
-        @info "objective of fsp: "
-        fsp|>objective_value|>println
-        @info "objective of fmph2 first heuristic"
-        obj_value1|>println
 
+    function FMPHStepperBasic()
+        """
+        Testing out the functionality of the stepper for the FMPH instances. 
+        """|>println
+        
         return true
     end
 
     @test FMPHBasicRun()
-    @test FMPHRunsWithCut()
+    @test FMPHStepperBasic()
 
-    global function Getw()
-        return w̄
-    end
-end
+end 

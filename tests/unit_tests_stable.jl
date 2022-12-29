@@ -28,6 +28,7 @@ code.
     global w̄
     global γ⁺ = 50
     global d̂ = 100*ones(size(MatrixConstruct.H, 2))
+    global mp 
 
     """
     Verifying that the matrices: C,B,H,G and the vector u, w, q are all having 
@@ -59,7 +60,7 @@ code.
     parameter config will be used to see if the master problem is working ok. 
     """
     function SetupMasterProblem()
-        @info "Settingup and solving master problem: "
+        @info "Setting up and solving master problem: "
         mp = MSP(Model(Gurobi.Optimizer), d̂, γ⁺, block_demands=1, objective_types=1)
         Solve!(mp)
         @info "gamma upper:"
@@ -68,9 +69,18 @@ code.
     end
 
     """
+    Test out the FMP, the FMP with the bilinear reformulations. 
+    """
+    function SetupFMP()
+        
+        return true 
+    end
+
+    """
     Using the constructor of FSP and testing it. 
     """
     function SetupFSP()
+        @info "Testing the FSP problem using parameters from the master problem and FMP. "
         return true
     end
     

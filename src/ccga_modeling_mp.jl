@@ -294,8 +294,8 @@ end
 
 """
 Create the upper bound for demands for the master problem.
-    * Adds the demands bounds constraints
-    * Adds the objective bounds maximizations objectives for the model.
+* Adds the demands bounds constraints
+* Adds the objective bounds maximizations objectives for the model.
 """
 function MasterProblemObjective!(this::MSP)
     model = GetModel(this)
@@ -356,7 +356,7 @@ return this end
 
 """
 Prepare the constraints for the primary generator, the system
-    * Aw <= b
+* Aw <= b
 """
 function PreppareConstraintsPrimary!(this::Union{MP, MSP})
     model = this|>GetModel
@@ -418,7 +418,7 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
         # depends on the option settings, we assert different type of block constraints on the demand invervals decision 
         # variable gamma. 
         if this.block_demands_types == 0
-            # do nothing here. 
+            # do nothing here. There is no constraints applied on the bounds of the uncertainty interval for the demands. 
         elseif this.block_demands_types == 1
             num_gen = MatrixConstruct.B̄; t_horizon = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
             γ = this.gamma

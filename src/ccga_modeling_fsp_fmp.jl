@@ -15,6 +15,7 @@ Given demand vector from FMP that is within the uncertainty rainge,
 feasibility slack variable: `v`. 
 
 # Fields
+
 * constructed fields
     - `u::Vector{VariableRef}`: The continuous secondary decision variables. 
     - `v::VariableRef`: The slack variables for all the constraints. 
@@ -23,15 +24,18 @@ feasibility slack variable: `v`.
 * Given parameters
     - `w::Vector{Float64}`: The primary binary decision variables, from the master problem. 
     - `d_star::Vector{Float64} `: The adversarial demand suggested by the fmp algorithm. 
-
 """
 @ProblemTemplate mutable struct FSP <: Problem
-    
-    u::Vector{VariableRef}
-    v::VariableRef
-    q::Vector{VariableRef}
 
+    "The continuous secondary decision variables. "
+    u::Vector{VariableRef}
+    "The slack variables for all the constraints, it's a scalar"
+    v::VariableRef
+    "The secondary discrete decision variable. "
+    q::Vector{VariableRef}
+    "The primary binary decision variables, from the master problem. "
     w::Vector{Float64}
+    "The adversarial demand suggested by the fmp algorithm."
     d_star::Vector{Float64} 
 
     function FSP()
@@ -217,7 +221,7 @@ Prepare a new set of decision variables for the given instance of the `FMP` prob
 - `this::FMP`
 - `q_given::Union{Nothing, Vector{Float64}}=nothing`
 
-### NOTE:
+# NOTE:
 * ALWAYS, run PrepareConstraints After a new constant "q[k]" is introduced to the system. 
 * This method is for super type AbsFMP and it's sharing it downwards. 
 
@@ -333,10 +337,11 @@ return this end
 
 
 """
-    Adversarial demands are coming from vertices of the hyper cube, this will recover
-    the term (d̂ + γ.*ρ⁺ - γ.*ρ⁻), which represents the extreme demands which breaks the system.
-        * It's used for the feasibility cut for the master problem to determine primary decision variable w̄.
-        * Returns the decision variable from the model, explicit conversion to value vectors is needed.
+Adversarial demands are coming from vertices of the hyper cube, this will recover
+the term (d̂ + γ.*ρ⁺ - γ.*ρ⁻), which represents the extreme demands which breaks the system.
+
+* It's used for the feasibility cut for the master problem to determine primary decision variable w̄.
+* Returns the decision variable from the model, explicit conversion to value vectors is needed.
 """
 function GetDemandVertex(this::FMP)
     ρ⁺ = this.rho_plus.|>value 
@@ -348,14 +353,14 @@ return d̂ + Γ*(ρ⁺ - ρ⁻) end
 
 
 """
-    Get the most recent ρ⁺, the worse demands for all the secondary configurations.
+Get the most recent ρ⁺, the worse demands for all the secondary configurations.
 """
 function GetRhoPlus(this::FMP)
 return this.rho_plus.|>value end
 
 
 """
-    Get the most recent ρ⁻, the worst demands for all the secondary configurations.
+Get the most recent ρ⁻, the worst demands for all the secondary configurations.
 """
 function GetRhoMinus(this::FMP)
 return this.rho_minus.|>value end
@@ -401,11 +406,11 @@ return this end
 FMPH2 is the heuristic search for FMP where `lambda` is fixed to be a constant and the d vector is now a continuous 
     decision varaibles. 
 
-### Fields
+# Fields
 - `const_lambdas::Vector{Vector{Float64}}``
 - `d::Vector{VariableRef}`
 
-### Constructors Args
+# Constructors Args
 - `w::Vector`
 - `gamma::Vector`
 - `d_hat::Vector`
@@ -459,6 +464,7 @@ end
 """
 FMP with Bilinear search Heuristic. This is a super type of AbsFMP, it inherit all fields from it's super types 
 recursively. 
+
 ### Fields
 - `d::Vector{Float64}`: A fixed constant for the demands vector. 
 - `lambda::Vector{Vector{VariableRef}}`: The constants, lambda dual decision variable. It should be suggested 
@@ -552,11 +558,11 @@ end
 
 
 """
-Prepare the constraints for the FMPHDFixed type. Function should be used each time when a cut is introduce to the 
-problem. 
+    PrepareConstraints!(this::FMPH1)
 
+Prepare the constraints for an instance of FMPH1. 
 """
-function PrepareConstraints!(this::Union{FMPH1, FMPH2})
+function PrepareConstraints!(this::FMPH1)
     function AddConstraints!(cons::JuMP.ConstraintRef)
         push!(this.con, cons)
     end
@@ -570,7 +576,6 @@ function PrepareConstraints!(this::Union{FMPH1, FMPH2})
     G = MatrixConstruct.G
     C = MatrixConstruct.C
     h = MatrixConstruct.h
-
     λ = this.lambda[k]
     d = this.d
     d̂ = this.d_hat
@@ -583,26 +588,52 @@ function PrepareConstraints!(this::Union{FMPH1, FMPH2})
     # operatorational constraints for reach k
     @constraint(this.model, C*u + B*w + G*q + H*d .- v .<= h, base_name="opt con [$k]") .|> AddConstraints!
     # Duality constraints
-    if isa(this, FMPH1)
-        @constraint(this.model, λ'*C .<= 0, base_name="dual [$k]") .|> AddConstraints!
-        @constraint(this.model, sum(λ) >= -1, base_name="dual [$k]") .|> AddConstraints!
-    end
-    
-    #TODO: Change the way that the dual con is handled here. 
-    if isa(this, FMPH2)
-        if length(this.lambda) >= k  # if there is no enough lambda, just ignore this constraint for now. 
-            push!(this.dual_cons, @constraint(this.model, dot(λ, -H*d + h - B*w - G*q) == v, base_name="strong dual [$k]"))
-        end
-        if k == 1
-            @constraint(this.model, -γ .<= this.d - d̂ .<= γ) .|> AddConstraints!
-        end
-    else
-        @constraint(this.model, dot(λ, -H*d + h - B*w - G*q) == v, base_name="strong dual [$k]") .|> AddConstraints!
-    end
-
-    return 
+    @constraint(this.model, λ'*C .<= 0, base_name="dual [$k]") .|> AddConstraints!
+    @constraint(this.model, sum(λ) >= -1, base_name="dual [$k]") .|> AddConstraints!
+    @constraint(this.model, dot(λ, -H*d + h - B*w - G*q) == v, base_name="strong dual [$k]") .|> AddConstraints!
+   
+    return this
 end
 
+"""
+    PrepareConstraints!(this::FMPH2)
+
+Prepare the constraints for an instance of FMPH2. 
+"""
+function PrepareConstraints!(this::FMPH2)
+    function AddConstraints!(cons::JuMP.ConstraintRef)
+        push!(this.con, cons)
+    end
+    k = this.k
+    η = this.eta
+    u = this.u[k]
+    v = this.v[k]
+    w = this.w
+    H = MatrixConstruct.H
+    B = MatrixConstruct.B
+    G = MatrixConstruct.G
+    C = MatrixConstruct.C
+    h = MatrixConstruct.h
+    
+    d = this.d
+    d̂ = this.d_hat
+    γ = this.gamma
+    # Γ = γ|>Diagonal
+    q = this.q[k]
+
+    # eta lower bound constraint for each k
+    @constraint(this.model, η <= v, base_name="eta con [$k]") .|> AddConstraints!
+    # operatorational constraints for reach k
+    @constraint(this.model, C*u + B*w + G*q + H*d .- v .<= h, base_name="opt con [$k]") .|> AddConstraints!
+    if length(this.lambda) >= k  
+        λ = this.lambda[k]
+        push!(this.dual_cons, @constraint(this.model, dot(λ, -H*d + h - B*w - G*q) == v, base_name="strong dual [$k]"))
+    end
+    if k == 1
+        @constraint(this.model, -γ .<= this.d - d̂ .<= γ) .|> AddConstraints!
+    end
+    return this
+end
 
 """
 Get the demand decision variable by its value from the instance of FMPH2. If it's not yet solved, there will be an error. 
@@ -629,8 +660,6 @@ function PrepareObjective!(this::Union{FMPH1, FMPH2})
     return this
 end
 
-
-
 """
 Introduce a new cut to the `FMPH1` with variables passed from the FSP. 
 ### Arguments
@@ -653,9 +682,7 @@ Introduce a new cut to the `FMPH2` with variables passed from the *FSP* and *FMP
 - `q::Vector{Float64}`: The q vector passed from the FSP instance. 
 """
 function IntroduceCut!(this::FMPH2, q::Vector{Float64})
-    @assert size(MatrixConstruct.H, 1) == length(lambda)
     @assert length(q) == size(MatrixConstruct.G, 2) "Wrong size for the passed in discrete secondary decision variables: q."
-
     this.k += 1
     IntroduceVariables!(this, q)
     PrepareConstraints!(this)
@@ -695,7 +722,7 @@ function TryHeuristic!(this::FMPH1, that::FMPH2)
     Solve!(this)
     ChangeLambdas!(that, GetLambdas(this))
     Solve!(that)
-    return that|>objective_value
+    return this|>objective_value, that|>objective_value
 end
 
 
@@ -734,7 +761,28 @@ function FirstHeuristic!(
     Solve!(fmph1)
     fmph2 = FMPH2(w, gamma, d_hat, fmph1.lambda[1].|>value, model2)
     Solve!(fmph2)   
-    return fmph2|>objective_value, fmph1, fmph2
+    return fmph1|>objective_value, fmph2|>objective_value, fmph1, fmph2
+end
+
+
+"""
+    FirstHeuristic!(
+        w::Vector, gamma::Vector, d_hat::Vector, 
+        optimizer::DataType;
+        kwargs...
+    )
+
+A variant of another function that only needs one function that produces a model instead of 2 separate models for 
+FMPH1, 2. 
+# Keyword Arguments
+- `initial_demands::Union{Vector, Nothing}=nothing`: The initial demands to istantiate the instance of FMPH1. 
+"""
+function FirstHeuristic!(
+    w::Vector, gamma::Vector, d_hat::Vector, 
+    make_model_func::Function;
+    kwargs...
+)
+return FirstHeuristic!(w, gamma, d_hat, make_model_func(), make_model_func(); kwargs...) 
 end
 
 
@@ -745,7 +793,7 @@ Given the lambds values for all cut, change the values of lambda in the underlyi
 set of lambds, update the lambda references in this model. 
 """
 function ChangeLambdas!(this::FMPH2, lambdas::Vector{Vector{Float64}})
-    # TODO: Change the way that dual con is handled here. 
+
     @assert this.k <= length(lambdas) "The set of lambdas suggested for FMPH2 is has length $(lambdas|>length), and the fmph2 has k=$(this.k). "
     H = MatrixConstruct.H    
     h = MatrixConstruct.h
@@ -755,7 +803,7 @@ function ChangeLambdas!(this::FMPH2, lambdas::Vector{Vector{Float64}})
     w = this.w
     q = this.q
     v = this.v
-    λ = this.lambda
+    λ = lambdas
     
     # find the duality constraints and delete them. 
     for idx in 1:length(this.dual_cons)
@@ -791,3 +839,84 @@ function RebuildFMPH1(fmph1::FMPH1, d::Vector; model::Model=HiGHS.Optimizer)
     end
     return fmph1_new
 end
+
+
+"""
+#Constructor 
+    FMPHStepper(w::Vector, gamma::Vector, d_hat::Vector, make_model_func::Function; kwargs...)
+* key world arguments: 
+    - `initial_demands::Union{Vector, Nothing}=nothing`: The initial demands for the instance of FMPH1. 
+
+A functor for executing the FMPH algorithm step by step and make collecting results simple and easy. 
+
+"""
+mutable struct FMPHStepper
+    """
+    An instance of the FMPH1, where d, demand is a constant and lambda, dual variable is a decision variable. 
+    It will be updated throughout the algorithm 
+    """
+    fmph1::FMPH1
+    """
+    An instance of FMPH2, where d is the decision variable and lambdas are a constant, solved by FMPH1.
+    It will be updated throughout the algorithm. 
+    """
+    fmph2::FMPH2
+    "Objective value of fmph1 whenever is being solved. "
+    obj1::Vector{Float64}
+    "Objective value of the fmph2 whenever is being solved. "
+    obj2::Vector{Float64}
+    """
+    A function that creates models for all of the FMPH1, FMPH2. This is a must because this struct 
+    constantly build new instance of FMPH1, FMPH2. 
+    """
+    make_model_func::Function
+    """
+    An integer to keep track of the current execution cycle. One execution cycle refers to: 
+    - Building up an instance of FMPH1 with the appropriate demand vector. 
+    - Solving the instance of FMPH1 to get the dual variable λ
+    - Putting the lambda into the instance of FMPH2 and solving that to get the demands. 
+    """
+    k::Int
+
+    function FMPHStepper(w::Vector, gamma::Vector, d_hat::Vector, make_model_func::Function; kwargs...)
+        this = new()
+        obj1, obj2, fmph1, fmph2 = FirstHeuristic!(w, gamma, d_hat, make_model_func; kwargs...)
+        this.fmph1 = fmph1
+        this.fmph2 = fmph2
+        this.obj1 = Vector{Float64}()
+        this.obj2 = Vector{Float64}()
+        push!(this.obj1, obj1)
+        push!(this.obj2, obj2)
+        this.k = 0
+        return this
+    end
+
+end
+
+"""
+Perform one step of the heuristic search and return the objective value of FMPH2. 
+"""
+function (this::FMPHStepper)()
+    this.fmph1 = RebuildFMPH1(this.fmph1, GetDemands(this.fmph2))
+    obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2)
+    push!(this.fmph1, obj1)
+    push!(this.fmph2, obj2)
+
+    return this
+end
+
+"""
+Introduce a cut to the FMPH1 and get the objective value of FMPH2 after the cut. This will perform 
+one cycle of heuristic search. 
+"""
+function Cut!(this::FMPHStepper, q::Vector{Float64})
+
+
+    return this
+end
+
+function GetDemands(this::FMPHStepper)
+    return GetDemands(this.fmph2)
+end
+
+
