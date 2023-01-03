@@ -82,9 +82,9 @@ return B, C, G, F end
 # ==============================================================================
 
 """
-    Adding the first row, the fuel constraints. RHS is returned by the function, as
-    a vector.
-    constraints (6, 7, 8)
+Adding the first row, the fuel constraints. RHS is returned by the function, as
+a vector.
+constraints (6, 7, 8)
 """
 function FuelConstraints()
     pg = PRIMARY_GENERATORS
@@ -127,8 +127,8 @@ function FuelConstraints()
 return rhs end
 
 """
-    Adding the quick start binary constraints
-    Constraints (9, ..., 12).
+Adding the quick start binary constraints
+Constraints (9, ..., 12).
 """
 function QuickStartConstraints()
     sg = SECONDARY_GENERATORS
@@ -187,10 +187,10 @@ return rhs end
 
 
 """
-    The capacity constraints of the first stage generator.
-    constraints (13, ..., 20)
-    * Pass in the generator instance, matrix C, or Matrix G to specify
-    whether these sets of constraints are for primary, or secondary generators.
+The capacity constraints of the first stage generator.
+constraints (13, ..., 20)
+* Pass in the generator instance, matrix C, or Matrix G to specify
+whether these sets of constraints are for primary, or secondary generators.
 """
 function CapacityConstraints(
     gen::Generators,
@@ -267,7 +267,7 @@ function CapacityConstraints(
 return rhs end
 
 """
-    Constraints 30 to 33.
+Constraints 30 to 33.
 
 """
 function MinimumRequirement()
@@ -308,7 +308,7 @@ return rhs end
 
 
 """
-    Batter constraints, constraints 34 ... 38
+Battery constraints, constraints 34 ... 38
 """
 function BatteryConstraints()
     rhs = Vector{Number}()
@@ -429,10 +429,10 @@ function DemandBalanceConstraints()
 return rhs end
 
 """
-    Given a symbol and the matrix that is supposed to responsbible for it, it returns 
-    what range of columns of the matrix corresponds to the given variable. 
-    
-    The columns will start indexing at one. 
+Given a symbol and the matrix that is supposed to responsbible for it, it returns 
+what range of columns of the matrix corresponds to the given variable. 
+
+The columns will start indexing at one. 
 """
 function ColumnRegimeFor(matrix::CoefficientMatrix, var::VariableCoefficientHolder)
     if !(var.v in matrix.var_posi|>keys)

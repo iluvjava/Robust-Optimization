@@ -47,16 +47,22 @@ return CartesianOutterProductList(NdimList...) end
 
 
 """
+    PrepareVariablesForTheModel!(
+        model::Model,
+        variable::Symbol,
+        ccga_itr::Union{Nothing, Int}=0
+    )
+
 Given a JuMP model, prepare the q, u variable for that model. This methods make the `u,q` variables for all the 
 instances like FMP, FSP, MSP etc. 
 
-### Arguments
+# Arguments
 - `model::Model`: An instance of the JuMP model. 
 - `variable::Symbol`: An instance of the symbol for the new variable that we wish to create. It has to be one of 
 {u, v}
 - `ccga_itr::Union{Nothing, Int}=0`: The number of inner/outer interations for the CCGA. Depends on the context. 
 
-### Returns
+# Returns
 - Returns the variable 'u' or 'q' packed into Vector{JuMP.VariableRef}.
 
 """
@@ -94,23 +100,25 @@ return nothing end
 # ======================================================================================================================
 """
 An aobstract type problem is just a super type for all the problems in this project. 
+Check `@ProblemTemplate` Macro or struct `ProblemTemplate`. 
+
 """
 abstract type Problem
-    # has a JuMP model in it.
-    # MUST IMPLEMENT: GetModel(::Problem)
-    # has a con vector that stores the references to all the constraints created for the model. 
+    
 end
 
 """
 The problem template is created to specify 2 of the common fields for all the optimization problem in this project. 
 All the optimization problem in this project requires the field of: 
-### Fields:
+# Fields:
 - `model::Model`: An instance of the JuMP model. 
 - `con::Vector{ConstraintRef}`: Just an vector storing all the references to the contraints we are interested, which 
 are also in the JuMP model itself. 
 """
 @premix mutable struct ProblemTemplate
+    "An instance of the JuMP model. "
     model::Model
+    "A vector storing all the references to the contraints in the same order that they are being added by our problem instances.  "
     con::Vector{ConstraintRef}
 end
 
@@ -127,37 +135,48 @@ end
 """
 An abstract FMP should model some type of FMP, the upper bound searcher for the feasibility problems. 
 
-### Fields
-- `w::Vector{Float64}`:Primary Generator decision variables, (GIVEN CONSTANT)
-- `gamma::Vector{Float64}` The bound for the demands on all the buses during a specific time, (GIVEN CONSTANT)
-- `q::Vector{Vector{Int}}`: The secondary discrete decision variables, (GIVEN CONSTANT)
-- `d_hat::Vector{Float64}`: The average testing demands vector, (GIVEN CONSTANT)
-- `v::Vector{VariableRef}`: The slack decision variables for each of the previous demands.
-- `u::Vector{Vector{VariableRef}}`: The secondary continuous decision variables.
-- `d::Vector{VariableRef}`: The demand decision variable, as a giant vector.
-- `eta::VariableRef`: The eta lower bound for all feasibility.
-- `lambda::Vector{Vector{VariableRef}}`: The dual decision variables.
-- `k::Int`:The iteration number from the ccga, this instance keep tracks of it by itself, because it uses this parameter
-internally frequently. 
+# Fields
+`w::Vector{Float64}`, `gamma::Vector{Float64}`, `q::Vector{Vector{Int}}`,`d_hat::Vector{Float64}`,
+`v::Vector{VariableRef}`, `u::Vector{Vector{VariableRef}}`, `eta::VariableRef`, `k::Int`. 
 """
 abstract type AbsFMP <: Problem
-    # FMP like problem. Different way of working with solving the FMP. 
+    # FMP like problem. Different way of working with solving the FMP. Check @AbsFMPTemplate. 
 
 end
 
 
 @premix mutable struct AbsFMPTemplate
-    w::Vector{Float64}                            # Primary Generator decision variables.               (GIVEN CONSTANT)
-    gamma::Vector{Float64}                        # the bound for the demands on all the buses during a specific time  (GIVEN CONSTANT)
-    q::Vector{Vector{Int}}                        # the secondary discrete decision variables           (GIVEN CONSTANT)
-    d_hat::Vector{Float64}                        # the average testing demands vector.                 (GIVEN CONSTANT)
-
-    v::Vector{VariableRef}                         # The slack decision variables for each of the previous demands.
-    u::Vector{Vector{VariableRef}}                # The secondary continuous decision variables.
-    # d::Vector{VariableRef}                      # The demand decision variable, as a giant vector.
-    eta::VariableRef                              # The eta lower bound for all feasibility.
-    # lambda::Vector{Vector{VariableRef}}           # the dual decision variables.
-    
-    k::Int                                        # The iteration number from the ccga.
+    """
+    Primary generator discrete decision variable flattened into a constant vector that is consistent with the `Getw`
+    function implemented in the master problem and the main problem. This is a given constant for the FMP. 
+    """
+    w::Vector{Float64}
+    """
+    This is the uncertainty bound passed from the master problem, and it's the upper bound and lower bound for the demands 
+    decision variables in the instance of FMPH, it's dimension and ordering should be consistent with `GetGamma` function
+    for the type MSP. 
+    """
+    gamma::Vector{Float64}
+    """
+    This is the secondary discrete decision variable for the generators. It's a constant. It's created to be 
+    all zeros before any cuts are introduced to the instances of FMPs, after that, for each cut, there is an 
+    constaint q introduced by the FSP. A given constant. 
+    """
+    q::Vector{Vector{Int}}
+    "The center of the uncertainty interval for the vector. A given constant. "
+    d_hat::Vector{Float64}
+    "The continuous, feasibility decision variable. It's a vector where each element is a scalar variable for the feasibility
+    for each of the cuts introduced to the instance of FMPs. "
+    v::Vector{VariableRef}
+    "The continuous decision variables for the secondary generators. Each cuts is associated with an separate set of secondary decision variables. "
+    u::Vector{Vector{VariableRef}}
+    # d::Vector{VariableRef}
+    """
+    The lower bound for all of the different feasibility decision variable `v` on each of the cuts. Maximizing this quantity is the objectives of FMPs.
+    """
+    eta::VariableRef
+    # lambda::Vector{Vector{VariableRef}}
+    "An counter for the number of cuts that is already introduced to FMPs, and the initial cut with `q` being all zeros is counted as the first one."
+    k::Int                                        
 
 end

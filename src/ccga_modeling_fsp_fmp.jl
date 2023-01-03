@@ -462,22 +462,30 @@ end
 """
 FMP with Bilinear search Heuristic. This is a super type of AbsFMP, it inherit all fields from it's super types 
 recursively. 
+# Constructor
+    FMPH1(
+        w::Vector,
+        gamma::Vector,
+        d_hat::Vector,
+        model::Model=Model(HiGHS.Optimizer);
+        initial_demands::Union{Vector, Nothing}=nothing
+    )
 
-### Fields
+# Fields
 - `d::Vector{Float64}`: A fixed constant for the demands vector. 
 - `lambda::Vector{Vector{VariableRef}}`: The constants, lambda dual decision variable. It should be suggested 
 by some instances of FMPH1. 
 - `dual_con_idx::Vector{Int}`: A list of indices storing exactly where the constraints for the strong duality is inside 
 of the constraint vector. 
 
-### Constructor Positional Args: 
+# Constructor Positional Args: 
 - `w::Vector`
 - `gamma::Vector`
 - `d_hat::Vector`
 - `model::Model=Model(HiGHS.Optimizer)`
 
-### Constructors Named Args: 
-- `initial_demands::Union{Vector, Nothing}=nothing`: The initial demands with not cut added yet. 
+# Constructors Named Args: 
+- `initial_demands::Union{Vector, Nothing}=nothing`: The initial demands with no cut added yet. 
 
 """
 @ProblemTemplate @AbsFMPTemplate mutable struct FMPH1 <: AbsFMP
@@ -895,6 +903,7 @@ end
 Perform one step of the heuristic search and return the objective value of FMPH2. 
 """
 function (this::FMPHStepper)()
+    this.k += 1
     this.fmph1 = RebuildFMPH1(this.fmph1, GetDemands(this.fmph2); model=this.make_model_func())
     obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2)
     push!(this.obj1, obj1)
@@ -907,8 +916,23 @@ end
 Introduce a cut to the FMPH1 and get the objective value of FMPH2 after the cut. This will perform 
 one cycle of heuristic search. 
 """
-function (this::FMPHStepper)(q::Vector{Float64})
+function (this::FMPHStepper)(q::Vector{N}) where {N<:Number}
+    this.k += 1
     this.fmph1 = RebuildFMPH1(this.fmph1, GetDemands(this.fmph2); model=this.make_model_func())
+    obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2, q)
+    push!(this.obj1, obj1) 
+    push!(this.obj2, obj2)
+    return this.fmph2|>objective_value
+end
+
+"""
+Try a new random demands and rebuild the instance FMPH, and then perform one cycle of heuristic search using this new demands. 
+The cuts will still be preserved. 
+"""
+function TryNewDemand(this::FMPHStepper) 
+    d = nothing
+
+    this.fmph1 = RebuildFMPH1(this.fmph1, d; model=this.make_model_func())
     obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2, q)
     push!(this.obj1, obj1) 
     push!(this.obj2, obj2)

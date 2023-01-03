@@ -119,12 +119,20 @@ code.
         return (fsp|>objective_value) <= (fmp|>objective_value)
     end
 
-    function IntroducingCutToFMP()
+    function IntroduceCutToFMP()
         @info "Introducing cut to the instance of FMP. "
         IntroduceCut!(fmp, q)
         Solve!(fmp)
         @info "Solving fmp with the cut"
         return true
+    end
+
+    """
+    Using the results of the FMP to add an cut to the master problem and make sure everything is 
+    running ok. 
+    """
+    function IntroduceCutToMSP()
+
     end
     
     # actually running these tests. 
@@ -134,7 +142,7 @@ code.
     @test SetupFMP()
     @test SetupFSP()
     @test FSPLessThanFMP()
-    @test IntroducingCutToFMP()
+    @test IntroduceCutToFMP()
 
 
 end

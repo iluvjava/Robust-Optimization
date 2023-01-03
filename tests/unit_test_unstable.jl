@@ -97,7 +97,7 @@ q_len = q.|>length|>sum
         Solve!(fsp)
         q = Getq(fsp)
         fmphs(q)
-        fmphs(q)
+        fmphs()
         @info "The list of demands for the FMPH stepper is: $(fmphs.obj2). "
         @info "The objective value of fsp was: $(fsp|>objective_value). "
         return true
