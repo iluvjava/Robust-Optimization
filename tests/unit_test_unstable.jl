@@ -98,12 +98,36 @@ q_len = q.|>length|>sum
         q = Getq(fsp)
         fmphs(q)
         fmphs()
-        @info "The list of demands for the FMPH stepper is: $(fmphs.obj2). "
-        @info "The objective value of fsp was: $(fsp|>objective_value). "
+        @info "The list of demands for the FMPH stepper is: $(fmphs.obj2). \nThe objective value of fsp was: $(fsp|>objective_value). "
+        return true
+    end
+
+    """
+    1. perform a bilinear hearustic search. 
+    2. Change the demand vector and then perform that again. 
+    3. Add a vector q from the FSP to it and then perform bilinear search. 
+    4. Change the value of demand vector and then perform it again. 
+    """
+    function FMPHStepperFull()
+        fmphs = FMPHStepper(w̄, γ, d̂, MakeEmptyModel)
+        fmphs()
+        fmphs()
+        TryNewDemand(fmphs)
+        fmphs()
+        fmphs()
+        local fsp = FSP(w̄, GetDemands(fmphs), MakeEmptyModel())
+        Solve!(fsp)
+        q = Getq(fsp)
+        fmphs(q)
+        TryNewDemand(fmphs)
+        TryNewDemand(fmphs)
+        TryNewDemand(fmphs)
+        @info "This is the list of fmph2 objectis for the fmphs full test:\n$(fmphs.obj2)"
         return true
     end
 
     @test FMPHBasicRun()
     @test FMPHStepperBasic()
+    @test FMPHStepperFull()
 
 end 

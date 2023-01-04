@@ -99,12 +99,13 @@ given solver name and a TimeStamp will be stored to the global SESSION_DIR.
 
 """
 function GetJuMPModel(
-    ;optimality_gap=0.001, time_out::Int=180, solver_name::String="", mip_focus::Int=0
+    ;optimality_gap=0.001, time_out::Int=180, solver_name::String="", mip_focus::Int=0, log_to_console::Int=0
 )
     model = Model(() -> Gurobi.Optimizer(GUROBI_ENV))
     set_optimizer_attribute(model, "MIPGap", optimality_gap)
     set_optimizer_attribute(model, "TIME_LIMIT", time_out)
     set_optimizer_attribute(model, "MIPFocus", mip_focus)
+    set_optimizer_attribute(model, "LogToConsole", log_to_console)
     if solver_name !== ""
         set_optimizer_attribute(model, "LogFile", SESSION_DIR*"/$(solver_name)_$(TimeStampConvert)_gurobi_log.txt")
     end
@@ -143,7 +144,7 @@ all the fields it has:
 ### Fields: 
 * `fmp`,`fsp`, `all_ds`, `all_qs`, `upper_bounds`, `lower_bounds`, `terminaton_staus`, 
 """
-mutable struct CCGAIRBR <: CCGAIR
+mutable struct IRBReform <: CCGAIR
     
     "the last instance of the fmp after the ccga inner forloop exited. "
     fmp::AbsFMP
@@ -159,12 +160,13 @@ mutable struct CCGAIRBR <: CCGAIR
     lower_bounds::Vector
     """
     A code representing different reasons that made the inner CCGA interminate: 
-    * Status code  `0`: terminates because fsp is positive or because fmp and fsp converged to zero. 
+    * Status code  `1`: terminates because fsp is positive
+    * status code  `0`: fmp and fsp both converged to zero. 
     * Status code `-1`: terminates because max iteration counter is reached. 
     """
     termination_status::Int 
 
-    function CCGAIRBR(
+    function IRBReform(
         fmp::AbsFMP,
         fsp::FSP,
         all_ds::Vector,
@@ -184,7 +186,7 @@ CCGAIRBH: CCGA Inner Results Bilinear Heuristic.
 This struct is made to store results from the bilinear reformulations of the FMPH, which is used as another type of 
 CCGA Inner iterations. 
 """
-mutable struct CCGAIRBH <: CCGAIR  # TODO: FINISHI WRITIN THIS STRUCT HERE. 
+mutable struct IRBHeuristic <: CCGAIR  # TODO: FINISHI WRITIN THIS STRUCT HERE. 
     "an instance of FMPH stepper that is used throughout the inner iterations of the CCGA. "
     fmphs::FMPHStepper 
     "The last FSP instance used. "
@@ -197,10 +199,17 @@ mutable struct CCGAIRBH <: CCGAIR  # TODO: FINISHI WRITIN THIS STRUCT HERE.
     upper_bounds::Vector
     "The objective of fsp, they form discrete trajectories. "
     lower_bounds::Vector
+    """
+    A code representing different reasons that made the inner CCGA interminate: 
+    * Status code  `1`: terminates because fsp is positive
+    * status code  `0`: because fmp and fsp converged to zero. 
+    * Status code `-1`: terminates because max iteration counter is reached. 
+    """
+    termination_status::Int 
 
-    function CCGAIRBH()
-        this = new()
-        return this
+    
+    function IRBHeuristic()
+        return new()
     end
 end
 
@@ -216,7 +225,7 @@ interested in:
 # Arguments
 - `this::CCGAInnerResults`: It's a member method of this type. 
 """
-function ProduceReport(this::CCGAIRBR)::String
+function ProduceReport(this::IRBReform)::String
     string_list = Vector{String}()
     u = this.fsp.u; C = MatrixConstruct.C_
     var_coef_holder_list = [
@@ -245,6 +254,12 @@ function ProduceReport(this::CCGAIRBR)::String
     
 return join(string_list) end
 
+function ProduceReport(this::IRBHeuristic)::String
+    # TODO: FINISH HERE. 
+    @warn "CCGAIRBH not yet implemented. "
+    return ""
+end
+
 
 """
 Produce a figure that contains the objective values of the FMP and the FSP, plotted on the same graph. 
@@ -254,7 +269,7 @@ The function will return a figure.
 # Arguments: 
 - `this::CCGAInnerResults`: A member method of this type. 
 """
-function ProducePlot(this::CCGAIRBR)::Plots.Plot
+function ProducePlot(this::IRBReform)::Plots.Plot
     fig = plot(
         (1:length(this.upper_bounds)|>collect) .- 0.5, 
         this.upper_bounds;
@@ -269,6 +284,15 @@ function ProducePlot(this::CCGAIRBR)::Plots.Plot
         label="lower_fsp"
     )
 return fig end
+
+"""
+Produce the plot for the inner iterations values for the fmphs. 
+"""
+function ProducePlot(this::IRBHeuristic)::Plots.Plot
+    # TODO: FINISH HERE. 
+    @warn "Produce plot for CCGAIRBH not yet implemented. "
+    return plot()
+end
 
 # ======================================================================================================================
 # CCGA Outer Loop struct 
@@ -286,11 +310,11 @@ It will stores the following items:
 `msp::Union{MSP, Nothing}`, `termination_status::Int`, `fmp_initial_objectives::Vector{Float64}`, 
 `fsp_initial_objectives::Vector{Floats}`
 """
-mutable struct CCGAOutterResults
+mutable struct OutterResults
     
     "A list of CCGAInnerLoop that is obtained during the iterations of the outer CCGA loops. "
-    inner_loops::Vector{CCGAIRBR}
-    "All the objective values of the msp for each iterations of the CCGA, initial msp without any cut should also be introduced into the vector. "
+    inner_loops::Vector{CCGAIR}
+    "All the objective values of the msp for each iterations of the outter CCGA, initial msp objective without cut is in this vector. "
     msp_objectives::Vector{Float64}
     "The vector of gammas from the msp is stored here. "
     msp_gamma::Vector{Vector{Float64}}
@@ -308,9 +332,9 @@ mutable struct CCGAOutterResults
     "The initial objective values for the fsp at the start of each of the inner CCGA for loops."
     fsp_initial_objectives::Vector{Float64}
 
-    function CCGAOutterResults()
+    function OutterResults()
         this= new(
-            Vector{CCGAIRBR}(),
+            Vector{IRBReform}(),
             Vector{Float64}(),
             Vector{Vector{Float64}}(),
             nothing,
@@ -325,18 +349,28 @@ end
 """
 Add an instance of ccga_inner forloop parameters for the instance. 
 """
-function (this::CCGAOutterResults)(that::CCGAIRBR)::CCGAOutterResults
+function (this::OutterResults)(that::IRBReform)::OutterResults
     push!(this.inner_loops, that)
     push!(this.fmp_initial_objectives, that.upper_bounds[1])
     push!(this.fsp_initial_objectives, that.lower_bounds[1])
 return this end
+
+"""
+function empty. 
+"""
+function (this::OutterResults)(that::IRBHeuristic)
+    # TODO: FINISH THIS
+    # 
+    push!(this.inner_loops, that)
+    return this 
+end
 
 
 """
 Call on an instance of `::MSP`, we will records all the gamma of the MSP instance, and then 
 we will store the objective values of the current instance of **MSP**. 
 """
-function (this::CCGAOutterResults)(that::MSP)::CCGAOutterResults
+function (this::OutterResults)(that::MSP)::OutterResults
     push!(this.msp_gamma, GetGamma(that))
     push!(this.msp_objectives, objective_value(that))
 return this end
@@ -353,7 +387,7 @@ reporting the following important parameters:
 ### Arguments
 - `this::CCGAOuterResults`: A member method for this type. 
 """
-function ProduceReport(this::CCGAOutterResults)::String
+function ProduceReport(this::OutterResults)::String
     string_list = Vector{String}()
     push!(string_list, "The msp objective value list is: ")
     push!(string_list, this.msp_objectives|>repr)
@@ -372,7 +406,7 @@ return string_list|>join end
 iterations. The files will be all the final version of *FMP*, *MSP* for the inner and outer iterations in the `MOI`
 file format compressed into `.gz`. 
 """
-function SaveAllModels(this::CCGAOutterResults)
+function SaveAllModels(this::OutterResults)
     for idx in eachindex(this.inner_loops)
         write_to_file(
             this.inner_loops[idx].fmp.model,
@@ -389,10 +423,10 @@ makes plots for `CCGAOutterResults`, there are 2 plots:
 1. All the final objective values of the FSP problems and the 
     final values of the FMP problems. 
 2. The FSP and the MSP values for the last inner iterations of the CCGA.  
-### Arguments: 
+# Arguments: 
 - `this::CCGAOuterResults`: It's a member method of this type. 
 """
-function ProducePlots(this::CCGAOutterResults)
+function ProducePlots(this::OutterResults)
     fig1 = this.inner_loops[end]|>ProducePlot
     fig2 = plot(this.fmp_initial_objectives; label="fmp_initials_vals")
     plot!(fig2, this.fsp_initial_objectives; label="fsp_initial_vals")
@@ -424,7 +458,7 @@ Performs the CCGA Inter forloops and returns the results for making the cut for 
 - `max_iter::Int=8`: The maximum number of iterations before the for loop terminates. 
 - `kwargs...`: This parameter is for ignoring invalid named parameters passed by other functions. 
 """
-function CCGAInnerLoop(
+function InnerLoopBilinear(
     gamma_bar::Vector{N1}, 
     w_bar::Vector{N2},
     d_hat::Vector{N3};
@@ -469,6 +503,7 @@ function CCGAInnerLoop(
         if lowerbound_list[end] > ϵ
             @info "$(TimeStamp()) Inner CCGA forloop terminated due to a positive lower of bound of"*
             ": $(lowerbound_list[end]) from FSP which is higher than: ϵ=$(ϵ)."|>SESSION_FILE1
+            termination_status = 1
             break
         end
         q = Getq(fsp); push!(all_qs, q)
@@ -487,7 +522,7 @@ function CCGAInnerLoop(
         end
     end
     
-return CCGAIRBR(
+return IRBReform(
     fmp,
     fsp,
     all_ds,
@@ -513,12 +548,12 @@ heurstic value that is lower than the `epsilon`.
 - `kwargs...`: Leftover parameters for ignore extra named arguments passed from other functions. 
 
 """
-function CCGAInnerLoopHeuristic(
+function InnerLoopHeuristic(
     gamma_bar::Vector{N1},
     w_bar::Vector{N2},
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
-    max_iter::Int=8, 
+    max_itr::Int=8, 
     N::Int=10,
     M::Int=10, 
     kwargs...
@@ -527,40 +562,65 @@ function CCGAInnerLoopHeuristic(
     @assert length(w_bar) == size(MatrixConstruct.B, 2) "$(premis)w̄ has the wrong size. please verify."
     @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(premise)d̂ has the wrong size, please check the code. "
     @assert epsilon >= 0 "$(premise)ϵ for terminating should be non-negative. "
-    @assert max_iter >= 0 "$(premise)Maximum iterations for the inner CCGA forloop should be non-negative. "
+    @assert max_itr >= 0 "$(premise)Maximum iterations for the inner CCGA forloop should be non-negative. "
     @assert !(0 in (gamma_bar .>= 0)) "$(premise)γ̄ should be non-negative. "
+    @info "$(TimeStamp()): Executing Inner loops with alternating bi-linear heuristic. "
 
     γ̄ = gamma_bar; d̂ = d_hat; ϵ = epsilon; w̄ = w_bar
     lowerbound_list = Vector{Float64}()
     upperbound_list = Vector{Float64}()
     all_qs = Vector{Vector}()
     all_ds = Vector{Vector}()
-    model_fmp = GetJuMPModel(solver_name="FMP", mip_focus=1)
-    fmph_val, fmph1, fmph2 = FirstHeuristic!(w̄, γ̄, d̂, model_fmp)
-    push!(upperbound_list, fmph_val)
-    termination_status = 0
-    fsp = nothing
-    function AlternatingDirections()    # capture fmph1, fmph2 and perform alternating direction. 
-
+    local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel); # push!(upperbound_list, fmph_val)
+    function AltUntilConverged(max_itr_alth::Int=0)
+        previous = Inf; t = 0
+        while (previous > fmphs|>GetObjectiveValue) && (t < max_itr_alth)
+            fmphs(); t += 1
+        end
     end
-    n = 1
+    fsp = FSP(w̄::Vector{Float64}, fmphs|>GetDemands, GetJuMPModel())
+    Solve!(fsp)
     m = 1
-    for II in 1:max_iter
-        
+    termination_status = 0
+    for II in 1:max_itr
+        if fmphs|>GetObjectiveValue > ϵ
+            if fsp|>objective_value > ϵ
+                @info "$(TimeStamp()): FSP objective value: $(fsp|>objective_value) > $ϵ. Terminate. "
+                termination_status = 1
+                break
+            else
+                m += 1
+                fsp = FSP(w̄::Vector{Float64}, fmphs|>GetDemands, GetJuMPModel()); Solve!(fsp)
+                fmphs(fsp|>Getq)
+                @info "$(TimeStamp()): FSP objective value $(fsp|>objective_value) < $ϵ. Introducing Cut and perform alt heuristic. "
+                AltUntilConverged()
+                if m >= M
+                    @info "$(TimeStamp()): Terminates due to m=$m>=$M. "
+                    termination_status = -1  # stagnations. 
+                    break
+                end
+            end
+        else
+            @info "$(TimeStamp()): FMPH has objective: $(fmphs|>GetObjectiveValue), too low, we will try new demands to bump it up. "
+            for n = 1:N
+                AltUntilConverged()
+                if fmphs|>GetObjectiveValue < ϵ
+                    @info "$(TimeStamp()): FMPH objective: $(fmphs|>GetObjectiveValue), trying new random demands. "
+                    fmphs|>TryNewDemand
+                else
+                    @info "FMPH objective: $(fmphs|>GetObjectiveValue) exceed ϵ, done and exit inner heuristic loop."
+                    # the success case. 
+                    break
+                end
+            end
+        end
 
     end
+    results = IRBHeuristic()
+    results.termination_status = termination_status
+    results.fsp = fsp
 
-
-
-return CCGAIRBR(
-    fmph2,
-    fsp,
-    all_ds,
-    all_qs,
-    upperbound_list,
-    lowerbound_list, 
-    termination_status
-) end
+return results end
 
 
 
@@ -594,15 +654,14 @@ Performs the outter forloop of the CCGA algorithm with initialized parameters.
 - `block_demands::Int=1`: See doc for type *MSP* for more information. 
 - `inner_routine::Function=CCGAInnerLoop,`
 """
-function CCGAOuterLoop(
+function OuterLoop(
     d_hat::Vector{N1}, 
     gamma_upper::N2;
-    outter_epsilon::N4=0.1,
     outter_max_itr::Int=40,
     make_plot::Bool=true, 
-    inner_routine::Function=CCGAInnerLoop,
+    inner_routine::Function=InnerLoopBilinear,
     kwargs...
-) where {N1 <: Number, N2 <: Number, N4<:Number}
+) where {N1 <: Number, N2 <: Number}
 
     context = "During the execution of the outter loop of CCGA: "
     @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(context)"*
@@ -616,7 +675,7 @@ function CCGAOuterLoop(
             println(io, repr("text/plain", d_hat))
             println(io, "Gamma upper, or M is: $(gamma_upper)")
             println(io, "epsilon_inner = $(kwargsd[:inner_epsilon])")
-            println(io, "epsilon_outer = $outter_epsilon")
+            # println(io, "epsilon_outer = $outter_epsilon")
             println(io, "inner_max_itr = $(kwargsd[:inner_max_itr])")
             println(io, "outer_max_itr = $outter_max_itr")
             println(io, "HORIZON = $(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON)")
@@ -636,7 +695,7 @@ function CCGAOuterLoop(
     Solve!(msp)
     γ̄ = GetGamma(msp)
     outer_counter = 0
-    outer_results = CCGAOutterResults()
+    outer_results = OutterResults()
     for _ in 1:outter_max_itr
         outer_counter += 1
 
@@ -655,12 +714,12 @@ function CCGAOuterLoop(
             @info "$(TimeStamp()) Outer loop terminated due to inner loop reaching maximum iterations without convergence."|>SESSION_FILE1
             break
         end
-        if Results.upper_bounds[end] < outter_epsilon
+        if Results.termination_status == 0
             @info "$(TimeStamp()) Outer for loop terminated due to convergence of FMP, FSP to an objective value of zero."|>SESSION_FILE1
             break
         end
         @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "|>SESSION_FILE1
-        
+        # BUG: DEPENDONG ON WHAT inner routine we are using, the way of introduce a cut to the master problem is different. 
         IntroduceCut!(
             msp, 
             GetRhoPlus(Results.fmp), 
@@ -687,7 +746,11 @@ function CCGAOuterLoop(
         write(io, outer_results|>ProduceReport)
         write(io, outer_results.inner_loops[end]|>ProduceReport)
     end
-    SaveAllModels(outer_results)
+
+    if inner_routine === InnerLoopBilinear
+        SaveAllModels(outer_results)
+    end
+
     if make_plot
         fig1, fig2 = outer_results|>ProducePlots
     end
@@ -698,21 +761,18 @@ function CCGAOuterLoop(
 return outer_results end
 
 
-### ====================================================================================================================
-### Problems we are identifying: 
-### Trying to executing the CCGA Inner forloops and see what could be causing the infeasibility to the cut to the master 
-### problem. 
 
-ϵ = 10.0
+ϵ = 1.0
 γ_upper = 50
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
-Results = CCGAOuterLoop(
+Results = OuterLoop(
     d̂,
     γ_upper,
     inner_max_itr=10, 
     outer_max_itr=5, 
     objective_types=2, 
     inner_epsilon=ϵ, 
-    outter_epsilon=ϵ
+    outter_epsilon=ϵ,
+    inner_routine=InnerLoopHeuristic
 );
 

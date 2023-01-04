@@ -48,6 +48,7 @@ code.
     global w̄    # solved by msp 
     global γ̄    # solved by msp 
     global mp   
+    global msp
     global fmp  
     global fsp
     global d⁺   # solved by fmp 
@@ -84,11 +85,11 @@ code.
     """
     function SetupMasterProblem()
         @info "Setting up and solving master problem: "
-        mp = MSP(MakeEmptyModel(), d̂, γ⁺, block_demands=1, objective_types=1)
-        Solve!(mp)
-        γ̄ = mp|>GetGamma
+        msp = MSP(MakeEmptyModel(), d̂, γ⁺, block_demands=1, objective_types=1)
+        Solve!(msp)
+        γ̄ = msp|>GetGamma
         @info "gamma upper:\n$(γ̄)"
-        return !(objective_value(mp)|>isnan)
+        return !(objective_value(msp)|>isnan)
     end
 
     """
@@ -123,7 +124,7 @@ code.
         @info "Introducing cut to the instance of FMP. "
         IntroduceCut!(fmp, q)
         Solve!(fmp)
-        @info "Solving fmp with the cut"
+        @info "Solving fmp with the cut and the objecive value of fmph is:\n$(fmp|>objective_value). "
         return true
     end
 
@@ -132,7 +133,11 @@ code.
     running ok. 
     """
     function IntroduceCutToMSP()
-
+        @info "Introducing the cut back to the master problem and then solving it. "
+        IntroduceCut!(msp, GetRhoPlus(fmp), GetRhoMinus(fmp))
+        Solve!(msp)
+        @info "The gamma upper bound from the msp is: \n$(msp|>objective_value).\nthe gamma vector is:\n $(GetGamma(msp))"
+        return true
     end
     
     # actually running these tests. 
@@ -143,6 +148,7 @@ code.
     @test SetupFSP()
     @test FSPLessThanFMP()
     @test IntroduceCutToFMP()
+    @test IntroduceCutToMSP()
 
 
 end

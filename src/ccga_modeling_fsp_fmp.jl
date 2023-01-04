@@ -846,11 +846,15 @@ end
 
 
 """
-#Constructor 
+
+# Constructor 
+
     FMPHStepper(w::Vector, gamma::Vector, d_hat::Vector, make_model_func::Function; kwargs...)
-* key world arguments: 
+
+### key world arguments: 
     - `initial_demands::Union{Vector, Nothing}=nothing`: The initial demands for the instance of FMPH1. 
 
+# Descriptions
 A functor for executing the FMPH algorithm step by step and make collecting results simple and easy. 
 
 """
@@ -900,6 +904,8 @@ end
 
 
 """
+    (this::FMPHStepper)()
+
 Perform one step of the heuristic search and return the objective value of FMPH2. 
 """
 function (this::FMPHStepper)()
@@ -913,6 +919,8 @@ end
 
 
 """
+    (this::FMPHStepper)(q::Vector{N}) where {N<:Number}
+
 Introduce a cut to the FMPH1 and get the objective value of FMPH2 after the cut. This will perform 
 one cycle of heuristic search. 
 """
@@ -925,15 +933,23 @@ function (this::FMPHStepper)(q::Vector{N}) where {N<:Number}
     return this.fmph2|>objective_value
 end
 
+
 """
 Try a new random demands and rebuild the instance FMPH, and then perform one cycle of heuristic search using this new demands. 
 The cuts will still be preserved. 
 """
-function TryNewDemand(this::FMPHStepper) 
-    d = nothing
-
-    this.fmph1 = RebuildFMPH1(this.fmph1, d; model=this.make_model_func())
-    obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2, q)
+function TryNewDemand(this::FMPHStepper, rand_strategy::Int=0) 
+    gamma = this.fmph1.gamma
+    d_hat = this.fmph1.d_hat
+    if rand_strategy == 0   # Make a random demand vector. 
+        ort = [1 for __ in 1:size(MatrixConstruct.H, 2)]  
+        d = max.(ort.*gamma .+ d_hat, 0)
+    else # mutate the current demands from fmph2 on 2 indices. Uniformally Randomly choose from the undertainty interval. 
+        # d_old = fmph2|>GetDemands
+        @error "Haven't been implemented yet. "
+    end
+    this.fmph1 = RebuildFMPH1(this.fmph1, d; model=this.make_model_func()) # rebuild the fmph1 using that new demand vector. 
+    obj1, obj2 = TryHeuristic!(this.fmph1, this.fmph2)
     push!(this.obj1, obj1) 
     push!(this.obj2, obj2)
     return this.fmph2|>objective_value
@@ -948,3 +964,6 @@ function GetDemands(this::FMPHStepper)
 end
 
 
+function GetObjectiveValue(this::FMPHStepper)
+    return this.fmph2|>objective_value
+end
