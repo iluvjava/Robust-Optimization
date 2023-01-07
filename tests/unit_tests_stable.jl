@@ -2,9 +2,14 @@
 ### didn't break the code while adding more code to existing code. 
 using Test
 
+"The global environment for the gurobi solver. "
+const GUROBI_ENV = Gurobi.Env()
+
 include("../src/utilities.jl")
 include("../src/matrix_construction_export.jl")
 include("../src/ccga_modeling.jl")
+
+@assert CONST_PROBLEM_PARAMETERS.TIME_LIMIT == 4 "Constant CONST_PROBLEM_PARAMETERS.TIME_LIMIT is not suitable for unit testing, please change it to: 4. "
 
 """
     MakeOptimizer(;optimality_gap=0.001, time_out::Int=180, solver_name::String="", mip_focus::Int=0)
@@ -73,7 +78,7 @@ code.
     """
     function SetupMainProblem()
         mp = MP(MakeEmptyModel(), γ⁺)
-        w = FeasibleConfig(mp, d̂)
+        w̄ = FeasibleConfig(mp, d̂)
         println("solution value w solved by the main problem is: ")
         w|>println
         return w !== nothing

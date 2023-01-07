@@ -463,7 +463,7 @@ function IntroduceCut!(
     this::MSP,
     rho_plus::Vector{Float64},
     rho_minus::Vector{Float64},
-)
+)::MSP
     model = this|>GetModel
     w = this |> Flattenw
     B = MatrixConstruct.B
@@ -484,7 +484,7 @@ function IntroduceCut!(
     push!(this.u, u)
     push!(this.q, q)
 
-    CutConstraints = @constraint(
+    cuts_cons = @constraint(
         model, 
         B*w + C*u + G*q + H*d̂ + H*Γ*(ρ⁺ - ρ⁻).<= h, 
         base_name="Cut $(this.cut_count)"
@@ -492,10 +492,57 @@ function IntroduceCut!(
 
     push!(
         this.con,
-        CutConstraints...   
+        cuts_cons...   
     )
     
-return CutConstraints end
+return this end
+
+"""
+    IntroduceCut!(this::MSP, demands::Vector{N}) where {N<:Number}
+
+Introduce the cut to the master problem directly using a demand vector that is returned by the FMP, FMPH etc 
+type of methods. The current instance of the MSP is returned. 
+"""
+function IntroduceCut!(this::MSP, d::Vector{Float64})::MSP
+    model = this|>GetModel
+    w = this |> Flattenw
+    B = MatrixConstruct.B
+    h = MatrixConstruct.h
+    G = MatrixConstruct.G
+    C = MatrixConstruct.C
+    H = MatrixConstruct.H
+    d̂ = this.d_hat
+    γ = this.gamma
+    Γ = γ|>Diagonal
+    γ̄ = (Γ.|>value)*ones(d̂|>length)
+
+    @assert length(d) == length(d̂) "The length of demand vector for the master problem is expected to be $(d̂|>length)."*
+    "However we have $(d|>length). "
+    @assert all(d .<= d̂ + γ̄ .+ eps(Float64)) && all(d .>= d̂ - γ̄ .+ eps(Float64)) ""*
+    "The demands is kinda outside the range of the uncertainty interval last suggested by the master problem"
+    ρ = (d - d̂)./γ̄ # construct partial rho. 
+
+
+    this.cut_count += 1
+    u = PrepareVariablesForTheModel!(model, :u, this.cut_count)
+    q = PrepareVariablesForTheModel!(model, :q, this.cut_count)
+    push!(this.u, u)
+    push!(this.q, q)
+
+    cuts_cons = @constraint(
+        model, 
+        B*w + C*u + G*q + H*d̂ + H*Γ*ρ .<= h, 
+        base_name="Cut $(this.cut_count)"
+    )
+
+    push!(
+        this.con,
+        cuts_cons...   
+    )
+    
+    return this
+end
+
 
 
 # """

@@ -41,6 +41,7 @@ struct SessionFile
     return new(file_loc) end
 end
 
+
 """
 A () operator for the type SessionFile which **accepts** `String` and opens the file stream then print
 the content of the string to the file specified in the field of the type and then 
@@ -360,7 +361,6 @@ function empty.
 """
 function (this::OutterResults)(that::IRBHeuristic)
     # TODO: FINISH THIS
-    # 
     push!(this.inner_loops, that)
     return this 
 end
@@ -571,7 +571,8 @@ function InnerLoopHeuristic(
     upperbound_list = Vector{Float64}()
     all_qs = Vector{Vector}()
     all_ds = Vector{Vector}()
-    local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel); # push!(upperbound_list, fmph_val)
+    local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel)
+    # push!(upperbound_list, fmph_val)
     function AltUntilConverged(max_itr_alth::Int=0)
         previous = Inf; t = 0
         while (previous > fmphs|>GetObjectiveValue) && (t < max_itr_alth)
@@ -585,7 +586,8 @@ function InnerLoopHeuristic(
     for II in 1:max_itr
         if fmphs|>GetObjectiveValue > ϵ
             if fsp|>objective_value > ϵ
-                @info "$(TimeStamp()): FSP objective value: $(fsp|>objective_value) > $ϵ. Terminate. "
+                @info "$(TimeStamp()): FSP objective value: $(fsp|>objective_value) > $ϵ;\n"*
+                "FMPHS obj value: $(fmphs|>GetObjectiveValue) > $ϵ Terminate. "
                 termination_status = 1
                 break
             else
@@ -619,9 +621,35 @@ function InnerLoopHeuristic(
     results = IRBHeuristic()
     results.termination_status = termination_status
     results.fsp = fsp
+    results.fmphs = fmphs
 
 return results end
 
+"""
+    RoutineFor(msp::MSP, inner_loop_results::IRBHeuristic)::MSP
+
+A subroutine that introduces the cut to the master problem given that the subroutine for the inner 
+loop computes using the alternating search heuristic. 
+"""
+function RoutineFor(msp::MSP, inner_loop_results::IRBHeuristic)::MSP
+    return IntroduceCut!(msp, inner_loop_results.fmphs|>GetDemands)
+end
+
+"""
+    RoutineFor(msp::MSP, inner_loop_results::IRBReform)::MSP
+
+A subroutine that itroduces the cut to the master problem given that the subroutine for the inner loop 
+computes using the bilinear reformulation with MIP
+"""
+function RoutineFor(msp::MSP, inner_loop_results::IRBReform)::MSP
+    IntroduceCut!(
+        msp, 
+        GetRhoPlus(inner_loop_results.fmp), 
+        GetRhoMinus(inner_loop_results.fmp), 
+    )
+    return msp
+end
+``
 
 
 """
@@ -647,7 +675,7 @@ Performs the outter forloop of the CCGA algorithm with initialized parameters.
     conditions for the CCGA inner forloop. 
 - `make_plot::Bool=true`: Whether to make a plot for all the results obtain from the execution of the inner CCGA forloop. 
 - `inner_max_itr=8`: The maximum time s for executing the inner forloop of CCGA. 
-- `outter_max_itr=40`: The maximum number of tiles for excuting the out forloop of CCGA. 
+- `outer_max_itr=40`: The maximum number of tiles for excuting the out forloop of CCGA. 
 - `make_plot::Bool=true`: Make plots for each of the inner CCGA iterations while running, also make plots after 
     everything is finished. 
 - `objective_types::Int=0`: See doc for *MSP* for more. 
@@ -657,7 +685,7 @@ Performs the outter forloop of the CCGA algorithm with initialized parameters.
 function OuterLoop(
     d_hat::Vector{N1}, 
     gamma_upper::N2;
-    outter_max_itr::Int=40,
+    outer_max_itr::Int=40,
     make_plot::Bool=true, 
     inner_routine::Function=InnerLoopBilinear,
     kwargs...
@@ -677,17 +705,16 @@ function OuterLoop(
             println(io, "epsilon_inner = $(kwargsd[:inner_epsilon])")
             # println(io, "epsilon_outer = $outter_epsilon")
             println(io, "inner_max_itr = $(kwargsd[:inner_max_itr])")
-            println(io, "outer_max_itr = $outter_max_itr")
+            println(io, "outer_max_itr = $outer_max_itr")
             println(io, "HORIZON = $(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON)")
         end
     end
-    # END
 
     γ⁺ = gamma_upper; d̂ = d_hat
     model_mp = GetJuMPModel()
     mp = MP(model_mp, γ⁺)
     model_msp = GetJuMPModel(solver_name="MSP")
-    msp = MSP(model_msp, d̂, γ⁺; kwargs)
+    msp = MSP(model_msp, d̂, γ⁺; kwargs...)
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
     PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
     Solve!(mp)
@@ -696,7 +723,7 @@ function OuterLoop(
     γ̄ = GetGamma(msp)
     outer_counter = 0
     outer_results = OutterResults()
-    for _ in 1:outter_max_itr
+    for _ in 1:outer_max_itr
         outer_counter += 1
 
         @info "$(TimeStamp()) Outter Forloop itr=$outer_counter" |> SESSION_FILE1
@@ -719,12 +746,8 @@ function OuterLoop(
             break
         end
         @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "|>SESSION_FILE1
-        # BUG: DEPENDONG ON WHAT inner routine we are using, the way of introduce a cut to the master problem is different. 
-        IntroduceCut!(
-            msp, 
-            GetRhoPlus(Results.fmp), 
-            GetRhoMinus(Results.fmp), 
-        )
+
+        RoutineFor(msp, Results) # Deploy the cut routine based on the inner results type. 
 
         Solve!(msp)
         outer_results(msp)
@@ -737,7 +760,7 @@ function OuterLoop(
     end
 
     outer_results.msp = msp
-    if outer_counter == outter_max_itr 
+    if outer_counter == outer_max_itr 
         outer_results.termination_status = -1
     end
 
@@ -768,11 +791,13 @@ d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
 Results = OuterLoop(
     d̂,
     γ_upper,
-    inner_max_itr=10, 
-    outer_max_itr=5, 
+    inner_max_itr=10,
+    outer_max_itr=10, 
     objective_types=2, 
     inner_epsilon=ϵ, 
     outter_epsilon=ϵ,
-    inner_routine=InnerLoopHeuristic
+    inner_routine=InnerLoopHeuristic, 
+    block_demands=1, 
+    make_plot=false
 );
 
