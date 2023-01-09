@@ -964,6 +964,6 @@ function GetDemands(this::FMPHStepper)
 end
 
 
-function GetObjectiveValue(this::FMPHStepper)
+function objective_value(this::FMPHStepper)
     return this.fmph2|>objective_value
 end

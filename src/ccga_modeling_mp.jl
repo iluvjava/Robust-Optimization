@@ -522,7 +522,6 @@ function IntroduceCut!(this::MSP, d::Vector{Float64})::MSP
     "The demands is kinda outside the range of the uncertainty interval last suggested by the master problem"
     ρ = (d - d̂)./γ̄ # construct partial rho. 
 
-
     this.cut_count += 1
     u = PrepareVariablesForTheModel!(model, :u, this.cut_count)
     q = PrepareVariablesForTheModel!(model, :q, this.cut_count)

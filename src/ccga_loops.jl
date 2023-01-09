@@ -196,7 +196,7 @@ mutable struct IRBHeuristic <: CCGAIR  # TODO: FINISHI WRITIN THIS STRUCT HERE.
     all_ds::Vector
     "All the q that had been passed to the FSP instance in the current iterations. "
     all_qs::Vector
-    "fmph values, forms one continuous trajectory. It's maybe not be monotonically decreasing. "
+    "All fmph objective values, forms one continuous trajectory. It's maybe not be monotonically decreasing. "
     upper_bounds::Vector
     "The objective of fsp, they form discrete trajectories. "
     lower_bounds::Vector
@@ -289,8 +289,7 @@ return fig end
 """
 Produce the plot for the inner iterations values for the fmphs. 
 """
-function ProducePlot(this::IRBHeuristic)::Plots.Plot
-    # TODO: FINISH HERE. 
+function ProducePlot(this::IRBHeuristic)::Plots.Plot 
     @warn "Produce plot for CCGAIRBH not yet implemented. "
     return plot()
 end
@@ -328,7 +327,7 @@ mutable struct OutterResults
     - `0`: Successfully finished all iterations without reaching the outer maximum iterations. 
     """
     termination_status::Int
-    "The initial objective value for the fmp at the start of each of the inner."
+    "The initial objective value for the fmp at the start of each of the inner iterations. "
     fmp_initial_objectives::Vector{Float64}
     "The initial objective values for the fsp at the start of each of the inner CCGA for loops."
     fsp_initial_objectives::Vector{Float64}
@@ -357,11 +356,13 @@ function (this::OutterResults)(that::IRBReform)::OutterResults
 return this end
 
 """
-function empty. 
+Pass an instance of the inner loop CCGA struct and transfer the results from the 
+    inner iterations. More specifically the value of FSP and FMPH. 
 """
 function (this::OutterResults)(that::IRBHeuristic)
-    # TODO: FINISH THIS
     push!(this.inner_loops, that)
+    push!(this.fmp_initial_objectives, that.upper_bounds[1])
+    push!(this.fmp_initial_objectives, vcat(that.lower_bounds...)[end])
     return this 
 end
 
@@ -567,27 +568,32 @@ function InnerLoopHeuristic(
     @info "$(TimeStamp()): Executing Inner loops with alternating bi-linear heuristic. "
 
     γ̄ = gamma_bar; d̂ = d_hat; ϵ = epsilon; w̄ = w_bar
-    lowerbound_list = Vector{Float64}()
-    upperbound_list = Vector{Float64}()
+    lowerbound_list = Vector{Vector{Float64}}() # for the fsp. 
+    push!(lowerbound_list, Vector{Float64}())
+    upperbound_list = Vector{Float64}() # for the fmph
+
     all_qs = Vector{Vector}()
     all_ds = Vector{Vector}()
     local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel)
-    # push!(upperbound_list, fmph_val)
+    push!(upperbound_list, fmphs|>objective_value)
     function AltUntilConverged(max_itr_alth::Int=0)
         previous = Inf; t = 0
-        while (previous > fmphs|>GetObjectiveValue) && (t < max_itr_alth)
+        while (previous > fmphs|>objective_value) && (t < max_itr_alth)
             fmphs(); t += 1
         end
     end
     fsp = FSP(w̄::Vector{Float64}, fmphs|>GetDemands, GetJuMPModel())
     Solve!(fsp)
+    push!(lowerbound_list, [fsp|>objective_value])
     m = 1
     termination_status = 0
     for II in 1:max_itr
-        if fmphs|>GetObjectiveValue > ϵ
+        if fmphs|>objective_value > ϵ
             if fsp|>objective_value > ϵ
                 @info "$(TimeStamp()): FSP objective value: $(fsp|>objective_value) > $ϵ;\n"*
-                "FMPHS obj value: $(fmphs|>GetObjectiveValue) > $ϵ Terminate. "
+                "FMPHS obj value: $(fmphs|>objective_value) > $ϵ Terminate. "
+                push!(lowerbound_list[end], fsp|>objective_value)
+                push!(upperbound_list, fmphs|>objective_value)
                 termination_status = 1
                 break
             else
@@ -596,6 +602,9 @@ function InnerLoopHeuristic(
                 fmphs(fsp|>Getq)
                 @info "$(TimeStamp()): FSP objective value $(fsp|>objective_value) < $ϵ. Introducing Cut and perform alt heuristic. "
                 AltUntilConverged()
+
+                push!(upperbound_list, fmphs|>objective_value)
+                push!(lowerbound_list[end], fsp|>objective_value)
                 if m >= M
                     @info "$(TimeStamp()): Terminates due to m=$m>=$M. "
                     termination_status = -1  # stagnations. 
@@ -603,18 +612,20 @@ function InnerLoopHeuristic(
                 end
             end
         else
-            @info "$(TimeStamp()): FMPH has objective: $(fmphs|>GetObjectiveValue), too low, we will try new demands to bump it up. "
+            @info "$(TimeStamp()): FMPH has objective: $(fmphs|>objective_value), too low, we will try new demands to bump it up. "
             for n = 1:N
                 AltUntilConverged()
-                if fmphs|>GetObjectiveValue < ϵ
-                    @info "$(TimeStamp()): FMPH objective: $(fmphs|>GetObjectiveValue), trying new random demands. "
+                if fmphs|>objective_value < ϵ # The failure case. 
+                    @info "$(TimeStamp()): FMPH objective: $(fmphs|>objective_value), trying new random demands. "
                     fmphs|>TryNewDemand
                 else
-                    @info "FMPH objective: $(fmphs|>GetObjectiveValue) exceed ϵ, done and exit inner heuristic loop."
+                    @info "FMPH objective: $(fmphs|>objective_value) exceed ϵ, done and exit inner heuristic loop."
                     # the success case. 
                     break
                 end
             end
+            push!(upperbound_list, fmphs|>objective_value)
+            push!(lowerbound_list, Vector{Float64}())  # add an empty vector to the lower bounds produced by the FSP instance. 
         end
 
     end
@@ -622,6 +633,8 @@ function InnerLoopHeuristic(
     results.termination_status = termination_status
     results.fsp = fsp
     results.fmphs = fmphs
+    results.lower_bounds = lowerbound_list
+    results.upper_bounds = upperbound_list
 
 return results end
 
@@ -649,7 +662,7 @@ function RoutineFor(msp::MSP, inner_loop_results::IRBReform)::MSP
     )
     return msp
 end
-``
+
 
 
 """
@@ -690,7 +703,7 @@ function OuterLoop(
     inner_routine::Function=InnerLoopBilinear,
     kwargs...
 ) where {N1 <: Number, N2 <: Number}
-
+    @exfiltrate
     context = "During the execution of the outter loop of CCGA: "
     @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(context)"*
     "The length of d_hat is wrong, it's $(length(d_hat)), but we want: $(size(MatrixConstruct.H, 2)). "
@@ -776,9 +789,10 @@ function OuterLoop(
 
     if make_plot
         fig1, fig2 = outer_results|>ProducePlots
+        savefig(fig1, SESSION_DIR*"/"*"last_fmp_fsp")
+        savefig(fig2, SESSION_DIR*"/"*"initial_fmp_fsp")
     end
-    savefig(fig1, SESSION_DIR*"/"*"last_fmp_fsp")
-    savefig(fig2, SESSION_DIR*"/"*"initial_fmp_fsp")
+    
     # END
 
 return outer_results end
