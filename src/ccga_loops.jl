@@ -362,7 +362,7 @@ Pass an instance of the inner loop CCGA struct and transfer the results from the
 function (this::OutterResults)(that::IRBHeuristic)
     push!(this.inner_loops, that)
     push!(this.fmp_initial_objectives, that.upper_bounds[1])
-    push!(this.fmp_initial_objectives, vcat(that.lower_bounds...)[end])
+    push!(this.fsp_initial_objectives, vcat(that.lower_bounds...)[end])
     return this 
 end
 
@@ -806,12 +806,12 @@ Results = OuterLoop(
     d̂,
     γ_upper,
     inner_max_itr=10,
-    outer_max_itr=10, 
+    outer_max_itr=40, 
     objective_types=2, 
     inner_epsilon=ϵ, 
     outter_epsilon=ϵ,
     inner_routine=InnerLoopHeuristic, 
     block_demands=1, 
-    make_plot=false
+    make_plot=true
 );
 
