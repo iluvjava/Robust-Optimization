@@ -247,7 +247,7 @@ on julia REPL for more information.
     q::Vector{Vector{VariableRef}}
     """ 
         0. The decision variable gamma, for the demand interval is indexed by both t, and i, time horizon and the generator index. 
-        1. The demand variable gamma is now just index by t, meaing that the demand interval is the same for all generator at a given time.  
+        1. The demand variable gamma is now just index by t, meaning that the demand interval is the same for all generator at a given time.  
     """
     block_demands_types::Int
     """
@@ -520,7 +520,13 @@ function IntroduceCut!(this::MSP, d::Vector{Float64})::MSP
     "However we have $(d|>length). "
     @assert all(d .<= d̂ + γ̄ .+ eps(Float64)) && all(d .>= d̂ - γ̄ .+ eps(Float64)) ""*
     "The demands is kinda outside the range of the uncertainty interval last suggested by the master problem"
-    ρ = (d - d̂)./γ̄ # construct partial rho. 
+    ρ = (d - d̂)./γ̄ 
+    ρ = map(ρ, γ̄) do r, g
+        if isnan(r)
+            return g
+        end
+        return r
+    end
 
     this.cut_count += 1
     u = PrepareVariablesForTheModel!(model, :u, this.cut_count)

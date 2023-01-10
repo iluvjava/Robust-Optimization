@@ -703,7 +703,6 @@ function OuterLoop(
     inner_routine::Function=InnerLoopBilinear,
     kwargs...
 ) where {N1 <: Number, N2 <: Number}
-    @exfiltrate
     context = "During the execution of the outter loop of CCGA: "
     @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(context)"*
     "The length of d_hat is wrong, it's $(length(d_hat)), but we want: $(size(MatrixConstruct.H, 2)). "
@@ -811,7 +810,8 @@ Results = OuterLoop(
     inner_epsilon=ϵ, 
     outter_epsilon=ϵ,
     inner_routine=InnerLoopHeuristic, 
-    block_demands=1, 
+    block_demands=0, 
     make_plot=true
 );
-
+fig = Results.msp_objectives|>plot
+savefig(fig, "msp_objectives T=24")
