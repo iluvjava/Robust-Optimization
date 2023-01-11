@@ -806,11 +806,11 @@ Results = OuterLoop(
     γ_upper,
     inner_max_itr=10,
     outer_max_itr=40, 
-    objective_types=2, 
+    objective_types=1,
     inner_epsilon=ϵ, 
     outter_epsilon=ϵ,
     inner_routine=InnerLoopHeuristic, 
-    block_demands=0, 
+    block_demands=1, 
     make_plot=true
 );
 fig = Results.msp_objectives|>plot
