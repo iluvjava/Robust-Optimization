@@ -1,0 +1,11 @@
+using Pkg 
+Pkg.add("JuMP")
+Pkg.add("ProgressMeter")
+Pkg.add("Plots")
+Pkg.add("Gurobi")
+Pkg.add("CSV")
+Pkg.add("GLPK")
+Pkg.add("HiGHS")
+Pkg.add("Infiltrator")
+Pkg.add("Mixers")
+Pkg.add("Kronecker")
