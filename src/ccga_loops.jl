@@ -120,11 +120,14 @@ return model end
 
 """
 A type that should inherit the following methods: 
-# TODO: CLARIFY THE INHERITANCE structure for the type here. 
+- `ProduceReport(this::IRBHeuristic)::String`
+- `ProducePlot(this::IRBHeuristic)::Plots.Plot`
 """
 abstract type CCGAIR
 
 end
+
+
 
 """
 CCGAIRBR: CCGA Inner Results Binlinear Reformulations (via MIP).
@@ -187,7 +190,7 @@ CCGAIRBH: CCGA Inner Results Bilinear Heuristic.
 This struct is made to store results from the bilinear reformulations of the FMPH, which is used as another type of 
 CCGA Inner iterations. 
 """
-mutable struct IRBHeuristic <: CCGAIR  # TODO: FINISHI WRITIN THIS STRUCT HERE. 
+mutable struct IRBHeuristic <: CCGAIR
     "an instance of FMPH stepper that is used throughout the inner iterations of the CCGA. "
     fmphs::FMPHStepper 
     "The last FSP instance used. "
@@ -255,9 +258,20 @@ function ProduceReport(this::IRBReform)::String
     
 return join(string_list) end
 
+"""
+    ProduceReport(this::IRBHeuristic)::String
+
+We report the feasible solutions produced by the FSP. Here is a list of parameters we are 
+interested in: 
+* `p, p',sr, sr',regu, regu', regd, regd' ,nsp, nsp',g+, g-, rho+, rho-`; 
+    And the values of these parameters will be returned as a formatted multi-line text. 
+
+# Arguments
+- `this::CCGAInnerResults`: It's a member method of this type. 
+"""
 function ProduceReport(this::IRBHeuristic)::String
-    # TODO: FINISH HERE. 
-    @warn "CCGAIRBH not yet implemented. "
+    # LATER: finish this one. 
+    @warn "CCGAIRBH Producereport not yet implemented. "
     return ""
 end
 
@@ -290,6 +304,7 @@ return fig end
 Produce the plot for the inner iterations values for the fmphs. 
 """
 function ProducePlot(this::IRBHeuristic)::Plots.Plot 
+    #LATER: Write this one here whenever we have time.  
     @warn "Produce plot for CCGAIRBH not yet implemented. "
     return plot()
 end
@@ -312,7 +327,10 @@ It will stores the following items:
 """
 mutable struct OutterResults
     
-    "A list of CCGAInnerLoop that is obtained during the iterations of the outer CCGA loops. "
+    """
+    A list of CCGAInnerLoop that is obtained during the iterations of the outer CCGA loops. 
+    They can be of different types depending on which function is used for the execution of the Inner CCGA. 
+    """
     inner_loops::Vector{CCGAIR}
     "All the objective values of the msp for each iterations of the outter CCGA, initial msp objective without cut is in this vector. "
     msp_objectives::Vector{Float64}
@@ -431,6 +449,7 @@ function ProducePlots(this::OutterResults)
     fig1 = this.inner_loops[end]|>ProducePlot
     fig2 = plot(this.fmp_initial_objectives; label="fmp_initials_vals")
     plot!(fig2, this.fsp_initial_objectives; label="fsp_initial_vals")
+    # TODO: Add another plot here for the objective value for the MSP instance
 return fig1, fig2 end
 
 
@@ -572,7 +591,7 @@ function InnerLoopHeuristic(
     push!(lowerbound_list, Vector{Float64}())
     upperbound_list = Vector{Float64}() # for the fmph
 
-    all_qs = Vector{Vector}()
+    all_qs = Vector{Vector}() #WARN: HAVEN'T implemented
     all_ds = Vector{Vector}()
     local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel)
     push!(upperbound_list, fmphs|>objective_value)
@@ -594,7 +613,7 @@ function InnerLoopHeuristic(
                 "FMPHS obj value: $(fmphs|>objective_value) > $ϵ Terminate. "
                 push!(lowerbound_list[end], fsp|>objective_value)
                 push!(upperbound_list, fmphs|>objective_value)
-                termination_status = 1
+                termination_status = 1  # exits due to FSP > ϵ
                 break
             else
                 m += 1
@@ -613,14 +632,13 @@ function InnerLoopHeuristic(
             end
         else
             @info "$(TimeStamp()): FMPH has objective: $(fmphs|>objective_value), too low, we will try new demands to bump it up. "
-            for n = 1:N
+            for _ = 1:N
                 AltUntilConverged()
-                if fmphs|>objective_value < ϵ # The failure case. 
+                if fmphs|>objective_value < ϵ # The suspicious case. 
                     @info "$(TimeStamp()): FMPH objective: $(fmphs|>objective_value), trying new random demands. "
                     fmphs|>TryNewDemand
                 else
                     @info "FMPH objective: $(fmphs|>objective_value) exceed ϵ, done and exit inner heuristic loop."
-                    # the success case. 
                     break
                 end
             end
@@ -629,6 +647,7 @@ function InnerLoopHeuristic(
         end
 
     end
+    # if forloop exists with max_itr == II, it counts as success. 
     results = IRBHeuristic()
     results.termination_status = termination_status
     results.fsp = fsp
@@ -715,7 +734,6 @@ function OuterLoop(
             println(io, repr("text/plain", d_hat))
             println(io, "Gamma upper, or M is: $(gamma_upper)")
             println(io, "epsilon_inner = $(kwargsd[:inner_epsilon])")
-            # println(io, "epsilon_outer = $outter_epsilon")
             println(io, "inner_max_itr = $(kwargsd[:inner_max_itr])")
             println(io, "outer_max_itr = $outer_max_itr")
             println(io, "HORIZON = $(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON)")
@@ -787,7 +805,8 @@ function OuterLoop(
     end
 
     if make_plot
-        fig1, fig2 = outer_results|>ProducePlots
+        
+        fig1, fig2 = outer_results|>ProducePlots  #TODO: Here, change it to include a list of figs, like, a lot of them with the plot names. 
         savefig(fig1, SESSION_DIR*"/"*"last_fmp_fsp")
         savefig(fig2, SESSION_DIR*"/"*"initial_fmp_fsp")
     end

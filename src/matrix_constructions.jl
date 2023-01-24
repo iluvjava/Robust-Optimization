@@ -357,7 +357,7 @@ return rhs end
 
 
 """
-    Constraints (39) to (41)
+Constraints (39) to (41)
 """
 function DemandBalanceConstraints()
     rhs = Vector{Number}()
@@ -502,6 +502,7 @@ RHS = vcat(RHS, BatteryConstraints()) # battery constraints
 SyncRow(B, C, G, F)
 
 DemandGroupStart = length(RHS) + 1
+
 RHS = vcat(RHS, DemandBalanceConstraints()) # demand balance
 SyncRow(B, C, G, F)
 CON_GROUPS["Demand Balance"] = (DemandGroupStart, length(RHS))
