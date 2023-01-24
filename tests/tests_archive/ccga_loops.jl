@@ -9,7 +9,7 @@ const GUROBI_ENV = Gurobi.Env()
 
 
 """
-    A struct that contains all the parameters involved for the CCGA inner forloop iterations. 
+A struct that contains all the parameters involved for the CCGA inner forloop iterations. 
 """
 mutable struct CCGAInnerloopParameters
     fmp::AbsFMP
@@ -32,7 +32,7 @@ mutable struct CCGAInnerloopParameters
 end
 
 """
-    Another struct that models the data exposed during the iterations of the full CCGA forloop. 
+Another struct that models the data exposed during the iterations of the full CCGA forloop. 
 """
 mutable struct CCGAResults
     inner_loops::Vector{CCGAInnerloopParameters}
@@ -43,7 +43,7 @@ mutable struct CCGAResults
 end
 
 """
-    Add an instance of ccga_inner forloop parameters for the instance. 
+Add an instance of ccga_inner forloop parameters for the instance. 
 """
 function (this::CCGAResults)(that::CCGAInnerloopParameters)
     push!(this.inner_loops, that)
@@ -51,7 +51,7 @@ return end
 
 
 """
-    Performs the CCGA Inter forloops and returns the results for the cut. 
+Performs the CCGA Inter forloops and returns the results for the cut. 
 """
 function CCGAInnerLoop(
     gamma_bar::Vector{N1}, 
@@ -122,15 +122,15 @@ return CCGAInnerloopParameters(
 
 """
     Performs the outter forloop of the CCGA algorithm with initialized parameters. The list of parameters: 
-    d̂: 
-        the centered which the uncertainty interval is going to be based upon. 
-    gamma_upper: 
-        The initial scalar upper bound for all the γ in the uncertainty interval. 
-    epsilon: 
-        The tolerance for the lower bound and upper bound between FMP, FSP, and it's used for the termination 
-        conditions for the inner forloop. 
-    make_plot: 
-        Whether to make a plot for all the results obtain from the execution of the inner CCGA forloop. 
+d̂: 
+    the centered which the uncertainty interval is going to be based upon. 
+gamma_upper: 
+    The initial scalar upper bound for all the γ in the uncertainty interval. 
+epsilon: 
+    The tolerance for the lower bound and upper bound between FMP, FSP, and it's used for the termination 
+    conditions for the inner forloop. 
+make_plot: 
+    Whether to make a plot for all the results obtain from the execution of the inner CCGA forloop. 
     inner_max_itr: 
         The maximum time s for executing the inner forloop of CCGA. 
     outter_max_itr: 
