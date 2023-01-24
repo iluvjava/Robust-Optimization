@@ -31,20 +31,20 @@ function MakeEmptyModel(;optimality_gap=0.001, time_out::Int=180, solver_name::S
 return model end
 
 
-C = MatrixConstruct.C
-B = MatrixConstruct.B
-H = MatrixConstruct.H
-G = MatrixConstruct.G
-h = MatrixConstruct.h
-u = MatrixConstruct.u
-u_len = u.|>length|>sum
-w = MatrixConstruct.w
-w_len = w.|>length|>sum
-q = MatrixConstruct.q
-q_len = q.|>length|>sum
-
 
 @testset "FMPH Basic Testing " begin 
+
+    C = MatrixConstruct.C
+    B = MatrixConstruct.B
+    H = MatrixConstruct.H
+    G = MatrixConstruct.G
+    h = MatrixConstruct.h
+    u = MatrixConstruct.u
+    u_len = u.|>length|>sum
+    w = MatrixConstruct.w
+    w_len = w.|>length|>sum
+    q = MatrixConstruct.q
+    q_len = q.|>length|>sum
     
     # testing parameters, for testing things in the interactive REPL. 
     global fmph1

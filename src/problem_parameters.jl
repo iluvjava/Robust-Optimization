@@ -1,17 +1,25 @@
 using CSV
-# Primary Generators
-CSV_P_ALPHAS = CSV.File(open("data/alpha.csv"))
-CSV_P_BETAS = CSV.File(open("data/beta.csv"))
-CSV_P_GEN = CSV.File(open("data/ro_gen_data.csv"))
-CSV_S_GEN = CSV.File("data/quick_start_data.csv")
-CSV_S_ALPHAS = CSV.File("data/alpha_prime.csv")
-CSV_S_BETAS = CSV.File("data/beta_prime.csv")
-CSV_DISFACTOR = CSV.File("data/mu.csv")
+"Primary generators fuel costs parameters. "
+const CSV_P_ALPHAS = CSV.File(open("data/alpha.csv"))
+"Primary generators fuel costs. "
+const CSV_P_BETAS = CSV.File(open("data/beta.csv"))
+"Primary generator generation limit. "
+const CSV_P_GEN = CSV.File(open("data/ro_gen_data.csv"))
+"Secondary generator generation limit. "
+const CSV_S_GEN = CSV.File("data/quick_start_data.csv")
+"Second generators fuel costs parameters. "
+const CSV_S_ALPHAS = CSV.File("data/alpha_prime.csv")
+"Secondary generators beta parameters for field costs. "
+const CSV_S_BETAS = CSV.File("data/beta_prime.csv")
+"Disfactor, the mu decision variables for the demands balance constraints. "
+const CSV_DISFACTOR = CSV.File("data/mu.csv")
 
-# Others
-CSV_STORAGE = CSV.File(open("data/storage_data.csv"))
-CSV_TRANS_LIMIT = CSV.File(open("data/transmission_limits.csv"))
-CSV_POWERFLOW_BUS = CSV.File(open("data/sigma.csv"))
+"The data for the storage devices. "
+const CSV_STORAGE = CSV.File(open("data/storage_data.csv"))
+"Transmission line limit. "
+const CSV_TRANS_LIMIT = CSV.File(open("data/transmission_limits.csv"))
+"the sigma variables. "
+const CSV_POWERFLOW_BUS = CSV.File(open("data/sigma.csv"))
 
 mutable struct ConstParameters
     HORIZON 
@@ -123,8 +131,8 @@ end
 
 
 """
-    Contains info for both buses and transmission line interactions!!!
-        [Busses Index, Transimission Line]
+Contains info for both buses and transmission line interactions!!!
+    [Busses Index, Transimission Line]
 """
 mutable struct DataMatrix
     the_matrix::Matrix{Number}
@@ -177,20 +185,20 @@ mutable struct Buses
 end
 
 "The constant parameters for the problem. "
-CONST_PROBLEM_PARAMETERS = ConstParameters()
+const CONST_PROBLEM_PARAMETERS = ConstParameters()
 "All the data related to the primary generators. "
-PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
+const PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
 "All the data related to the secondary generators. "
-SECONDARY_GENERATORS = Generators(CSV_S_GEN, CSV_S_ALPHAS, CSV_S_BETAS)
+const SECONDARY_GENERATORS = Generators(CSV_S_GEN, CSV_S_ALPHAS, CSV_S_BETAS)
 "All the data related to the storage system. "
-STORAGE_SYSTEM = StorageSystem()
+const STORAGE_SYSTEM = StorageSystem()
 "All the data related to the transmission system for the model. "
-TRANSMISSION_SYSTEM = Transmission()
+const TRANSMISSION_SYSTEM = Transmission()
 "The sigma transmission coefficients between the powerline and the generators. "
-SIGMAS = DataMatrix(CSV_POWERFLOW_BUS)
+const SIGMAS = DataMatrix(CSV_POWERFLOW_BUS)
 "The disfactor parameters. "
-DISFACTORS = DataMatrix(CSV_DISFACTOR)
+const DISFACTORS = DataMatrix(CSV_DISFACTOR)
 "Stores all the structures of the busses in different transmission line. "
-BUSES = Buses()
+const BUSES = Buses()
 
 @info "Problem Parameters Successfully Loaded"
