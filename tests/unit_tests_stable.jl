@@ -27,7 +27,7 @@ function MakeEmptyModel(;optimality_gap=0.001, time_out::Int=180, solver_name::S
     if solver_name !== ""
         set_optimizer_attribute(model, "LogFile", SESSION_DIR*"/$(solver_name)_$(TimeStampConvert)_gurobi_log.txt")
     end
-return model end
+return model end    
 
 
 @testset "Testing Basics" begin

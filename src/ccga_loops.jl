@@ -201,8 +201,12 @@ mutable struct IRBHeuristic <: CCGAIR
     all_qs::Vector
     "All fmph objective values, forms one continuous trajectory. It's maybe not be monotonically decreasing. "
     upper_bounds::Vector
-    "The objective of fsp, they form discrete trajectories. "
-    lower_bounds::Vector
+    """
+    The objective of fsp, they form discrete trajectories. It's in the form of an array of array, inhomogenous. 
+    Whenever FMPH failed to hit `ϵ` tolerance level for inner loop, a new empty vector will be inserted 
+    to this lower bounds vector. 
+    """
+    lower_bounds::Vector{Vector}
     """
     A code representing different reasons that made the inner CCGA interminate: 
     * Status code  `1`: terminates because fsp is positive
@@ -230,6 +234,9 @@ interested in:
 - `this::CCGAInnerResults`: It's a member method of this type. 
 """
 function ProduceReport(this::IRBReform)::String
+    # TODO: Produce Report stuff. 
+    # In addition to produce the report in text, these parameters need to be stored as flattend array after the algorithm is finished. 
+    # This is for the CCGA module. 
     string_list = Vector{String}()
     u = this.fsp.u; C = MatrixConstruct.C_
     var_coef_holder_list = [
@@ -270,7 +277,7 @@ interested in:
 - `this::CCGAInnerResults`: It's a member method of this type. 
 """
 function ProduceReport(this::IRBHeuristic)::String
-    # LATER: finish this one. 
+    # LATER: Produce Report for IRBHeuristic. 
     @warn "CCGAIRBH Producereport not yet implemented. "
     return ""
 end
@@ -304,7 +311,7 @@ return fig end
 Produce the plot for the inner iterations values for the fmphs. 
 """
 function ProducePlot(this::IRBHeuristic)::Plots.Plot 
-    #LATER: Write this one here whenever we have time.  
+    #LATER: ProducePlot for the IRBHeuristic in the inner function.   
     @warn "Produce plot for CCGAIRBH not yet implemented. "
     return plot()
 end
@@ -396,6 +403,9 @@ return this end
 
 
 """
+
+    ProduceReport(this::OutterResults)::String
+
 Returns a *string* that is reporting all the results 
 after the finishing the outer forloop iterations. We will be 
 reporting the following important parameters: 
@@ -449,8 +459,10 @@ function ProducePlots(this::OutterResults)
     fig1 = this.inner_loops[end]|>ProducePlot
     fig2 = plot(this.fmp_initial_objectives; label="fmp_initials_vals")
     plot!(fig2, this.fsp_initial_objectives; label="fsp_initial_vals")
-    # TODO: Add another plot here for the objective value for the MSP instance
-return fig1, fig2 end
+    # TODO: [x]
+    # Add another plot here for the objective value for the MSP instance. 
+    fig3 = plot(this.msp_objectives; label="msp_objectives")
+return fig1, fig2, fig3 end
 
 
 ### ====================================================================================================================
@@ -591,7 +603,7 @@ function InnerLoopHeuristic(
     push!(lowerbound_list, Vector{Float64}())
     upperbound_list = Vector{Float64}() # for the fmph
 
-    all_qs = Vector{Vector}() #WARN: HAVEN'T implemented
+    all_qs = Vector{Vector}() #WARN: all_qs, all_ds in `InnerLoopHeuristic` HAVEN'T implemented
     all_ds = Vector{Vector}()
     local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel)
     push!(upperbound_list, fmphs|>objective_value)
@@ -806,9 +818,10 @@ function OuterLoop(
 
     if make_plot
         
-        fig1, fig2 = outer_results|>ProducePlots  #TODO: Here, change it to include a list of figs, like, a lot of them with the plot names. 
-        savefig(fig1, SESSION_DIR*"/"*"last_fmp_fsp")
-        savefig(fig2, SESSION_DIR*"/"*"initial_fmp_fsp")
+        figs = outer_results|>ProducePlots  
+        savefig(figs[1], SESSION_DIR*"/"*"last_fmp_fsp")
+        savefig(figs[2], SESSION_DIR*"/"*"initial_fmp_fsp")
+        savefig(figs[3], SESSION_DIR*"/"*"objectives_msp")
     end
     
     # END
@@ -818,7 +831,7 @@ return outer_results end
 
 
 ϵ = 1.0
-γ_upper = 50
+γ_upper = 90
 d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
 Results = OuterLoop(
     d̂,

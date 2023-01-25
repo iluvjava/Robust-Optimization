@@ -163,9 +163,10 @@ function FeasibleConfig(this::MP, demand::N)::Union{Vector{Float64}, Nothing} wh
 end
 
 """
+    MainProblemObjective!(this::MP)
 Creates the main problem objectives:
-    * Find a maximum lower bound for demands on all buses, all time.
-    * Fix the slack variable to be zero.
+* Find a maximum lower bound for demands on all buses, all time.
+* Fix the slack variable to be zero.
 """
 function MainProblemObjective!(this::MP)
     @warn "METHOD DEPRECATED. "
@@ -179,6 +180,7 @@ return end
 
 
 """
+    EstablishMainProblem!(this::MP)
 Establish the main problem, and then solving it will provide some suggestions for the
 best average demands for the system.
 * The constraints
@@ -225,7 +227,11 @@ on julia REPL for more information.
     w::Array{VariableRef, 3}
     "The center for the demand interval. "
     d_hat::Array{Float64}
-    "gamma: The decision variable for the uncertainty bound on the demand. "
+    """
+    gamma: The decision variable for the uncertainty bound on the demand. Its index regime is: 
+    `γ[g*t + 1: g*(t + 1)]`, where `g` is the index for the generators and `t` is index for time, it's a block vector 
+    where each block is all the generator's gamma decision variable for a fixed time. 
+    """
     gamma::Vector{VariableRef}
     "gamma_upper: The upper bound on all the gamma upper bound. "
     gamma_upper::Number
@@ -359,6 +365,7 @@ return this end
 
 
 """
+    PreppareConstraintsPrimary!(this::Union{MP, MSP})
 Prepare the constraints for the primary generator, the system
 * Aw <= b
 """
