@@ -81,7 +81,7 @@ global SESSION_DIR = RESULTS_DIRECTORY*"/"*FILE_SESSTION_TIME_STAMP
 global SESSION_FILE1 = SessionFile(SESSION_DIR*"/"*"main_print_out.txt")
 "stores the parameters that are used to run the algorithm."
 global SESSION_FILE2 = SessionFile(SESSION_DIR*"/"*"ccga_parameters.txt")
-"stores the results of the full CCGA. "
+"It stores results at the end of CCGA, which are all the decision variables from the last instance of FSP. "
 global SESSION_FILE3 = SessionFile(SESSION_DIR*"/"*"ccga_results.txt")         # the results from the ccga outer and inner iterations. 
 
 
@@ -223,22 +223,12 @@ end
 
 
 """
-    ProduceReport(this::CCGAIRBR)::String
-
-We report the feasible solutions produced by the FSP. Here is a list of parameters we are 
-interested in: 
-* `p, p',sr, sr',regu, regu', regd, regd' ,nsp, nsp',g+, g-, rho+, rho-`; 
-    And the values of these parameters will be returned as a formatted multi-line text. 
-
-# Arguments
-- `this::CCGAInnerResults`: It's a member method of this type. 
+A function factored out and its being shared by instances of `IRBHeuristic`, and `IRBReform`. 
 """
-function ProduceReport(this::IRBReform)::String
-    # TODO: Produce Report stuff. 
-    # In addition to produce the report in text, these parameters need to be stored as flattend array after the algorithm is finished. 
-    # This is for the CCGA module. 
+function ProduceReport(::CCGAIR, fsp::FSP)::Vector{String}
+    # WARN:[?]() This code is not yet tested! 
     string_list = Vector{String}()
-    u = this.fsp.u; C = MatrixConstruct.C_
+    u = fsp.u; C = MatrixConstruct.C_
     var_coef_holder_list = [
         MatrixConstruct.p, MatrixConstruct.p′,
         MatrixConstruct.sr, MatrixConstruct.sr′,
@@ -253,12 +243,35 @@ function ProduceReport(this::IRBReform)::String
             push!(string_list, "$(u[idx]) = $(u[idx]|>value)")
         end
     end
+    return string_list
+end
+
+"""
+    ProduceReport(this::IRBReform)::String
+
+We report the feasible solutions produced by the FSP. Here is a list of parameters we are 
+interested in: 
+* `p, p',sr, sr',regu, regu', regd, regd' ,nsp, nsp',g+, g-, rho+, rho-`; 
+And the values of these parameters will be returned as a formatted multi-line text. 
+This function when the outer loop terminates and the inner loop had been identified 
+as the last iteration of the inner loop. 
+
+# Arguments
+- `this::CCGAInnerResults`: It's a member method of this type. 
+"""
+function ProduceReport(this::IRBReform)::String
+    # In addition to produce the report in text, these parameters need to be stored as flattend array after the algorithm is finished. 
+    # This is for the CCGA outterloop. 
+    # WARN [?]() This code is not yet tested. 
+    string_list = Vector{String}()
+    append!(string_list, ProduceReport(this, this.fsp))
     ρ⁺ = reshape(GetRhoPlus(this.fmp), size(MatrixConstruct.d))
     ρ⁻ = reshape(GetRhoMinus(this.fmp), size(MatrixConstruct.d))
     push!(string_list, "ρ⁺:")
     push!(string_list, repr("text/plain", ρ⁺))
     push!(string_list, "ρ⁻: ")
     push!(string_list, repr("text/plain", ρ⁻))
+    # insert newline character text at the end of each line oof. 
     for idx in length(string_list) + 1 :-1: 1
         insert!(string_list, idx, "\n")
     end
@@ -270,17 +283,24 @@ return join(string_list) end
 
 We report the feasible solutions produced by the FSP. Here is a list of parameters we are 
 interested in: 
-* `p, p',sr, sr',regu, regu', regd, regd' ,nsp, nsp',g+, g-, rho+, rho-`; 
-    And the values of these parameters will be returned as a formatted multi-line text. 
+* `p, p',sr, sr',regu, regu', regd, regd' ,nsp, nsp',g+, g-`; 
+And the values of these parameters will be returned as a formatted multi-line text. 
+The value `ρ⁺`, `ρ⁻` are not stored, nor is the last demand value tried by the instance of `FMPHStepper`. 
 
 # Arguments
 - `this::CCGAInnerResults`: It's a member method of this type. 
 """
 function ProduceReport(this::IRBHeuristic)::String
-    # LATER: Produce Report for IRBHeuristic. 
+    # TODO:[x](2) Produce Report for IRBHeuristic. 
     @warn "CCGAIRBH Producereport not yet implemented. "
-    return ""
-end
+    string_list = Vector{String}()
+    append!(string_list, ProduceReport(this, this.fsp))
+    # insert newline character text at the end of each line oof. 
+    for idx in length(string_list) + 1 :-1: 1
+        insert!(string_list, idx, "\n")
+    end
+    
+return join(string_list) end
 
 
 """
@@ -459,8 +479,6 @@ function ProducePlots(this::OutterResults)
     fig1 = this.inner_loops[end]|>ProducePlot
     fig2 = plot(this.fmp_initial_objectives; label="fmp_initials_vals")
     plot!(fig2, this.fsp_initial_objectives; label="fsp_initial_vals")
-    # TODO: [x]
-    # Add another plot here for the objective value for the MSP instance. 
     fig3 = plot(this.msp_objectives; label="msp_objectives")
 return fig1, fig2, fig3 end
 
@@ -603,7 +621,7 @@ function InnerLoopHeuristic(
     push!(lowerbound_list, Vector{Float64}())
     upperbound_list = Vector{Float64}() # for the fmph
 
-    all_qs = Vector{Vector}() #WARN: all_qs, all_ds in `InnerLoopHeuristic` HAVEN'T implemented
+    all_qs = Vector{Vector}() #TODO [x](1): all_qs, all_ds should be filled in properly for the Produce report of IRBHeuristic. 
     all_ds = Vector{Vector}()
     local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel)
     push!(upperbound_list, fmphs|>objective_value)
@@ -614,34 +632,32 @@ function InnerLoopHeuristic(
         end
     end
     fsp = FSP(w̄::Vector{Float64}, fmphs|>GetDemands, GetJuMPModel())
-    Solve!(fsp)
+    Solve!(fsp)  # always solved regardless of objective value of fmph. 
     push!(lowerbound_list, [fsp|>objective_value])
     m = 1
     termination_status = 0
+    break_flag = false
     for II in 1:max_itr
         if fmphs|>objective_value > ϵ
             if fsp|>objective_value > ϵ
                 @info "$(TimeStamp()): FSP objective value: $(fsp|>objective_value) > $ϵ;\n"*
                 "FMPHS obj value: $(fmphs|>objective_value) > $ϵ Terminate. "
-                push!(lowerbound_list[end], fsp|>objective_value)
-                push!(upperbound_list, fmphs|>objective_value)
                 termination_status = 1  # exits due to FSP > ϵ
-                break
+                break_flag = true
             else
                 m += 1
                 fsp = FSP(w̄::Vector{Float64}, fmphs|>GetDemands, GetJuMPModel()); Solve!(fsp)
                 fmphs(fsp|>Getq)
                 @info "$(TimeStamp()): FSP objective value $(fsp|>objective_value) < $ϵ. Introducing Cut and perform alt heuristic. "
                 AltUntilConverged()
-
-                push!(upperbound_list, fmphs|>objective_value)
-                push!(lowerbound_list[end], fsp|>objective_value)
                 if m >= M
                     @info "$(TimeStamp()): Terminates due to m=$m>=$M. "
                     termination_status = -1  # stagnations. 
-                    break
+                    break_flag = true
                 end
             end
+            # updates the lower bound and the upper bounds. 
+            push!(upperbound_list, fmphs|>objective_value)
         else
             @info "$(TimeStamp()): FMPH has objective: $(fmphs|>objective_value), too low, we will try new demands to bump it up. "
             for _ = 1:N
@@ -651,13 +667,18 @@ function InnerLoopHeuristic(
                     fmphs|>TryNewDemand
                 else
                     @info "FMPH objective: $(fmphs|>objective_value) exceed ϵ, done and exit inner heuristic loop."
-                    break
+                    break_flag = true
                 end
             end
-            push!(upperbound_list, fmphs|>objective_value)
             push!(lowerbound_list, Vector{Float64}())  # add an empty vector to the lower bounds produced by the FSP instance. 
         end
-
+        push!(upperbound_list, fmphs|>objective_value)
+        # before we break... 
+        push!(all_ds, fmphs|>GetDemands)
+        push!(all_qs, fsp|>Getq)
+        if break_flag
+            break
+        end
     end
     # if forloop exists with max_itr == II, it counts as success. 
     results = IRBHeuristic()
@@ -666,6 +687,8 @@ function InnerLoopHeuristic(
     results.fmphs = fmphs
     results.lower_bounds = lowerbound_list
     results.upper_bounds = upperbound_list
+    results.all_ds = all_ds
+    results.all_qs = all_qs
 
 return results end
 
@@ -808,8 +831,8 @@ function OuterLoop(
 
     # Print the results to files! 
     SESSION_FILE3() do io
-        write(io, outer_results|>ProduceReport)
-        write(io, outer_results.inner_loops[end]|>ProduceReport)
+        write(io, outer_results|>ProduceReport)  # print out master problem report first! 
+        write(io, outer_results.inner_loops[end]|>ProduceReport) # print out the inner loop results next. 
     end
 
     if inner_routine === InnerLoopBilinear
@@ -817,7 +840,6 @@ function OuterLoop(
     end
 
     if make_plot
-        
         figs = outer_results|>ProducePlots  
         savefig(figs[1], SESSION_DIR*"/"*"last_fmp_fsp")
         savefig(figs[2], SESSION_DIR*"/"*"initial_fmp_fsp")
@@ -832,7 +854,8 @@ return outer_results end
 
 ϵ = 1.0
 γ_upper = 90
-d̂ = 200*(size(MatrixConstruct.H, 2)|>ones)
+d̂ = 180*(size(MatrixConstruct.H, 2)|>ones)
+d̂ += 20*rand(d̂|>length)
 Results = OuterLoop(
     d̂,
     γ_upper,
