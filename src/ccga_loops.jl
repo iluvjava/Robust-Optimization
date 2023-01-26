@@ -853,7 +853,7 @@ return outer_results end
 
 
 EXPECTED_DEMANDS = 200
-VARIANCE = 50
+VARIANCE = 70
 GAMMA_UPPER = 50
 TOL = 1.0
 
