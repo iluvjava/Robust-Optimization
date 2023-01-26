@@ -1,4 +1,5 @@
-using Infiltrator, ProgressMeter, Dates
+using Infiltrator, ProgressMeter, Dates, Distributions
+
 include("utilities.jl")
 include("matrix_construction_export.jl")
 include("ccga_modeling.jl")
@@ -262,7 +263,7 @@ as the last iteration of the inner loop.
 function ProduceReport(this::IRBReform)::String
     # In addition to produce the report in text, these parameters need to be stored as flattend array after the algorithm is finished. 
     # This is for the CCGA outterloop. 
-    # WARN [?]() This code is not yet tested. 
+    # WARN: [?]() This code is not yet tested. 
     string_list = Vector{String}()
     append!(string_list, ProduceReport(this, this.fsp))
     ρ⁺ = reshape(GetRhoPlus(this.fmp), size(MatrixConstruct.d))
@@ -851,22 +852,23 @@ function OuterLoop(
 return outer_results end
 
 
+EXPECTED_DEMANDS = 200
+VARIANCE = 50
+GAMMA_UPPER = 50
+TOL = 1.0
 
 ϵ = 1.0
-γ_upper = 90
-d̂ = 180*(size(MatrixConstruct.H, 2)|>ones)
-d̂ += 20*rand(d̂|>length)
+d̂ = EXPECTED_DEMANDS*(size(MatrixConstruct.H, 2)|>ones)
+d̂ += rand(Uniform(-VARIANCE, VARIANCE), d̂|>length)
 Results = OuterLoop(
     d̂,
-    γ_upper,
+    GAMMA_UPPER,
     inner_max_itr=10,
     outer_max_itr=40, 
     objective_types=1,
-    inner_epsilon=ϵ, 
-    outter_epsilon=ϵ,
+    inner_epsilon=TOL, 
     inner_routine=InnerLoopHeuristic, 
     block_demands=1, 
     make_plot=true
 );
-fig = Results.msp_objectives|>plot
-savefig(fig, "msp_objectives T=24")
+
