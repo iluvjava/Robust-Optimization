@@ -73,6 +73,8 @@ function Close(this::SessionFile)
 return end
 
 
+# Session file related info are all here. 
+
 global FILE_SESSTION_TIME_STAMP = TimeStampConvert()
 mkdir(RESULTS_DIRECTORY*"/$FILE_SESSTION_TIME_STAMP")
 
@@ -854,7 +856,7 @@ return outer_results end
 
 EXPECTED_DEMANDS = 200
 VARIANCE = 70
-GAMMA_UPPER = 50
+GAMMA_UPPER = 90
 TOL = 1.0
 
 ϵ = 1.0
