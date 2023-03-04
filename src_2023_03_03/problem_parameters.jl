@@ -1,34 +1,43 @@
 using CSV
-
-
 "Primary generators fuel costs parameters. "
 const CSV_P_ALPHAS = CSV.File(open("data/alpha.csv"))
 "Primary generators fuel costs. "
 const CSV_P_BETAS = CSV.File(open("data/beta.csv"))
 "Primary generator generation limit. "
 const CSV_P_GEN = CSV.File(open("data/ro_gen_data.csv"))
+"Secondary generator generation limit. "
+const CSV_S_GEN = CSV.File("data/quick_start_data.csv")
+"Second generators fuel costs parameters. "
+const CSV_S_ALPHAS = CSV.File("data/alpha_prime.csv")
+"Secondary generators beta parameters for field costs. "
+const CSV_S_BETAS = CSV.File("data/beta_prime.csv")
+"Disfactor, the mu decision variables for the demands balance constraints. "
+const CSV_DISFACTOR = CSV.File("data/mu.csv")
+
 "The data for the storage devices. "
 const CSV_STORAGE = CSV.File(open("data/storage_data.csv"))
-
-const CSV_DEMAND_RESPONSE = CSV.File(open("data/dr_data.csv"))
-
+"Transmission line limit. "
+const CSV_TRANS_LIMIT = CSV.File(open("data/transmission_limits.csv"))
+"the sigma variables. "
+const CSV_POWERFLOW_BUS = CSV.File(open("data/sigma.csv"))
 
 mutable struct ConstParameters
-    HORIZON::Int
-    Φ::Number
+    HORIZON 
+    Φ
+    RREGD::Vector{Number}
+    RREGU::Vector{Number}
+    RNSP::Vector{Number}
 
     function ConstParameters()
         this = new()
         this.HORIZON = 24; 
-        this.Φ = 1e8;
+        this.Φ = 1e8; 
+        this.RREGD = zeros(this.HORIZON)
+        this.RREGU = zeros(this.HORIZON)
+        this.RNSP = zeros(this.HORIZON)
     return this end
 end
 
-"""
-- The alpha file, 
-- beta file. 
-- generator file. 
-"""
 mutable struct Generators
     generator_count::Int
     
@@ -42,17 +51,16 @@ mutable struct Generators
     RD::Vector{Number}
     RU_bar::Vector{Number}
     RU::Vector{Number}
-    RREGU::Vector{Number} 
-    RREGD::Vector{Number} 
+    RREGU::Vector{Number}  # wrong parameters 
+    RREGD::Vector{Number}  # wrong parameters 
     REGU::Vector{Number}
     REGD::Vector{Number}
     SR::Vector{Number}
-    RNSP::Vector{Number} 
+    RNSP::Vector{Number}   # move to global
     NSP::Vector{Number}
 
     alphas::Matrix{Number}
     betas::Matrix{Number}
-    
     function Generators(
         gen_file::CSV.File, 
         alpha_file::CSV.File, 
@@ -93,8 +101,8 @@ mutable struct StorageSystem
     Capacity::Array{Number}    # H̅
     CharingLim::Array{Number}  # G̅+
     DischargingLim::Array{Number}  # G̅-
-    s  # total number of storage system
-
+    
+    s  # total number of storage system 
     function StorageSystem()
         this = new()
         properties = CSV_STORAGE|>propertynames
@@ -111,24 +119,31 @@ mutable struct StorageSystem
     
 end
 
-mutable struct DemandResponse
-    level::Int
-    rho::Vector
-    R::Vector
-    dr_max::Number
 
-    """
+mutable struct Transmission
+    Limit::Vector{Number}
     
-    """
-    function DemandResponse(file::CSV.File)
+    function Transmission()
         this = new()
-        this.level = length(file)
-        this.rho = file["rho"]
-        this.R = file["R"]
-        this.dr_max = file["dr_max"][1]
-        return this
-    end
+        this.Limit = CSV_TRANS_LIMIT["Limit"]
+    return this end
+end
 
+
+"""
+Contains info for both buses and transmission line interactions!!!
+    [Busses Index, Transimission Line]
+"""
+mutable struct DataMatrix
+    the_matrix::Matrix{Number}
+    
+    function DataMatrix(input_file::CSV.File)
+        this = new()
+        this.the_matrix = ConvertCSV(input_file)'
+    return this end
+    
+    function Base.size(this::DataMatrix)
+    return size(this.the_matrix) end 
 end
 
 
@@ -141,21 +156,49 @@ function ConvertCSV(data::CSV.File)
 return m end
 
 
+"""
+Models a group of generators that are in the same busses. 
+It has primary/secondary generator in it, and it maps the buses to a set of 
+indices for generators in that bus. 
+
+* The array could be empty. 
+* CURRENTLY NO DATA IS PREPARE FOR THIS YET, SO IT'S HARD CODED IN. 
+"""
+mutable struct Buses
+    primary::Dict{Int, Set{Int}}
+    secondary::Dict{Int, Set{Int}}
+    
+    """
+    Generator info are HARD CODED IN!!! 
+    """
+    function Buses(num_of_busses=6, num_primary_gen=6, num_secondary_gen=1)
+        this = new()
+        this.primary = Dict()
+        this.secondary = Dict()
+        for II in 1:num_of_busses
+            this.primary[II] = Set{Int}()
+            push!(this.primary[II], II)
+            this.secondary[II] = Set{Int}()
+        end
+        push!(this.secondary[2], 1)
+    return this end
+end
 
 "The constant parameters for the problem. "
 const CONST_PROBLEM_PARAMETERS = ConstParameters()
-
 "All the data related to the primary generators. "
 const PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
-
+"All the data related to the secondary generators. "
+const SECONDARY_GENERATORS = Generators(CSV_S_GEN, CSV_S_ALPHAS, CSV_S_BETAS)
 "All the data related to the storage system. "
 const STORAGE_SYSTEM = StorageSystem()
-
-
-const DEMAND_RESPONSE = DemandResponse(CSV_DEMAND_RESPONSE)
-
-
-# "Stores all the structures of the busses in different transmission line. "
-# const BUSES = Buses()
+"All the data related to the transmission system for the model. "
+const TRANSMISSION_SYSTEM = Transmission()
+"The sigma transmission coefficients between the powerline and the generators. "
+const SIGMAS = DataMatrix(CSV_POWERFLOW_BUS)
+"The disfactor parameters. "
+const DISFACTORS = DataMatrix(CSV_DISFACTOR)
+"Stores all the structures of the busses in different transmission line. "
+const BUSES = Buses()
 
 @info "Problem Parameters Successfully Loaded"
