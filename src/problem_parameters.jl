@@ -88,12 +88,17 @@ end
 
 
 mutable struct StorageSystem
+    "ν, greek nu"
     Efficiency::Array{Number}  # nu 
     # Distfactor::Array{Number}  # mu
+    "H̄"
     Capacity::Array{Number}    # H̅
+    "Ḡ⁺"
     CharingLim::Array{Number}  # G̅+
+    "Ḡ⁻"
     DischargingLim::Array{Number}  # G̅-
-    s  # total number of storage system
+    "total number of storage system"
+    s  
 
     function StorageSystem()
         this = new()
@@ -103,7 +108,6 @@ mutable struct StorageSystem
         this.CharingLim = CSV_STORAGE[properties[4]]    
         this.DischargingLim = CSV_STORAGE[properties[5]]
         this.s = CSV_STORAGE |> length
-
     return this end
 
     function Base.length(this::StorageSystem)
