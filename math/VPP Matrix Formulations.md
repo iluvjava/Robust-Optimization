@@ -57,7 +57,7 @@ u =
         \\
         (dr)_t
         \\
-        \mu_{l, t}
+        \mu_{l}^{(t)}
     \end{bmatrix}
 \end{aligned}
 $$
@@ -71,9 +71,9 @@ $$
 \begin{aligned}
     q = 
     \begin{bmatrix}
-        \sigma^+_t
+        (\sigma^+_s)^{(t)}
         \\
-        \sigma^-_t
+        (\sigma^-_s)^{(t)}
     \end{bmatrix}
 \end{aligned}
 $$
@@ -208,16 +208,19 @@ $$
     & 
     \underbrace{(g^+)_s^{(t)}}_{\text{for }C}
     -
-    \underbrace{\sigma_t^+\bar{G}_s^{+}}_{\text{for }G}
+    \underbrace{(\sigma_s^+)^{(t)}\bar{G}_s^{+}}_{\text{for }G}
     \leq 0  
     \hspace{3mm} \forall t,s
     \\
     & \underbrace{(g^-)_s^{(t)}}_{\text{for } C}
     -
-    \underbrace{\sigma_t^-\bar{G}_s^{-}}_{\text{for }G}\le 0 \hspace{3mm} \forall t,s
+    \underbrace{(\sigma_s^-)^{(t)}\bar{G}_s^{-}}_{\text{for }G}\le 0 \hspace{3mm} \forall t,s
     \\
     &
-    \underbrace{\sigma_t^++\sigma_t^-}_{\text{for } G}=1 \hspace{3mm} \forall t,s
+    \underbrace{
+        (\sigma_s^+)^{(t)} +
+        (\sigma_s^-)^{(t)}
+    }_{\text{for } G}=1 \hspace{3mm} \forall t,s
 \end{aligned}
 $$
 
@@ -236,6 +239,7 @@ $$
     (dr)_t
     =
     d_{t}
+    \quad \forall t
 \end{aligned}
 $$
 

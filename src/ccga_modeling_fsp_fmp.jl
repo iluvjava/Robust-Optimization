@@ -191,9 +191,9 @@ function IntroduceVariables!(
     if q_given === nothing
         Decisionvariables = Vector()
         q = MatrixConstruct.q
-        push!(Decisionvariables, zeros(Int, size(q[1])...)...)
-        push!(Decisionvariables, zeros(Int, size(q[2])...)...)
-        push!(Decisionvariables, zeros(Int, size(q[3])...)...)
+        for q′ in q
+            append!(Decisionvariables, zeros(Int, size(q′)...))
+        end
         push!(this.q, Decisionvariables)
         this.eta = @variable(this.model, η >= 0)
     else

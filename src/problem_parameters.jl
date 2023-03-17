@@ -19,7 +19,7 @@ mutable struct ConstParameters
 
     function ConstParameters()
         this = new()
-        this.HORIZON = 24; 
+        this.HORIZON = 4; 
         this.Φ = 1e8;
     return this end
 end
@@ -118,17 +118,15 @@ end
 mutable struct DemandResponse
     level::Int
     rho::Vector
-    R::Vector
+    R::Dict{Int, Number}
     dr_max::Number
 
-    """
-    
-    """
     function DemandResponse(file::CSV.File)
         this = new()
         this.level = length(file)
         this.rho = file["rho"]
-        this.R = file["R"]
+        this.R = zip(1:length(file["R"]), file["R"])|>collect|>Dict
+        this.R[0] = 0
         this.dr_max = file["dr_max"][1]
         return this
     end

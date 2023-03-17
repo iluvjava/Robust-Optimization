@@ -352,6 +352,7 @@ function BatteryConstraints()
         C(g_minus); C()
         push!(rhs, G_minus[s])
     end
+    
 
 return rhs end
 
@@ -442,7 +443,7 @@ function ColumnRegimeFor(matrix::CoefficientMatrix, var::VariableCoefficientHold
 return (starting + 1, starting + length(var)) end
 
 # ------------------------------------------------------------------------------
-# CALL these construction functions in the correct oder
+# CALL these construction functions in the correct order
 # Visualize the matrices for debugging purpose.
 
 

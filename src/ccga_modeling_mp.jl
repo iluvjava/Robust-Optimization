@@ -348,7 +348,7 @@ function IntroduceMasterProblemVariables!(this::Union{MP, MSP})
     # B̄ = size(MatrixConstruct.H, 2)
     this.gamma = @variable(
         model,
-        γ[1:MatrixConstruct.B̄, 1:time_horizon],
+        γ[1:time_horizon],
         lower_bound=0, upper_bound=this.gamma_upper
     )[:]
     
@@ -431,7 +431,9 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
         if this.block_demands_types == 0
             # do nothing here. There is no constraints applied on the bounds of the uncertainty interval for the demands. 
         elseif this.block_demands_types == 1
-            num_gen = MatrixConstruct.B̄; t_horizon = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
+            error("Error out deal with this later. ")
+            num_gen = MatrixConstruct.B̄; 
+            t_horizon = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
             γ = this.gamma
             for t in 0:t_horizon - 1
                 γ_block = γ[num_gen*t + 1: num_gen*(t + 1)]

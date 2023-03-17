@@ -233,12 +233,14 @@ function ProduceReport(::CCGAIR, fsp::FSP)::Vector{String}
     string_list = Vector{String}()
     u = fsp.u; C = MatrixConstruct.C_
     var_coef_holder_list = [
-        MatrixConstruct.p, MatrixConstruct.p′,
-        MatrixConstruct.sr, MatrixConstruct.sr′,
-        MatrixConstruct.regu, MatrixConstruct.regu′,
-        MatrixConstruct.regd, MatrixConstruct.regd′,
-        MatrixConstruct.nsp, MatrixConstruct.nsp′,
-        MatrixConstruct.g_plus, MatrixConstruct.g_minus, 
+        #TODO:[?] DO THIS LATER. Commented out for running new models. 
+        # This section is for storing algorithm output. 
+        # MatrixConstruct.p, MatrixConstruct.p′,
+        # MatrixConstruct.sr, MatrixConstruct.sr′,
+        # MatrixConstruct.regu, MatrixConstruct.regu′,
+        # MatrixConstruct.regd, MatrixConstruct.regd′,
+        # MatrixConstruct.nsp, MatrixConstruct.nsp′,
+        # MatrixConstruct.g_plus, MatrixConstruct.g_minus, 
     ]
     for var_coef_holder in var_coef_holder_list
         (starting_at, ending_at) = MatrixConstruct.ColumnRegimeFor(C, var_coef_holder)
@@ -870,7 +872,7 @@ Results = OuterLoop(
     objective_types=1,
     inner_epsilon=TOL, 
     inner_routine=InnerLoopHeuristic, 
-    block_demands=1, 
+    block_demands=0, 
     make_plot=true
 );
 

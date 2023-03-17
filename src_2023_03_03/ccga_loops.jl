@@ -870,7 +870,7 @@ Results = OuterLoop(
     objective_types=1,
     inner_epsilon=TOL, 
     inner_routine=InnerLoopHeuristic, 
-    block_demands=1, 
+    block_demands=0, 
     make_plot=true
 );
 

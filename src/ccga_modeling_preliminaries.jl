@@ -76,7 +76,6 @@ function PrepareVariablesForTheModel!(
         u = Vector{JuMP.VariableRef}()
         for v in MatrixConstruct.u
             push!(u, @variable(model, [IndicesList(v)], base_name="$(v.v)$(ccga_itr)", lower_bound=0)...)
-
         end
         return u
     end
@@ -85,7 +84,6 @@ function PrepareVariablesForTheModel!(
         q = Vector{JuMP.VariableRef}()
         for v in MatrixConstruct.q
             push!(q, @variable(model, [IndicesList(v)], Bin, base_name="$(v.v)$(ccga_itr)")...)
-
         end
         return q
     end
