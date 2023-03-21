@@ -103,7 +103,11 @@ given solver name and a TimeStamp will be stored to the global SESSION_DIR.
 
 """
 function GetJuMPModel(
-    ;optimality_gap=0.001, time_out::Int=180, solver_name::String="", mip_focus::Int=0, log_to_console::Int=0
+    ;optimality_gap=0.05, 
+    time_out::Int=180, 
+    solver_name::String="", 
+    mip_focus::Int=0, 
+    log_to_console::Int=0
 )
     model = Model(() -> Gurobi.Optimizer(GUROBI_ENV))
     set_optimizer_attribute(model, "MIPGap", optimality_gap)
@@ -783,7 +787,7 @@ function OuterLoop(
     γ⁺ = gamma_upper; d̂ = d_hat
     model_mp = GetJuMPModel()
     mp = MP(model_mp, γ⁺)
-    model_msp = GetJuMPModel(solver_name="MSP")
+    model_msp = GetJuMPModel(solver_name="MSP", log_to_console=1)
     msp = MSP(model_msp, d̂, γ⁺; kwargs...)
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
     PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
@@ -858,7 +862,7 @@ return outer_results end
 
 EXPECTED_DEMANDS = 200
 VARIANCE = 50
-GAMMA_UPPER = 130
+GAMMA_UPPER = 300
 TOL = 1.0
 
 ϵ = 1.0
@@ -869,7 +873,7 @@ Results = OuterLoop(
     GAMMA_UPPER,
     inner_max_itr=10,
     outer_max_itr=40, 
-    objective_types=1,
+    objective_types=2,
     inner_epsilon=TOL, 
     inner_routine=InnerLoopHeuristic, 
     block_demands=0, 

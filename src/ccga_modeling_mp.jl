@@ -527,7 +527,7 @@ function IntroduceCut!(this::MSP, d::Vector{Float64})::MSP
 
     @assert length(d) == length(d̂) "The length of demand vector for the master problem is expected to be $(d̂|>length)."*
     "However we have $(d|>length). "
-    @assert all(d .<= d̂ + γ̄ .+ eps(Float64)) && all(d .>= d̂ - γ̄ .+ eps(Float64)) ""*
+    @assert all(d .<= d̂ + γ̄ .+ eps(Float32)) && all(d .>= d̂ - γ̄ .- eps(Float32)) ""*
     "The demands is kinda outside the range of the uncertainty interval last suggested by the master problem"
     ρ = (d - d̂)./γ̄ 
     ρ = map(ρ, γ̄) do r, g
