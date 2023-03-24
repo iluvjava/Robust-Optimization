@@ -194,13 +194,16 @@ constraints are all are in the same matrix: $C$.
 
 $$
 \begin{aligned}
+    & 
+    \underbrace{h_s^{1} - h_s^{0} = 0}_{\text{for C}}, \forall s \in S \quad 
+    \\
     \text{for }C
     & 
     \begin{cases}
-        h_s^{t+1} - h_s^t - \nu_s^{+}g_s^{t+} + \nu_s^{-}g_s^{t-} = 0, 
+        h_s^{t} - h_s^{t - 1} - \nu_s^{+}(g_s^+)^{t-1} + \nu_s^{-}(g_s^-)^{t-1} = 0, 
         & 
         \hspace{3mm} 
-        \forall t=1,...T-1, \forall s 
+        \forall t=2,\cdots,T, \forall s 
         \\
         h_s^t \leq \bar{H}_s & \hspace{3mm} \forall t 
     \end{cases}

@@ -48,7 +48,7 @@ MP: Master problem.
         this.Tminu = MatrixConstruct.PRIMARY_GENERATORS.Tminu
         @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
-        this.gamma_upper = gamma_upper
+        this.gamma_upper = gamma_upper  # this is unused. 
         this.con = Vector()
         EstablishMainProblem!(this)
     return this end

@@ -188,20 +188,32 @@ function BatteryConstraints()
     G_plus = STORAGE_SYSTEM.CharingLim
     G_minus = STORAGE_SYSTEM.DischargingLim
 
-    for t in 1:T - 1, s in 1:S
-        h[s, t + 1] = 1
-        h[s, t] = -1
-        g_plus[s, t] = -v[s]
-        g_minus[s, t] = v[s]
+    for s in 1: S
+        # Note, the h[0, s] has been set to a constant value: 0, manually. 
+        h[s, 1] = 1
+        C(h); C()
+        push!(rhs, 0)
+
+        h[s, 1] = -1
+        C(h); C()
+        push!(rhs, 0)
+        
+    end
+    
+    for t in 2:T, s in 1:S
+        h[s, t] = 1
+        h[s, t - 1] = -1
+        g_plus[s, t - 1] = -v[s]
+        g_minus[s, t - 1] = v[s]
         C(h, g_plus, g_minus); C()
         push!(rhs, 0)
     end
-
-    for t in 1:T - 1, s in 1:S
-        h[s, t + 1] = -1
-        h[s, t] = 1
-        g_plus[s, t] = v[s]
-        g_minus[s, t] = -v[s]
+    
+    for t in 2:T, s in 1:S
+        h[s, t] = -1
+        h[s, t - 1] = 1
+        g_plus[s, t - 1] = v[s]
+        g_minus[s, t - 1] = -v[s]
         C(h, g_plus, g_minus); C()
         push!(rhs, 0)
     end
@@ -288,6 +300,19 @@ function DemandsBalanceConstraints()
     return rhs
 end
 
+
+"""
+Given a symbol and the matrix that is supposed to responsbible for it, it returns 
+what range of columns of the matrix corresponds to the given variable. 
+
+The columns will start indexing at one. 
+"""
+function ColumnRegimeFor(matrix::CoefficientMatrix, var::VariableCoefficientHolder)
+    if !(var.v in matrix.var_posi|>keys)
+        return -1 
+    end
+    starting = matrix.var_posi[var.v]
+return (starting + 1, starting + length(var)) end
 
 rhs1 = FuelConstraints()
 rhs2 = CapacityContraints()

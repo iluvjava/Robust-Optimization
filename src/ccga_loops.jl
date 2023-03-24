@@ -231,21 +231,19 @@ end
 
 """
 A function factored out and its being shared by instances of `IRBHeuristic`, and `IRBReform`. 
+It reads out the values for the JuMP variables output from the FSP solve. 
 """
 function ProduceReport(::CCGAIR, fsp::FSP)::Vector{String}
     # WARN:[?]() This code is not yet tested! 
     string_list = Vector{String}()
     u = fsp.u; C = MatrixConstruct.C_
-    var_coef_holder_list = [
+    # u = [c, p, h, g_plus, g_minus, dr, μ]
+    var_coef_holder_list = MatrixConstruct.u
+    # [
         #TODO:[?] DO THIS LATER. Commented out for running new models. 
         # This section is for storing algorithm output. 
-        # MatrixConstruct.p, MatrixConstruct.p′,
-        # MatrixConstruct.sr, MatrixConstruct.sr′,
-        # MatrixConstruct.regu, MatrixConstruct.regu′,
-        # MatrixConstruct.regd, MatrixConstruct.regd′,
-        # MatrixConstruct.nsp, MatrixConstruct.nsp′,
-        # MatrixConstruct.g_plus, MatrixConstruct.g_minus, 
-    ]
+       
+    # ]
     for var_coef_holder in var_coef_holder_list
         (starting_at, ending_at) = MatrixConstruct.ColumnRegimeFor(C, var_coef_holder)
         for idx = starting_at:ending_at
@@ -860,9 +858,9 @@ function OuterLoop(
 return outer_results end
 
 
-EXPECTED_DEMANDS = 200
+EXPECTED_DEMANDS = 1200
 VARIANCE = 50
-GAMMA_UPPER = 300
+GAMMA_UPPER = 50
 TOL = 1.0
 
 ϵ = 1.0
