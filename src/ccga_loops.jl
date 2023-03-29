@@ -858,9 +858,9 @@ function OuterLoop(
 return outer_results end
 
 
-EXPECTED_DEMANDS = 1200
+EXPECTED_DEMANDS = 600
 VARIANCE = 50
-GAMMA_UPPER = 50
+GAMMA_UPPER = 500
 TOL = 1.0
 
 ϵ = 1.0

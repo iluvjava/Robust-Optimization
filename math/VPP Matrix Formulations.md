@@ -246,4 +246,4 @@ $$
 \end{aligned}
 $$
 
-They are all for the matrix $C$. 
+$p, g^+, g^-$ are for $C$ matrix, and $d_t$, is for the $H$ matrix in the code. 

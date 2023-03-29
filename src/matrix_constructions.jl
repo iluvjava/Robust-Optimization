@@ -276,7 +276,7 @@ function DemandsBalanceConstraints()
         end
         dr[t] = 1
         d[t] = -1
-        C(p, g_plus, g_minus); C()
+        C(p, g_plus, g_minus, dr); C()
         H(d); H()
         push!(rhs, 0)
     end
@@ -290,7 +290,7 @@ function DemandsBalanceConstraints()
         end
         dr[t] = -1
         d[t] = 1
-        C(p, g_plus, g_minus); C()
+        C(p, g_plus, g_minus, dr); C()
         H(d); H()
         push!(rhs, 0)
     end
