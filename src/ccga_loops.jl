@@ -15,7 +15,7 @@ if !isdir(RESULTS_DIRECTORY)
 end
 
 """
-Get the current system time stamp up to milisec that can be interpolated within files names in most platforms. 
+Get the current system time stamp up to mili sec that can be interpolated within files names in most platforms. 
 """
 function TimeStamp()
 return "["*(Date(now())|>string)*" "*(Time(now())|>string)*"]" end
@@ -57,7 +57,7 @@ return that end
 """
 Pass a IO lambada function and apply that lamba to the underlying IOStream of the file. 
 """
-function(this::SessionFile)(fxn::Function)::SessionFile
+function (this::SessionFile)(fxn::Function)::SessionFile
     open(this.file_loc, "a+") do io
         fxn(io)
     end
@@ -73,7 +73,7 @@ function Close(this::SessionFile)
 return end
 
 
-# Session file related info are all here. 
+# Session file handers are global variables ============================================================================
 
 global FILE_SESSTION_TIME_STAMP = TimeStampConvert()
 mkdir(RESULTS_DIRECTORY*"/$FILE_SESSTION_TIME_STAMP")
@@ -194,8 +194,8 @@ end
 """
 CCGAIRBH: CCGA Inner Results Bilinear Heuristic. 
 
-This struct is made to store results from the bilinear reformulations of the FMPH, which is used as another type of 
-CCGA Inner iterations. 
+This struct is made to store results from the bilinear reformulations using the FMPH (Binlinear search), 
+which is used as another type of CCGAIR. 
 """
 mutable struct IRBHeuristic <: CCGAIR
     "an instance of FMPH stepper that is used throughout the inner iterations of the CCGA. "
@@ -236,14 +236,10 @@ It reads out the values for the JuMP variables output from the FSP solve.
 function ProduceReport(::CCGAIR, fsp::FSP)::Vector{String}
     # WARN:[?]() This code is not yet tested! 
     string_list = Vector{String}()
-    u = fsp.u; C = MatrixConstruct.C_
+    u = fsp.u
+    C = MatrixConstruct.C_
     # u = [c, p, h, g_plus, g_minus, dr, μ]
     var_coef_holder_list = MatrixConstruct.u
-    # [
-        #TODO:[?] DO THIS LATER. Commented out for running new models. 
-        # This section is for storing algorithm output. 
-       
-    # ]
     for var_coef_holder in var_coef_holder_list
         (starting_at, ending_at) = MatrixConstruct.ColumnRegimeFor(C, var_coef_holder)
         for idx = starting_at:ending_at
@@ -268,7 +264,8 @@ as the last iteration of the inner loop.
 """
 function ProduceReport(this::IRBReform)::String
     # In addition to produce the report in text, these parameters need to be stored as flattend array after the algorithm is finished. 
-    # This is for the CCGA outterloop. 
+    # This is for the CCGA outterloop.
+
     # WARN: [?]() This code is not yet tested. 
     string_list = Vector{String}()
     append!(string_list, ProduceReport(this, this.fsp))
@@ -308,6 +305,8 @@ function ProduceReport(this::IRBHeuristic)::String
     end
     
 return join(string_list) end
+
+
 
 
 """
@@ -456,9 +455,42 @@ function ProduceReport(this::OutterResults)::String
     
 return string_list|>join end
 
+"""
+    ProduceCSVFiles(this::OutterResults)
+
+Print out all the decision variables for the last instance of the FSP, in a formatted CSV files. 
+It will get the JuMP decision variable from an instance of `CCGAIR`. 
+"""
+function ProduceCSVFiles(this::OutterResults)::Nothing
+    #TODO [] Test out Produce CSV files 
+    gammas_matrix = this.msp.gamma # this later. 
+    u = this.fsp.u
+    var_coef_holder_list = MatrixConstruct.u
+    all_decision_var_vals = Vector{AbstractArray}()
+    all_decision_var_names = Vector{Vector}()
+
+    for var_coef_holder in var_coef_holder_list
+        (starting_at, ending_at) = MatrixConstruct.ColumnRegimeFor(C, var_coef_holder)
+        decision_var_val = Vector{AbstractFloat}()
+        for idx = starting_at: ending_at
+            push!(decision_var_val, u[idx].|>value) # can you index the whole array using an array here? 
+        end
+        decision_var_val = reshape(decision_var_val, var_coef_holder.dims)'
+        decision_var_names = ["$(var_coef_holder.v)[$k]" for k in 1: size(decision_var_val, 2)]
+        push!(all_decision_var_vals, decision_var_val)
+        push!(all_decision_var_names, decision_var_names)
+    end
+    u_matrix = hcat(all_decision_var_vals...)
+    u_matrix_col_attr = hcat(all_decision_var_names...)
+    CSV.write("$(SESSION_DIR)/u_final.csv", Tables.table(u_matrix), header=u_matrix_col_attr)
+
+return nothing end
+
 
 """
-`SaveAllModels(this::CCGAOuterResults)` saves all the the models involved during the execution of the full CCGA 
+    SaveAllModels(this::CCGAOuterResults)
+
+saves all the the models involved during the execution of the full CCGA 
 iterations. The files will be all the final version of *FMP*, *MSP* for the inner and outer iterations in the `MOI`
 file format compressed into `.gz`. 
 """
@@ -841,6 +873,8 @@ function OuterLoop(
         write(io, outer_results|>ProduceReport)  # print out master problem report first! 
         write(io, outer_results.inner_loops[end]|>ProduceReport) # print out the inner loop results next. 
     end
+    #TODO []() write the ProduceCSVFiles here, for the instance of outter ccga forloop. 
+    OutterResults|>ProduceCSVFiles
 
     if inner_routine === InnerLoopBilinear
         SaveAllModels(outer_results)
