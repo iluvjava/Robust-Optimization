@@ -1,4 +1,4 @@
-using Infiltrator, ProgressMeter, Dates, Distributions
+using Infiltrator, ProgressMeter, Dates, Distributions, Tables, CSV
 
 include("utilities.jl")
 include("matrix_construction_export.jl")
@@ -463,26 +463,27 @@ It will get the JuMP decision variable from an instance of `CCGAIR`.
 """
 function ProduceCSVFiles(this::OutterResults)::Nothing
     #TODO [] Test out Produce CSV files 
-    gammas_matrix = this.msp.gamma # this later. 
-    u = this.fsp.u
+    gammas_matrix = this.msp_gamma # this later. 
+    u = this.inner_loops[end].fsp.u
     var_coef_holder_list = MatrixConstruct.u
     all_decision_var_vals = Vector{AbstractArray}()
     all_decision_var_names = Vector{Vector}()
 
     for var_coef_holder in var_coef_holder_list
-        (starting_at, ending_at) = MatrixConstruct.ColumnRegimeFor(C, var_coef_holder)
+        (starting_at, ending_at) = MatrixConstruct.ColumnRegimeFor(MatrixConstruct.C_, var_coef_holder)
         decision_var_val = Vector{AbstractFloat}()
         for idx = starting_at: ending_at
             push!(decision_var_val, u[idx].|>value) # can you index the whole array using an array here? 
         end
-        decision_var_val = reshape(decision_var_val, var_coef_holder.dims)'
+        decision_var_val = reshape(decision_var_val, :, MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON)'
         decision_var_names = ["$(var_coef_holder.v)[$k]" for k in 1: size(decision_var_val, 2)]
         push!(all_decision_var_vals, decision_var_val)
         push!(all_decision_var_names, decision_var_names)
     end
     u_matrix = hcat(all_decision_var_vals...)
-    u_matrix_col_attr = hcat(all_decision_var_names...)
+    u_matrix_col_attr = vcat(all_decision_var_names...)
     CSV.write("$(SESSION_DIR)/u_final.csv", Tables.table(u_matrix), header=u_matrix_col_attr)
+    CSV.write("$(SESSION_DIR)/gammas_all.csv", Tables.table(hcat(gammas_matrix...)))
 
 return nothing end
 
@@ -874,7 +875,7 @@ function OuterLoop(
         write(io, outer_results.inner_loops[end]|>ProduceReport) # print out the inner loop results next. 
     end
     #TODO []() write the ProduceCSVFiles here, for the instance of outter ccga forloop. 
-    OutterResults|>ProduceCSVFiles
+    outer_results|>ProduceCSVFiles
 
     if inner_routine === InnerLoopBilinear
         SaveAllModels(outer_results)
@@ -896,10 +897,10 @@ EXPECTED_DEMANDS = 600
 VARIANCE = 50
 GAMMA_UPPER = 500
 TOL = 1.0
-
 ϵ = 1.0
 d̂ = EXPECTED_DEMANDS*(size(MatrixConstruct.H, 2)|>ones)
 d̂ += rand(Uniform(-VARIANCE, VARIANCE), d̂|>length)
+CSV.write("$SESSION_DIR/d_hat.csv", Tables.table(d̂))
 Results = OuterLoop(
     d̂,
     GAMMA_UPPER,
