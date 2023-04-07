@@ -271,8 +271,8 @@ function DemandsBalanceConstraints()
             p[n, t] = 1
         end
         for s in 1:S
-            g_plus[s, t] = 1
-            g_minus[s, t] = -1
+            g_plus[s, t] = -1
+            g_minus[s, t] = 1
         end
         dr[t] = 1
         d[t] = -1
@@ -280,13 +280,14 @@ function DemandsBalanceConstraints()
         H(d); H()
         push!(rhs, 0)
     end
+
     for t in 1:T
         for n in 1: N
             p[n, t] = -1
         end
         for s in 1:S
-            g_plus[s, t] = -1
-            g_minus[s, t] = 1
+            g_plus[s, t] = 1
+            g_minus[s, t] = -1
         end
         dr[t] = -1
         d[t] = 1

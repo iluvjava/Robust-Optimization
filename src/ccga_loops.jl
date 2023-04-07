@@ -460,16 +460,16 @@ return string_list|>join end
 
 Print out all the decision variables for the last instance of the FSP, in a formatted CSV files. 
 It will get the JuMP decision variable from an instance of `CCGAIR`. 
+
+It will also print out all the objective values for the fsp at the last inner loop iterations as well. 
 """
 function ProduceCSVFiles(this::OutterResults)::Nothing
-    #TODO [] Test out Produce CSV files 
     gammas_matrix = this.msp_gamma # this later. 
     u = this.inner_loops[end].fsp.u
-    var_coef_holder_list = MatrixConstruct.u
     all_decision_var_vals = Vector{AbstractArray}()
     all_decision_var_names = Vector{Vector}()
 
-    for var_coef_holder in var_coef_holder_list
+    for var_coef_holder in MatrixConstruct.u
         (starting_at, ending_at) = MatrixConstruct.ColumnRegimeFor(MatrixConstruct.C_, var_coef_holder)
         decision_var_val = Vector{AbstractFloat}()
         for idx = starting_at: ending_at
@@ -482,9 +482,11 @@ function ProduceCSVFiles(this::OutterResults)::Nothing
     end
     u_matrix = hcat(all_decision_var_vals...)
     u_matrix_col_attr = vcat(all_decision_var_names...)
+    
+    # Saving all the data into .csv files. 
     CSV.write("$(SESSION_DIR)/u_final.csv", Tables.table(u_matrix), header=u_matrix_col_attr)
     CSV.write("$(SESSION_DIR)/gammas_all.csv", Tables.table(hcat(gammas_matrix...)))
-
+    CSV.write("$(SESSION_DIR)/gamma_objectives.csv",this.msp_objectives|>Tables.table)
 return nothing end
 
 
@@ -874,6 +876,7 @@ function OuterLoop(
         write(io, outer_results|>ProduceReport)  # print out master problem report first! 
         write(io, outer_results.inner_loops[end]|>ProduceReport) # print out the inner loop results next. 
     end
+    
     #TODO []() write the ProduceCSVFiles here, for the instance of outter ccga forloop. 
     outer_results|>ProduceCSVFiles
 
@@ -893,23 +896,5 @@ function OuterLoop(
 return outer_results end
 
 
-EXPECTED_DEMANDS = 1800
-VARIANCE = 50
-GAMMA_UPPER = 500
-TOL = 1.0
-ϵ = 1.0
-d̂ = EXPECTED_DEMANDS*(size(MatrixConstruct.H, 2)|>ones)
-d̂ += rand(Uniform(-VARIANCE, VARIANCE), d̂|>length)
-CSV.write("$SESSION_DIR/d_hat.csv", Tables.table(d̂))
-Results = OuterLoop(
-    d̂,
-    GAMMA_UPPER,
-    inner_max_itr=10,
-    outer_max_itr=40, 
-    objective_types=2,
-    inner_epsilon=TOL, 
-    inner_routine=InnerLoopHeuristic, 
-    block_demands=0, 
-    make_plot=true
-);
+
 

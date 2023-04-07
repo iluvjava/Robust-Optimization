@@ -20,7 +20,7 @@ mutable struct ConstParameters
     function ConstParameters()
         this = new()
         this.HORIZON = 24; 
-        this.Φ = 1e8;
+        this.Φ = 250000
     return this end
 end
 
