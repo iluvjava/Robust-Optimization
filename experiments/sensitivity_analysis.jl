@@ -7,7 +7,7 @@ global DEMANDS_PROFILES = "data/demand_profiles.csv"|>open|>CSV.File
 global PROFILE = 8
 d̂ = [DEMANDS_PROFILES[PROFILE][idx] for idx in 2:(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON + 1)]
 TOL = 1.0
-GAMMA_UPPER = 1000
+GAMMA_UPPER = 500
 
 Results = OuterLoop(
     d̂,
