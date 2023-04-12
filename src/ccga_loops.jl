@@ -814,6 +814,13 @@ function OuterLoop(
             println(io, "inner_max_itr = $(kwargsd[:inner_max_itr])")
             println(io, "outer_max_itr = $outer_max_itr")
             println(io, "HORIZON = $(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON)")
+            println(io, "budget = $(MatrixConstruct.CONST_PROBLEM_PARAMETERS.Φ)")
+            println(io, "dr_max = $(MatrixConstruct.DEMAND_RESPONSE.dr_max )")
+            println(io, "H̄ = $(MatrixConstruct.STORAGE_SYSTEM.Capacity)")
+            println(io, "Pmax = $(MatrixConstruct.PRIMARY_GENERATORS.Pmax)")
+            println(io, "Pmin = $(MatrixConstruct.PRIMARY_GENERATORS.Pmin)")
+            println(io, "RU = $(MatrixConstruct.PRIMARY_GENERATORS.RU)")
+            println(io, "RD = $(MatrixConstruct.PRIMARY_GENERATORS.RD)")
         end
     end
 

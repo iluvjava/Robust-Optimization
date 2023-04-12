@@ -145,19 +145,29 @@ return m end
 
 
 "The constant parameters for the problem. "
-const CONST_PROBLEM_PARAMETERS = ConstParameters()
+CONST_PROBLEM_PARAMETERS = ConstParameters()
 
 "All the data related to the primary generators. "
-const PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
+PRIMARY_GENERATORS = Generators(CSV_P_GEN, CSV_P_ALPHAS, CSV_P_BETAS)
 
 "All the data related to the storage system. "
-const STORAGE_SYSTEM = StorageSystem()
+STORAGE_SYSTEM = StorageSystem()
 
 
-const DEMAND_RESPONSE = DemandResponse(CSV_DEMAND_RESPONSE)
+DEMAND_RESPONSE = DemandResponse(CSV_DEMAND_RESPONSE)
 
 
 # "Stores all the structures of the busses in different transmission line. "
 # const BUSES = Buses()
 
 @info "Problem Parameters Successfully Loaded"
+
+# Manual changes here, for sensitivity analysis 
+CONST_PROBLEM_PARAMETERS.HORIZON = 24
+CONST_PROBLEM_PARAMETERS.Φ = 1e8
+DEMAND_RESPONSE.dr_max = 300
+STORAGE_SYSTEM.Capacity[1] = 100
+PRIMARY_GENERATORS.Pmax .*= 1
+PRIMARY_GENERATORS.Pmin .*= 1
+PRIMARY_GENERATORS.RU .*= 1
+PRIMARY_GENERATORS.RD .*= 1
