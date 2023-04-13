@@ -2,7 +2,6 @@ include("../src/ccga_loops.jl")
 # setting some constant variables 
 
 
-
 global DEMANDS_PROFILES = "data/demand_profiles.csv"|>open|>CSV.File
 global PROFILE = 8
 d̂ = [DEMANDS_PROFILES[PROFILE][idx] for idx in 2:(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON + 1)]
