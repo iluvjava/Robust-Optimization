@@ -133,7 +133,6 @@ end
 function DemandResponseConstraints()
     rhs = Vector()
     R = DEMAND_RESPONSE.R
-    dr_max = DEMAND_RESPONSE.dr_max
 
     for l in 1:L, t in 1:T
         μ[l, t] = -1
@@ -164,13 +163,6 @@ function DemandResponseConstraints()
         dr[t] = -1
         push!(rhs, 0)
         C(μ, dr); C() 
-    end
-    Sync()
-
-    for t in 1:T
-        dr[t] = 1
-        push!(rhs, dr_max)
-        C(dr); C()
     end
     Sync()
 

@@ -119,7 +119,6 @@ mutable struct DemandResponse
     level::Int
     rho::Vector
     R::Dict{Int, Number}
-    dr_max::Number
 
     function DemandResponse(file::CSV.File)
         this = new()
@@ -127,7 +126,6 @@ mutable struct DemandResponse
         this.rho = file["rho"]
         this.R = zip(1:length(file["R"]), file["R"])|>collect|>Dict
         this.R[0] = 0
-        this.dr_max = file["dr_max"][1]
         return this
     end
 
@@ -164,9 +162,11 @@ DEMAND_RESPONSE = DemandResponse(CSV_DEMAND_RESPONSE)
 
 # Manual changes here, for sensitivity analysis 
 CONST_PROBLEM_PARAMETERS.HORIZON = 24
-CONST_PROBLEM_PARAMETERS.Φ = 1e8
-DEMAND_RESPONSE.dr_max *= 1
-STORAGE_SYSTEM.Capacity[1] = 300
+CONST_PROBLEM_PARAMETERS.Φ = 6e6
+for k in keys(DEMAND_RESPONSE.R)
+    DEMAND_RESPONSE.R[k] *= 2
+end
+STORAGE_SYSTEM.Capacity[1] = 100
 PRIMARY_GENERATORS.Pmax .*= 1
 PRIMARY_GENERATORS.Pmin .*= 1
 PRIMARY_GENERATORS.RU .*= 1
