@@ -1,0 +1,66 @@
+
+Gurobi 9.5.2 (mac64[arm]) logging started Fri Apr 21 21:37:49 2023
+
+Set parameter LogFile to value "./ccga_results/2023-04-21 21-37-48-186/MSP_TimeStampConvert_gurobi_log.txt"
+
+Gurobi 9.5.2 (mac64[arm]) logging started Fri Apr 21 21:37:49 2023
+
+Set parameter LogFile to value "./ccga_results/2023-04-21 21-37-48-186/MSP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 180
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (mac64[arm])
+Thread count: 8 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 600 rows, 457 columns and 1482 nonzeros
+Model fingerprint: 0xe63f0f4b
+Variable types: 25 continuous, 432 integer (432 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+00]
+Found heuristic solution: objective 24000.000000
+
+Explored 0 nodes (0 simplex iterations) in 0.00 seconds (0.00 work units)
+Thread count was 1 (of 8 available processors)
+
+Solution count 1: 24000 
+
+Optimal solution found (tolerance 5.00e-02)
+Best objective 2.400000000000e+04, best bound 2.400000000000e+04, gap 0.0000%
+
+User-callback calls 21, time in user-callback 0.00 sec
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (mac64[arm])
+Thread count: 8 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 2149 rows, 961 columns and 6467 nonzeros
+Model fingerprint: 0x2d0fc218
+Variable types: 481 continuous, 480 integer (480 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 2e+06]
+
+MIP start from previous solve did not produce a new incumbent solution
+
+Presolve removed 1015 rows and 464 columns
+Presolve time: 0.02s
+Presolved: 1134 rows, 497 columns, 3659 nonzeros
+Variable types: 303 continuous, 194 integer (194 binary)
+Found heuristic solution: objective 3690.0000000
+Found heuristic solution: objective 5640.0000000
+
+Root relaxation: objective 6.090000e+03, 209 iterations, 0.00 seconds (0.00 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+*    0     0               0    6090.0000000 6090.00000  0.00%     -    0s
+
+Explored 1 nodes (209 simplex iterations) in 0.03 seconds (0.03 work units)
+Thread count was 8 (of 8 available processors)
+
+Solution count 3: 6090 5640 3690 
+
+Optimal solution found (tolerance 5.00e-02)
+Best objective 6.090000000000e+03, best bound 6.090000000000e+03, gap 0.0000%
+
+User-callback calls 906, time in user-callback 0.00 sec
