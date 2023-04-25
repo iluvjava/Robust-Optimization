@@ -1,0 +1,18 @@
+d̂: 
+4-element Vector{Float64}:
+ 1833.3561962274987
+ 1784.0746702069207
+ 1790.7871676498
+ 1804.6791579117298
+Gamma upper, or M is: 500
+epsilon_inner = 1.0
+inner_max_itr = 10
+outer_max_itr = 40
+HORIZON = 4
+budget = 6.0e6
+H̄ = Number[100]
+Pmax = Number[350, 200, 150, 350, 350, 150]
+Pmin = Number[100, 100, 50, 100, 100, 50]
+RU = Number[35, 20, 15, 35, 35, 15]
+RD = Number[35, 20, 15, 35, 35, 15]
+R = Dict{Int64, Number}(0 => 0, 2 => 200, 3 => 300, 1 => 100)

@@ -160,9 +160,10 @@ DEMAND_RESPONSE = DemandResponse(CSV_DEMAND_RESPONSE)
 
 @info "Problem Parameters Successfully Loaded"
 
+
 # Manual changes here, for sensitivity analysis 
-CONST_PROBLEM_PARAMETERS.HORIZON = 24
-CONST_PROBLEM_PARAMETERS.Φ = 6e6*(36/24)
+CONST_PROBLEM_PARAMETERS.HORIZON = 12
+CONST_PROBLEM_PARAMETERS.Φ = 6e6
 for k in keys(DEMAND_RESPONSE.R)
     DEMAND_RESPONSE.R[k] *= 1
 end

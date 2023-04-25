@@ -100,7 +100,7 @@ gurobi solver can be found here [here](https://www.gurobi.com/documentation/9.5/
 - `solver_name::String`: Give the solver a name, if this parameter is specified then a file with the 
 given solver name and a TimeStamp will be stored to the global SESSION_DIR. 
 - `mip_focus::Int`: Change the mode of focus for the GUROBI solver. 
-
+- `log_to_console::Int=0`: Whether to log the JuMP printout to the console. 
 """
 function GetJuMPModel(
     ;optimality_gap=0.05, 
@@ -575,7 +575,7 @@ function InnerLoopBilinear(
     termination_status = 0
     # ----------------------------------
     # Preparing solvers
-    model_fmp = GetJuMPModel(solver_name="FMP", mip_focus=1)
+    model_fmp = GetJuMPModel(solver_name="FMP", mip_focus=1, log_to_console=1)
     fmp = FMP(w̄, γ̄, d̂, model_fmp)
     @info "$(TimeStamp()) Inner loop is initialized with fmp, and we are solving the initial fmp. "|>SESSION_FILE1
     Solve!(fmp)
