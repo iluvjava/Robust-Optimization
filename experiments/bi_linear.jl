@@ -19,3 +19,5 @@ Results = OuterLoop(
     block_demands=0, 
     make_plot=true
 );
+
+# WHEN YOU RUN IT ON YOUR WORK COMPUTER, REMEMBER TO GET RID OF THE 3 MINUES TIME LIMIT FOR THE SOLVER!!!!!!!! 
