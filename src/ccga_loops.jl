@@ -9,6 +9,8 @@ include("ccga_modeling.jl")
 const GUROBI_ENV = Gurobi.Env()
 "The major directories where every session of the ccga results are going to output to. "
 const RESULTS_DIRECTORY = "./ccga_results"
+"The parameters for default time out options for the solver made for JuMP Models. "
+const SOLVER_TIME_OUT = typemax(Int);
 
 if !isdir(RESULTS_DIRECTORY)
     mkdir(RESULTS_DIRECTORY)
@@ -104,7 +106,7 @@ given solver name and a TimeStamp will be stored to the global SESSION_DIR.
 """
 function GetJuMPModel(
     ;optimality_gap=0.05, 
-    time_out::Int=180, 
+    time_out::Int=SOLVER_TIME_OUT, 
     solver_name::String="", 
     mip_focus::Int=0, 
     log_to_console::Int=0
