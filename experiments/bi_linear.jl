@@ -15,7 +15,7 @@ Results = OuterLoop(
     outer_max_itr=40, 
     objective_types=2,
     inner_epsilon=1.0, 
-    inner_routine=InnerLoopBilinear, 
+    inner_routine=InnerLoopHeuristic, 
     block_demands=0, 
     make_plot=true
 );
