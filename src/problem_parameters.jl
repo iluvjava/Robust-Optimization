@@ -1,12 +1,16 @@
 using CSV
 
+DATA_DIR = "data_3"
 
 "Primary generators fuel costs parameters. "
-const CSV_P_ALPHAS = CSV.File(open("data/alpha.csv"))
+const CSV_P_ALPHAS = CSV.File(open("$DATA_DIR/alpha.csv"))
+
 "Primary generators fuel costs. "
-const CSV_P_BETAS = CSV.File(open("data/beta.csv"))
+const CSV_P_BETAS = CSV.File(open("$DATA_DIR/beta.csv"))
+
 "Primary generator generation limit. "
-const CSV_P_GEN = CSV.File(open("data/ro_gen_data.csv"))
+const CSV_P_GEN = CSV.File(open("$DATA_DIR/ro_gen_data.csv"))
+
 "The data for the storage devices. "
 const CSV_STORAGE = CSV.File(open("data/storage_data.csv"))
 
@@ -162,7 +166,6 @@ DEMAND_RESPONSE = DemandResponse(CSV_DEMAND_RESPONSE)
 
 
 # Manual changes here, for sensitivity analysis 
-CONST_PROBLEM_PARAMETERS.HORIZON = 16
 CONST_PROBLEM_PARAMETERS.Φ = 6e6
 for k in keys(DEMAND_RESPONSE.R)
     DEMAND_RESPONSE.R[k] *= 1

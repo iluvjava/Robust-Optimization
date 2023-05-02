@@ -10,7 +10,7 @@ const GUROBI_ENV = Gurobi.Env()
 "The major directories where every session of the ccga results are going to output to. "
 const RESULTS_DIRECTORY = "./ccga_results"
 "The parameters for default time out options for the solver made for JuMP Models. "
-const SOLVER_TIME_OUT = typemax(Int);
+const SOLVER_TIME_OUT = 180;
 
 if !isdir(RESULTS_DIRECTORY)
     mkdir(RESULTS_DIRECTORY)
