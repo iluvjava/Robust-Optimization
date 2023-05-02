@@ -1,6 +1,6 @@
 using CSV
 
-DATA_DIR = "data_3"
+DATA_DIR = "data"
 
 "Primary generators fuel costs parameters. "
 const CSV_P_ALPHAS = CSV.File(open("$DATA_DIR/alpha.csv"))
