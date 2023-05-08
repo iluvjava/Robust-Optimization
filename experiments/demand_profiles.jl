@@ -1,10 +1,11 @@
-include("../src/ccga_loops.jl")
+include("experiment_context_and_assembling.jl")
 
-global DEMANDS_PROFILES = "data_3/demand_profiles.csv"|>open|>CSV.File
-global PROFILE = 20
+# Experiment code here, for example: 
+global DEMANDS_PROFILES = "$(MatrixConstruct.DATA_DIR)/demand_profiles.csv"|>open|>CSV.File
+global PROFILE = 13
 d̂ = [DEMANDS_PROFILES[PROFILE][idx] for idx in 2:(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON + 1)]
 TOL = 1.0
-GAMMA_UPPER = 500
+GAMMA_UPPER = 1000
 
 Results = OuterLoop(
     d̂,
@@ -15,5 +16,5 @@ Results = OuterLoop(
     inner_epsilon=1, 
     inner_routine=InnerLoopHeuristic, 
     block_demands=0, 
-    make_plot=true
+    make_plot=false
 );

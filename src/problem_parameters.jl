@@ -1,6 +1,7 @@
 using CSV
 
-DATA_DIR = "data"
+
+
 
 "Primary generators fuel costs parameters. "
 const CSV_P_ALPHAS = CSV.File(open("$DATA_DIR/alpha.csv"))
@@ -164,14 +165,3 @@ DEMAND_RESPONSE = DemandResponse(CSV_DEMAND_RESPONSE)
 
 @info "Problem Parameters Successfully Loaded"
 
-
-# Manual changes here, for sensitivity analysis 
-CONST_PROBLEM_PARAMETERS.Φ = 6e6
-for k in keys(DEMAND_RESPONSE.R)
-    DEMAND_RESPONSE.R[k] *= 1
-end
-STORAGE_SYSTEM.Capacity[1] = 100
-PRIMARY_GENERATORS.Pmax .*= 1
-PRIMARY_GENERATORS.Pmin .*= 1
-PRIMARY_GENERATORS.RU .*= 1
-PRIMARY_GENERATORS.RD .*= 1

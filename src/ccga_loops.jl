@@ -1,8 +1,3 @@
-using Infiltrator, ProgressMeter, Dates, Distributions, Tables, CSV
-
-include("utilities.jl")
-include("matrix_construction_export.jl")
-include("ccga_modeling.jl")
 
 
 "The global environment for the gurobi solver. "
@@ -636,9 +631,9 @@ true value of `FMP`, as compare to the `FMP` problem designed using the bilinear
 - `d_hat::Vector{N3}`: The center of the uncertainty interval. 
 - `epsilon::Float64=0.1`: The tolerance for deciding whether fmph is close to zero, or not close to zero. 
 - `max_iter::Int=8`: The maximal iterations allowed to compute the alternative heuristic for the FMPH. 
-- `N::Int=10`: Controls the total number of attempts to start with an random guess for the FMPH system to bump up the 
-heurstic value that is lower than the `epsilon`. 
-- `M::Int=10`: Consrols the total number of cuts introduced by the FSP to the FMPH system. 
+- `N::Int=10`: Controls the total number of attempts do a random search on demands for the FMPH system to bump up the 
+heurstic each time when the value of heuristic is lower than `epsilon`. 
+- `M::Int=10`: Consrols the total number of cuts can be introduced by the FSP to the FMPH system. 
 - `kwargs...`: Leftover parameters for ignore extra named arguments passed from other functions. 
 
 """
@@ -648,7 +643,7 @@ function InnerLoopHeuristic(
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
     max_itr::Int=8, 
-    N::Int=10,
+    N::Int=1, 
     M::Int=10, 
     kwargs...
 ) where {N1<:Number, N2<:Number, N3 <:Number}
@@ -669,12 +664,14 @@ function InnerLoopHeuristic(
     all_ds = Vector{Vector}()
     local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel)
     push!(upperbound_list, fmphs|>objective_value)
-    function AltUntilConverged(max_itr_alth::Int=0)
+    
+    function AltUntilConverged(max_itr_alth::Int=5)
         previous = Inf; t = 0
         while (previous > fmphs|>objective_value) && (t < max_itr_alth)
             fmphs(); t += 1
         end
     end
+
     fsp = FSP(w̄::Vector{Float64}, fmphs|>GetDemands, GetJuMPModel())
     Solve!(fsp)  # always solved regardless of objective value of fmph. 
     push!(lowerbound_list, [fsp|>objective_value])
