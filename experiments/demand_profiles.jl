@@ -13,8 +13,8 @@ Results = OuterLoop(
     inner_max_itr=10,
     outer_max_itr=40, 
     objective_types=2,
-    inner_epsilon=1, 
-    inner_routine=InnerLoopHeuristic, 
+    inner_epsilon=1.0, 
+    inner_routine=InnerLoopBilinear, 
     block_demands=0, 
     make_plot=false
 );

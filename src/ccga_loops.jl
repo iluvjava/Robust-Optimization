@@ -535,7 +535,7 @@ return fig1, fig2, fig3 end
         max_itr::Int=8
     ) where {N1<:Number, N2<:Number, N3 <:Number}
 
-Performs the CCGA Inter forloops and returns the results for making the cut for the *MSP*. 
+This is the MIP reformulation of the Bi-linear problem. 
 
 # Positional arguments: 
 - `gamma_bar::Vector{N1}`: The initial gamma bound for each of the demand decision variable, predicted by the MSP.
@@ -551,7 +551,7 @@ function InnerLoopBilinear(
     gamma_bar::Vector{N1}, 
     w_bar::Vector{N2},
     d_hat::Vector{N3};
-    inner_epsilon::Float64=0.1,
+    inner_epsilon::Number=0.1,
     inner_max_itr::Int=8, 
     kwargs...
 ) where {N1<:Number, N2<:Number, N3 <:Number}
@@ -860,7 +860,7 @@ function OuterLoop(
         end
         @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "|>SESSION_FILE1
 
-        RoutineFor(msp, Results) # Deploy the cut routine based on the inner results type. 
+        RoutineFor(msp, Results) # Deploy the cut routine based on the inner results type, for the master problem. 
 
         Solve!(msp)
         outer_results(msp)
@@ -870,6 +870,7 @@ function OuterLoop(
         @assert !isnan(objective_value(msp)) "$context objective value for msp is NaN. "
         @assert !isinf(objective_value(msp)) "$contex objective value of msp is inf. "
         
+        outer_results|>ProduceCSVFiles
     end
 
     outer_results.msp = msp
@@ -883,8 +884,6 @@ function OuterLoop(
         write(io, outer_results.inner_loops[end]|>ProduceReport) # print out the inner loop results next. 
     end
     
-    #TODO []() write the ProduceCSVFiles here, for the instance of outter ccga forloop. 
-    outer_results|>ProduceCSVFiles
 
     if inner_routine === InnerLoopBilinear
         SaveAllModels(outer_results)
