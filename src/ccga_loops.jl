@@ -642,7 +642,7 @@ function InnerLoopMIP(
         q = Getq(fsp); push!(all_qs, q)
         IntroduceCut!(fmp, q)
         @info "$(TimeStamp()) CCGA Inner loop continues, constraints is introduced to fmp and we are solving it. "|>SESSION_FILE1
-        AdaptSolverTimeout(fmp); Solve!(fmp)
+        AdaptSolverTimeout(model_fmp); Solve!(fmp)
         @assert !(objective_value(fmp)|>isnan) "$(premise) FMP"*
             " is infeasible or unbounded DURING the inner CCGA iterations. "
         push!(upperbound_list, objective_value(fmp))
