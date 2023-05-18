@@ -5,7 +5,7 @@ const RESULTS_DIRECTORY = "./ccga_results"
 "The parameters for default time out options for the solver made for JuMP Models. "
 const SOLVER_TIME_OUT = 1800
 "The total amount of time allowed for executing the CCGA algorithm. "
-const SESSION_TIME_OUT = 30
+global SESSION_TIME_OUT = 1800
 
 if SESSION_TIME_OUT <= 0
     error("SESSION_TIME_OUT out can't be <= 0. ")
@@ -848,7 +848,7 @@ function OuterLoop(
     outer_max_itr::Int=40,
     make_plot::Bool=true, 
     inner_routine::Function=InnerLoopMIP,
-    session_time_out::Bool=false,
+    session_time_out::Int=-1,
     kwargs...
 ) where {N1 <: Number, N2 <: Number}
     context = "During the execution of the outter loop of CCGA: "
@@ -877,8 +877,9 @@ function OuterLoop(
             println(io, "R = $(MatrixConstruct.DEMAND_RESPONSE.R)")
         end
     end
-    if session_time_out
+    if session_time_out >= 0
         global SESSION_START_TIME = datetime2unix(now())|>floor|>Int
+        global SESSION_TIME_OUT = session_time_out
         @info "Session time limit has been set to $(SESSION_TIME_OUT) seconds. "*
             "This will dynamically adjust solver time_out options depending on the amount of time remainds. "
     end
