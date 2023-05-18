@@ -13,7 +13,7 @@ module MatrixConstruct
     include("../src/problem_parameters.jl")
     
     # Manual changes here, for sensitivity analysis 
-    CONST_PROBLEM_PARAMETERS.HORIZON = 12
+    CONST_PROBLEM_PARAMETERS.HORIZON = 20
     CONST_PROBLEM_PARAMETERS.Φ = 6e6
     for k in keys(DEMAND_RESPONSE.R)
         DEMAND_RESPONSE.R[k] *= 1
