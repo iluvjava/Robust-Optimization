@@ -1,14 +1,50 @@
-
-
 "The global environment for the gurobi solver. "
 const GUROBI_ENV = Gurobi.Env()
 "The major directories where every session of the ccga results are going to output to. "
 const RESULTS_DIRECTORY = "./ccga_results"
 "The parameters for default time out options for the solver made for JuMP Models. "
-const SOLVER_TIME_OUT = 180;
+const SOLVER_TIME_OUT = 1800
+"The total amount of time allowed for executing the CCGA algorithm. "
+const SESSION_TIME_OUT = 30
+
+if SESSION_TIME_OUT <= 0
+    error("SESSION_TIME_OUT out can't be <= 0. ")
+end
+
+"The int epoch time for when the session was started. This can be modified. "
+global SESSION_START_TIME = nothing
+
 
 if !isdir(RESULTS_DIRECTORY)
     mkdir(RESULTS_DIRECTORY)
+end
+
+"""
+function returns the number of seconds since `SESSION_START_TIME`. If -1 
+is returned, that means `SESSION_START_TIME` was never established before 
+this function is being called. 
+
+"""
+function Elapsed()::Int
+    if SESSION_START_TIME === nothing
+        return -1
+    end
+    return (now()|>datetime2unix|>floor|>Int) - SESSION_START_TIME
+end
+
+"""
+Change the solver timeout to be the amount of time remains for this section. 
+"""
+function AdaptSolverTimeout(model::Model)::Model
+    if Elapsed() == -1
+        return model
+    end
+    timeRemains = SESSION_TIME_OUT - Elapsed()
+    if timeRemains <= 0 
+        error("We run out of time, forced terminations by errors. ")
+    end
+    set_optimizer_attribute(model, "TIME_LIMIT", timeRemains)
+    return model
 end
 
 """
@@ -123,7 +159,8 @@ return model end
 # ======================================================================================================================
 
 """
-A type that should inherit the following methods: 
+CCGAIR: CCGA Innerloop Results
+A type that should inherit the following methods:
 - `ProduceReport(this::IRBHeuristic)::String`
 - `ProducePlot(this::IRBHeuristic)::Plots.Plot`
 """
@@ -168,9 +205,10 @@ mutable struct IRBReform <: CCGAIR
     lower_bounds::Vector
     """
     A code representing different reasons that made the inner CCGA interminate: 
-    * Status code  `1`: terminates because fsp is positive
+    * Status code  `1`: terminates because fsp is positive, demand is good for introducing cut on MSP. 
     * status code  `0`: fmp and fsp both converged to zero. 
     * Status code `-1`: terminates because max iteration counter is reached. 
+    * Status code `-2`: terminates due to session time out. 
     """
     termination_status::Int 
 
@@ -547,12 +585,12 @@ This is the MIP reformulation of the Bi-linear problem.
 - `max_iter::Int=8`: The maximum number of iterations before the for loop terminates. 
 - `kwargs...`: This parameter is for ignoring invalid named parameters passed by other functions. 
 """
-function InnerLoopBilinear(
+function InnerLoopMIP(
     gamma_bar::Vector{N1}, 
     w_bar::Vector{N2},
     d_hat::Vector{N3};
     inner_epsilon::Number=0.1,
-    inner_max_itr::Int=8, 
+    inner_max_itr::Int=8,
     kwargs...
 ) where {N1<:Number, N2<:Number, N3 <:Number}
     
@@ -570,9 +608,14 @@ function InnerLoopBilinear(
     all_qs = Vector{Vector}()
     all_ds = Vector{Vector}()
     termination_status = 0
-    # ----------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
     # Preparing solvers
-    model_fmp = GetJuMPModel(solver_name="FMP", mip_focus=1, log_to_console=1)
+    model_fmp = GetJuMPModel(
+        solver_name="FMP", 
+        mip_focus=1, 
+        log_to_console=1
+    )
+    AdaptSolverTimeout(model_fmp)
     fmp = FMP(w̄, γ̄, d̂, model_fmp)
     @info "$(TimeStamp()) Inner loop is initialized with fmp, and we are solving the initial fmp. "|>SESSION_FILE1
     Solve!(fmp)
@@ -598,17 +641,22 @@ function InnerLoopBilinear(
         q = Getq(fsp); push!(all_qs, q)
         IntroduceCut!(fmp, q)
         @info "$(TimeStamp()) CCGA Inner loop continues, constraints is introduced to fmp and we are solving it. "|>SESSION_FILE1
-        Solve!(fmp);push!(upperbound_list, objective_value(fmp))
+        Solve!(fmp)
         @assert !(objective_value(fmp)|>isnan) "$(premise) FMP"*
             " is infeasible or unbounded DURING the inner CCGA iterations. "
+        push!(upperbound_list, objective_value(fmp))
         if abs(upperbound_list[end] - lowerbound_list[end]) < ϵ
             @info "$(TimeStamp()) Inner CCGA forloop termminated due to convergence of"*
                 " FSP and FMP on tolerance level ϵ=$(ϵ), new fmp returns: $(fmp|>objective_value)"|>SESSION_FILE1
             break
         end
+        
         if II == inner_max_itr
             termination_status = -1
         end
+        
+        model_fmp|>AdaptSolverTimeout
+
     end
     
 return IRBReform(
@@ -623,17 +671,19 @@ return IRBReform(
 
 
 """
-This inner CCGA, but this time we are using the alternating heuristic to approximate the lower bound for the 
-true value of `FMP`, as compare to the `FMP` problem designed using the bilinear reformulations. 
+This inner CCGA routine uses alternating heuristic to approximate the lower bound for the 
+true value of `FMP`.
 
 - `gamma_bar::Vector{N1}`: This is the uncertainty bounds returned by the master problem. 
 - `w_bar::Vector{N2}`: Primary discrete variable from the master proble. 
 - `d_hat::Vector{N3}`: The center of the uncertainty interval. 
 - `epsilon::Float64=0.1`: The tolerance for deciding whether fmph is close to zero, or not close to zero. 
-- `max_iter::Int=8`: The maximal iterations allowed to compute the alternative heuristic for the FMPH. 
+- `inner_max_itr::Int=8`: The maximal iterations allowed to compute the alternative heuristic for the FMPH. 
 - `N::Int=10`: Controls the total number of attempts do a random search on demands for the FMPH system to bump up the 
-heurstic each time when the value of heuristic is lower than `epsilon`. 
-- `M::Int=10`: Consrols the total number of cuts can be introduced by the FSP to the FMPH system. 
+heurstic each time when the value of heuristic estimate from fmph is lower than `epsilon`. 
+- `M::Int=10`: It is the maximum number of times after a `q` is produced from FSP, and added as a cut for the FMPHs
+and then performing the laternative heuristic based on the new `q`, as a results, it limits the maximum number of cuts 
+can be added to the FMPHs, independent of the parameter `inner_max_itr`. 
 - `kwargs...`: Leftover parameters for ignore extra named arguments passed from other functions. 
 
 """
@@ -642,8 +692,8 @@ function InnerLoopHeuristic(
     w_bar::Vector{N2},
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
-    max_itr::Int=8, 
-    N::Int=1, 
+    inner_max_itr::Int=8, 
+    N::Int=0, 
     M::Int=10, 
     kwargs...
 ) where {N1<:Number, N2<:Number, N3 <:Number}
@@ -651,7 +701,7 @@ function InnerLoopHeuristic(
     @assert length(w_bar) == size(MatrixConstruct.B, 2) "$(premis)w̄ has the wrong size. please verify."
     @assert length(d_hat) == size(MatrixConstruct.H, 2) "$(premise)d̂ has the wrong size, please check the code. "
     @assert epsilon >= 0 "$(premise)ϵ for terminating should be non-negative. "
-    @assert max_itr >= 0 "$(premise)Maximum iterations for the inner CCGA forloop should be non-negative. "
+    @assert inner_max_itr >= 0 "$(premise)Maximum iterations for the inner CCGA forloop should be non-negative. "
     @assert !(0 in (gamma_bar .>= 0)) "$(premise)γ̄ should be non-negative. "
     @info "$(TimeStamp()): Executing Inner loops with alternating bi-linear heuristic. "
 
@@ -660,7 +710,7 @@ function InnerLoopHeuristic(
     push!(lowerbound_list, Vector{Float64}())
     upperbound_list = Vector{Float64}() # for the fmph
 
-    all_qs = Vector{Vector}() #TODO [x](1): all_qs, all_ds should be filled in properly for the Produce report of IRBHeuristic. 
+    all_qs = Vector{Vector}() 
     all_ds = Vector{Vector}()
     local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel)
     push!(upperbound_list, fmphs|>objective_value)
@@ -678,7 +728,7 @@ function InnerLoopHeuristic(
     m = 1
     termination_status = 0
     break_flag = false
-    for II in 1:max_itr
+    for II in 1:inner_max_itr
         if fmphs|>objective_value > ϵ
             if fsp|>objective_value > ϵ
                 @info "$(TimeStamp()): FSP objective value: $(fsp|>objective_value) > $ϵ;\n"*
@@ -788,14 +838,17 @@ Performs the outter forloop of the CCGA algorithm with initialized parameters.
     everything is finished. 
 - `objective_types::Int=0`: See doc for *MSP* for more. 
 - `block_demands::Int=1`: See doc for type *MSP* for more information. 
-- `inner_routine::Function=CCGAInnerLoop,`
+- `inner_routine::Function=CCGAInnerLoop`, the inner routine function you want the outter CCGA forloop function 
+to call. 
+- `session_time_out::Bool=False`
 """
 function OuterLoop(
     d_hat::Vector{N1}, 
     gamma_upper::N2;
     outer_max_itr::Int=40,
     make_plot::Bool=true, 
-    inner_routine::Function=InnerLoopBilinear,
+    inner_routine::Function=InnerLoopMIP,
+    session_time_out::Bool=false,
     kwargs...
 ) where {N1 <: Number, N2 <: Number}
     context = "During the execution of the outter loop of CCGA: "
@@ -804,14 +857,16 @@ function OuterLoop(
     @assert gamma_upper > 0 "$context gamma_upper should be a strictly positive number."
     # Store the parameters of the CCGA for reports. 
     let
-        kwargsd = Dict([(item[1], item[2]) for item in kwargs])
+        # kwargsd = Dict([(item[1], item[2]) for item in kwargs])
         SESSION_FILE2() do io
+            # Problem parameters for algorithm 
+            println(io, 
+                foldl(*, [("$(item[1])=$(item[2])\n") for item in kwargs])
+            )
+            # Problem parameters for the systems
+            println(io, "Gamma upper, or M is: $(gamma_upper)")
             println(io, "d̂: ")
             println(io, repr("text/plain", d_hat))
-            println(io, "Gamma upper, or M is: $(gamma_upper)")
-            println(io, "epsilon_inner = $(kwargsd[:inner_epsilon])")
-            println(io, "inner_max_itr = $(kwargsd[:inner_max_itr])")
-            println(io, "outer_max_itr = $outer_max_itr")
             println(io, "HORIZON = $(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON)")
             println(io, "budget = $(MatrixConstruct.CONST_PROBLEM_PARAMETERS.Φ)")
             println(io, "H̄ = $(MatrixConstruct.STORAGE_SYSTEM.Capacity)")
@@ -822,11 +877,16 @@ function OuterLoop(
             println(io, "R = $(MatrixConstruct.DEMAND_RESPONSE.R)")
         end
     end
-
+    if session_time_out
+        global SESSION_START_TIME = datetime2unix(now())|>floor|>Int
+        @info "Session time limit has been set to $(SESSION_TIME_OUT) seconds. "*
+            "This will dynamically adjust solver time_out options depending on the amount of time remainds. "
+    end
     γ⁺ = gamma_upper; d̂ = d_hat
     model_mp = GetJuMPModel()
     mp = MP(model_mp, γ⁺)
     model_msp = GetJuMPModel(solver_name="MSP", log_to_console=1)
+    AdaptSolverTimeout(model_msp)
     msp = MSP(model_msp, d̂, γ⁺; kwargs...)
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
     PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
@@ -838,17 +898,14 @@ function OuterLoop(
     outer_results = OutterResults()
     for _ in 1:outer_max_itr
         outer_counter += 1
-
         @info "$(TimeStamp()) Outter Forloop itr=$outer_counter" |> SESSION_FILE1
         Results = inner_routine(γ̄, w̄, d̂; kwargs...)
         outer_results(Results)
-        
         # SHOULD FACTOR IT OUT AND MAKE IT AS PART OF THE OUTER LOOP STRUCT OBJECTIVE. 
         if make_plot
             fig = Results|>ProducePlot
             fig|>display
         end
-
         if Results.termination_status == -1
             outer_results.termination_status = -2
             @info "$(TimeStamp()) Outer loop terminated due to inner loop reaching maximum iterations without convergence."|>SESSION_FILE1
@@ -859,9 +916,8 @@ function OuterLoop(
             break
         end
         @info "$(TimeStamp()) Introduced cut to the msp and we are solving it. "|>SESSION_FILE1
-
         RoutineFor(msp, Results) # Deploy the cut routine based on the inner results type, for the master problem. 
-
+        AdaptSolverTimeout(model_msp)
         Solve!(msp)
         outer_results(msp)
         w̄ = Getw(msp)
@@ -869,7 +925,6 @@ function OuterLoop(
         @info "$(TimeStamp()) Objective value of msp settled at: $(objective_value(msp)). "|>SESSION_FILE1
         @assert !isnan(objective_value(msp)) "$context objective value for msp is NaN. "
         @assert !isinf(objective_value(msp)) "$contex objective value of msp is inf. "
-        
         outer_results|>ProduceCSVFiles
     end
 
@@ -885,7 +940,7 @@ function OuterLoop(
     end
     
 
-    if inner_routine === InnerLoopBilinear
+    if inner_routine === InnerLoopMIP
         SaveAllModels(outer_results)
     end
 

@@ -14,7 +14,8 @@ Results = OuterLoop(
     outer_max_itr=40, 
     objective_types=2,
     inner_epsilon=TOL, 
-    inner_routine=InnerLoopBilinear, 
+    inner_routine=InnerLoopMIP, 
     block_demands=0, 
-    make_plot=true
+    make_plot=true,
+    
 );
