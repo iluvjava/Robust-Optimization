@@ -17,5 +17,5 @@ Results = OuterLoop(
     inner_routine=InnerLoopMIP, 
     block_demands=0, 
     make_plot=false, 
-    session_time_out=1800
+    session_time_out=1200
 );+
