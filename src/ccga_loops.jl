@@ -694,7 +694,7 @@ function InnerLoopHeuristic(
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
     inner_max_itr::Int=8, 
-    N::Int=0, 
+    N::Int=10, 
     M::Int=10, 
     kwargs...
 ) where {N1<:Number, N2<:Number, N3 <:Number}
@@ -716,10 +716,12 @@ function InnerLoopHeuristic(
     local fmphs = FMPHStepper(w̄, γ̄, d̂, GetJuMPModel)
     push!(upperbound_list, fmphs|>objective_value)
     
-    function AltUntilConverged(max_itr_alth::Int=5)
+    function AltUntilConverged(max_itr_alth::Int=20)
         previous = Inf; t = 0
         while (previous > fmphs|>objective_value) && (t < max_itr_alth)
-            fmphs(); t += 1
+            fmphs()
+            previous = fmphs|>objective_value
+            t += 1
         end
     end
 
@@ -740,7 +742,7 @@ function InnerLoopHeuristic(
                 m += 1
                 fsp = FSP(w̄::Vector{Float64}, fmphs|>GetDemands, GetJuMPModel()); Solve!(fsp)
                 fmphs(fsp|>Getq)
-                @info "$(TimeStamp()): FSP objective value $(fsp|>objective_value) < $ϵ. Introducing Cut and perform alt heuristic. "
+                @info "$(TimeStamp()): FSP objective value $(fsp|>objective_value) < $ϵ, FMPHS obj > $(ϵ). Introducing cut to fmph and perform alt heuristic. "
                 AltUntilConverged()
                 if m >= M
                     @info "$(TimeStamp()): Terminates due to m=$m>=$M. "
@@ -759,7 +761,8 @@ function InnerLoopHeuristic(
                     fmphs|>TryNewDemand
                 else
                     @info "FMPH objective: $(fmphs|>objective_value) exceed ϵ, done and exit inner heuristic loop."
-                    break_flag = true
+                    break # break out of this forloop and continue in the outer forloop. 
+                   
                 end
             end
             push!(lowerbound_list, Vector{Float64}())  # add an empty vector to the lower bounds produced by the FSP instance. 
@@ -887,7 +890,7 @@ function OuterLoop(
     γ⁺ = gamma_upper; d̂ = d_hat
     model_mp = GetJuMPModel()
     mp = MP(model_mp, γ⁺)
-    model_msp = GetJuMPModel(solver_name="MSP", log_to_console=1)
+    model_msp = GetJuMPModel(solver_name="MSP", log_to_console=1, optimality_gap=0.001)
     AdaptSolverTimeout(model_msp)
     msp = MSP(model_msp, d̂, γ⁺; kwargs...)
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
