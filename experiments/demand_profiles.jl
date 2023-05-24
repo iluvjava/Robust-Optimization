@@ -17,5 +17,5 @@ Results = OuterLoop(
     inner_routine=InnerLoopHeuristic, 
     block_demands=0, 
     make_plot=false, 
-    session_time_out=1200
+    session_time_out=typemax(Int)
 );
