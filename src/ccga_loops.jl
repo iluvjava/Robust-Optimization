@@ -694,7 +694,7 @@ function InnerLoopHeuristic(
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
     inner_max_itr::Int=8, 
-    N::Int=10, 
+    N::Int=5,
     M::Int=10, 
     kwargs...
 ) where {N1<:Number, N2<:Number, N3 <:Number}
