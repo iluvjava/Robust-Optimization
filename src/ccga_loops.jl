@@ -878,7 +878,7 @@ function OuterLoop(
             println(io, "Pmin = $(MatrixConstruct.PRIMARY_GENERATORS.Pmin)")
             println(io, "RU = $(MatrixConstruct.PRIMARY_GENERATORS.RU)")
             println(io, "RD = $(MatrixConstruct.PRIMARY_GENERATORS.RD)")
-            println(io, "R = $(MatrixConstruct.DEMAND_RESPONSE.R)")
+            println(io, "DR = $(MatrixConstruct.DEMAND_RESPONSE.R)")
         end
     end
     if session_time_out >= 0
