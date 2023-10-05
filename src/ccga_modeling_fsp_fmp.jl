@@ -941,7 +941,7 @@ The cuts will still be preserved.
 function TryNewDemand(this::FMPHStepper, rand_strategy::Int=0) 
     gamma = this.fmph1.gamma
     d_hat = this.fmph1.d_hat
-    if rand_strategy == 0   # Make a random demand vector. 
+    if rand_strategy == 0   # Make a random demand vector, chosen to be the vertices of the uncertainty set. 
         ort = [rand((-1, 1)) for __ in 1:size(MatrixConstruct.H, 2)]  
         d = max.(ort.*gamma .+ d_hat, 0)
     else # mutate the current demands from fmph2 on 2 indices. Uniformally Randomly choose from the undertainty interval. 

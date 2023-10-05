@@ -853,6 +853,7 @@ function OuterLoop(
     make_plot::Bool=true, 
     inner_routine::Function=InnerLoopMIP,
     session_time_out::Int=-1,
+    msp_optimality_gap::Float64=1e-2,
     kwargs...
 ) where {N1 <: Number, N2 <: Number}
     context = "During the execution of the outter loop of CCGA: "
@@ -890,7 +891,7 @@ function OuterLoop(
     γ⁺ = gamma_upper; d̂ = d_hat
     model_mp = GetJuMPModel()
     mp = MP(model_mp, γ⁺)
-    model_msp = GetJuMPModel(solver_name="MSP", log_to_console=1, optimality_gap=0.001)
+    model_msp = GetJuMPModel(solver_name="MSP", log_to_console=1, optimality_gap=msp_optimality_gap)
     AdaptSolverTimeout(model_msp)
     msp = MSP(model_msp, d̂, γ⁺; kwargs...)
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
