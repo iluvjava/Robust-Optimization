@@ -642,7 +642,8 @@ function InnerLoopMIP(
         q = Getq(fsp); push!(all_qs, q)
         IntroduceCut!(fmp, q)
         @info "$(TimeStamp()) CCGA Inner loop continues, constraints is introduced to fmp and we are solving it. "|>SESSION_FILE1
-        AdaptSolverTimeout(model_fmp); Solve!(fmp)
+        AdaptSolverTimeout(model_fmp)
+        Solve!(fmp)
         @assert !(objective_value(fmp)|>isnan) "$(premise) FMP"*
             " is infeasible or unbounded DURING the inner CCGA iterations. "
         push!(upperbound_list, objective_value(fmp))
@@ -655,8 +656,6 @@ function InnerLoopMIP(
         if II == inner_max_itr
             termination_status = -1
         end
-        
-        model_fmp|>AdaptSolverTimeout
 
     end
     
@@ -758,7 +757,7 @@ function InnerLoopHeuristic(
                 AltUntilConverged()
                 if fmphs|>objective_value < ϵ # The suspicious case. 
                     @info "$(TimeStamp()): FMPH objective: $(fmphs|>objective_value), trying new random demands. "
-                    fmphs|>TryNewDemand
+                    TryNewDemand(fmphs, 1)
                 else
                     @info "FMPH objective: $(fmphs|>objective_value) exceed ϵ, done and exit inner heuristic loop."
                     break # break out of this forloop and continue in the outer forloop. 
