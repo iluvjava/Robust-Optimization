@@ -17,5 +17,4 @@ Results = OuterLoop(
     inner_routine=InnerLoopMIP, 
     block_demands=0, 
     make_plot=true,
-    
 );
