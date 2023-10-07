@@ -17,5 +17,6 @@ Results = OuterLoop(
     inner_routine=InnerLoopHeuristic, 
     block_demands=0, 
     make_plot=false, 
+    msp_optimality_gap=0.05,
     session_time_out=7200
-);
+);  

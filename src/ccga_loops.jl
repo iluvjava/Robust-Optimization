@@ -757,7 +757,7 @@ function InnerLoopHeuristic(
                 AltUntilConverged()
                 if fmphs|>objective_value < ϵ # The suspicious case. 
                     @info "$(TimeStamp()): FMPH objective: $(fmphs|>objective_value), trying new random demands. "
-                    TryNewDemand(fmphs, 1)
+                    TryNewDemand(fmphs, 0)
                 else
                     @info "FMPH objective: $(fmphs|>objective_value) exceed ϵ, done and exit inner heuristic loop."
                     break # break out of this forloop and continue in the outer forloop. 
@@ -844,6 +844,7 @@ Performs the outter forloop of the CCGA algorithm with initialized parameters.
 - `inner_routine::Function=CCGAInnerLoop`, the inner routine function you want the outter CCGA forloop function 
 to call. 
 - `session_time_out::Bool=False`
+- `msp_optimality_gap::Float64=1e-2`, this is the optimality MIP optimality passed to the solver for the MSP problem. 
 """
 function OuterLoop(
     d_hat::Vector{N1}, 

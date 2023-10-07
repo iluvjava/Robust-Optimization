@@ -13,7 +13,7 @@ module MatrixConstruct
     include("../src/problem_parameters.jl")
     
     # Manual changes here, for sensitivity analysis 
-    CONST_PROBLEM_PARAMETERS.HORIZON = 8
+    CONST_PROBLEM_PARAMETERS.HORIZON = 24
     CONST_PROBLEM_PARAMETERS.Φ = 6e6
     for k in keys(DEMAND_RESPONSE.R)
         DEMAND_RESPONSE.R[k] *= 1
@@ -27,6 +27,28 @@ module MatrixConstruct
 
     include("../src/matrix_constructions.jl")
     h = rhs
+
+    """
+        Change some parameters for the generators ramp-up, down limit, and multipliers for bdges, generation level, 
+        demand response. And finally time horizon and budget. The matrices inside of the module will be reconstructed 
+        after the parameter change. 
+    """
+    function ChangeParametersMakeMatrices(
+        time_horizon, 
+        budget, 
+        demand_response, 
+        multiplier, 
+        storage_sys_capacity_multiplier, 
+        pmax_multiplier, 
+        pmin_multiplier, 
+        ru_multiplier, 
+        rd_multiplier, 
+        )
+        
+        EstablishMatrices()
+    end
+
+
 end
 
 
