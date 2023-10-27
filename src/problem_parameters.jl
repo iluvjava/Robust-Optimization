@@ -1,8 +1,5 @@
 using CSV
 
-
-
-
 "Primary generators fuel costs parameters. "
 const CSV_P_ALPHAS = CSV.File(open("$DATA_DIR/alpha.csv"))
 
@@ -13,9 +10,9 @@ const CSV_P_BETAS = CSV.File(open("$DATA_DIR/beta.csv"))
 const CSV_P_GEN = CSV.File(open("$DATA_DIR/ro_gen_data.csv"))
 
 "The data for the storage devices. "
-const CSV_STORAGE = CSV.File(open("data/storage_data.csv"))
+const CSV_STORAGE = CSV.File(open("$DATA_DIR/storage_data.csv"))
 
-const CSV_DEMAND_RESPONSE = CSV.File(open("data/dr_data.csv"))
+const CSV_DEMAND_RESPONSE = CSV.File(open("$DATA_DIR/dr_data.csv"))
 
 
 mutable struct ConstParameters
