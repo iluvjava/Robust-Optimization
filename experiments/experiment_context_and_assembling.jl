@@ -29,9 +29,10 @@ module MatrixConstruct
     h = rhs
 
     """
-        Change some parameters for the generators ramp-up, down limit, and multipliers for bdges, generation level, 
-        demand response. And finally time horizon and budget. The matrices inside of the module will be reconstructed 
-        after the parameter change. 
+    Change some parameters for the generators ramp-up, down limit, and multipliers for bdges, generation level, 
+    demand response. And finally time horizon and budget. The matrices inside of the module will be reconstructed 
+    after the parameter change. This should make sensitivity analysis easier. 
+
     """
     function ChangeParametersMakeMatrices(
         time_horizon, 
