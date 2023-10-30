@@ -938,13 +938,14 @@ end
 Try a new random demands and rebuild the instance FMPH, and then perform one cycle of heuristic search using this new demands. 
 The cuts will still be preserved. 
 """
-function TryNewDemand(this::FMPHStepper, rand_strategy::Int=0) 
+function TryNewDemand(this::FMPHStepper, random_search::Bool=true) 
     gamma = this.fmph1.gamma
     d_hat = this.fmph1.d_hat
-    if rand_strategy == 0   # Make a random demand vector, chosen to be the vertices of the uncertainty set. 
+    if random_search   # Make a random demand vector, chosen to be the vertices of the uncertainty set. 
         ort = [rand((-1, 1)) for __ in 1:size(MatrixConstruct.H, 2)]
         d = max.(ort.*gamma .+ d_hat, 0)
     else # mutate the current demands from fmph2 on 2 indices. Uniformally Randomly choose from the undertainty interval. 
+        
         d = max.(gamma .+ d_hat, 0)
     end
     this.fmph1 = RebuildFMPH1(this.fmph1, d; model=this.make_model_func()) # rebuild the fmph1 using that new demand vector. 

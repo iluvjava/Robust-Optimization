@@ -695,6 +695,7 @@ function InnerLoopHeuristic(
     inner_max_itr::Int=8, 
     N::Int=5,
     M::Int=10, 
+    random_searth::Bool=true,
     kwargs...
 ) where {N1<:Number, N2<:Number, N3 <:Number}
     premise = "During executing CCGA Inner for loop: "
@@ -757,7 +758,7 @@ function InnerLoopHeuristic(
                 AltUntilConverged()
                 if fmphs|>objective_value < ϵ # The suspicious case. 
                     @info "$(TimeStamp()): FMPH objective: $(fmphs|>objective_value), trying new random demands. "
-                    TryNewDemand(fmphs, 0)
+                    TryNewDemand(fmphs, random_searth)
                 else
                     @info "FMPH objective: $(fmphs|>objective_value) exceed ϵ, done and exit inner heuristic loop."
                     break # break out of this forloop and continue in the outer forloop. 
