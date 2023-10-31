@@ -19,7 +19,7 @@ module MatrixConstruct
         DEMAND_RESPONSE.R[k] *= 3
     end
     STORAGE_SYSTEM.Capacity[1] = 100
-    PRIMARY_GENERATORS.Pmax .*= 1
+    PRIMARY_GENERATORS.Pmax .*= 1.1
     PRIMARY_GENERATORS.Pmin .*= 1
     PRIMARY_GENERATORS.RU .*= 1
     PRIMARY_GENERATORS.RD .*= 1
@@ -31,7 +31,7 @@ module MatrixConstruct
     """
     Change some parameters for the generators ramp-up, down limit, and multipliers for bdges, generation level, 
     demand response. And finally time horizon and budget. The matrices inside of the module will be reconstructed 
-    after the parameter change. This should make sensitivity analysis easier. 
+    after the parameter change. This should make s  ensitivity analysis easier. 
 
     """
     function ChangeParametersMakeMatrices(
