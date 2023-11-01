@@ -19,7 +19,7 @@ module MatrixConstruct
         DEMAND_RESPONSE.R[k] *= 3
     end
     STORAGE_SYSTEM.Capacity[1] = 100
-    PRIMARY_GENERATORS.Pmax .*= 1.1
+    PRIMARY_GENERATORS.Pmax .*= 1.2
     PRIMARY_GENERATORS.Pmin .*= 1
     PRIMARY_GENERATORS.RU .*= 1
     PRIMARY_GENERATORS.RD .*= 1
