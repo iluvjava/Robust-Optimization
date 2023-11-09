@@ -693,7 +693,7 @@ function InnerLoopHeuristic(
     d_hat::Vector{N3};
     epsilon::Float64=0.1,
     inner_max_itr::Int=8, 
-    N::Int=5,
+    N::Int=30,
     M::Int=10, 
     random_searth::Bool=true,
     kwargs...
