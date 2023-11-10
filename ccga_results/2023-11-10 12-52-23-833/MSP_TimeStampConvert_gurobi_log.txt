@@ -1,0 +1,825 @@
+
+Gurobi 9.5.2 (win64) logging started Fri Nov 10 12:52:25 2023
+
+Set parameter LogFile to value "./ccga_results/2023-11-10 12-52-23-833/MSP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7200
+
+Gurobi 9.5.2 (win64) logging started Fri Nov 10 12:52:25 2023
+
+Set parameter LogFile to value "./ccga_results/2023-11-10 12-52-23-833/MSP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7200
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 600 rows, 457 columns and 1482 nonzeros
+Model fingerprint: 0xe63f0f4b
+Variable types: 25 continuous, 432 integer (432 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+00]
+Found heuristic solution: objective 24000.000000
+
+Explored 0 nodes (0 simplex iterations) in 0.00 seconds (0.00 work units)
+Thread count was 1 (of 20 available processors)
+
+Solution count 1: 24000 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 2.400000000000e+04, best bound 2.400000000000e+04, gap 0.0000%
+
+User-callback calls 21, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7199
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 2149 rows, 961 columns and 6467 nonzeros
+Model fingerprint: 0xb17bca18
+Variable types: 481 continuous, 480 integer (480 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve did not produce a new incumbent solution
+
+Presolve removed 1015 rows and 428 columns
+Presolve time: 0.01s
+Presolved: 1134 rows, 533 columns, 3731 nonzeros
+Variable types: 339 continuous, 194 integer (194 binary)
+Found heuristic solution: objective 1110.0654000
+Found heuristic solution: objective 3069.1529000
+
+Root relaxation: objective 3.563365e+03, 347 iterations, 0.00 seconds (0.00 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+*    0     0               0    3563.3654000 3563.36540  0.00%     -    0s
+
+Explored 1 nodes (347 simplex iterations) in 0.03 seconds (0.03 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 3: 3563.37 3069.15 1110.07 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.563365400000e+03, best bound 3.563365400000e+03, gap 0.0000%
+
+User-callback calls 851, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7197
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 3698 rows, 1465 columns and 11430 nonzeros
+Model fingerprint: 0x0aebeb64
+Variable types: 937 continuous, 528 integer (528 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3269.65 (0.02s)
+Loaded MIP start from previous solve with objective 3269.65
+
+Presolve removed 1672 rows and 549 columns
+Presolve time: 0.03s
+Presolved: 2026 rows, 916 columns, 6922 nonzeros
+Variable types: 722 continuous, 194 integer (194 binary)
+
+Root relaxation: objective 3.328191e+03, 894 iterations, 0.01 seconds (0.01 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3328.19119    0    6 3269.65101 3328.19119  1.79%     -    0s
+     0     0 3324.52730    0    6 3269.65101 3324.52730  1.68%     -    0s
+H    0     0                    3285.2729391 3324.52730  1.19%     -    0s
+     0     0 3319.99745    0    9 3285.27294 3319.99745  1.06%     -    0s
+H    0     0                    3298.6223037 3319.99745  0.65%     -    0s
+     0     0 3315.36339    0    6 3298.62230 3315.36339  0.51%     -    0s
+
+Cutting planes:
+  MIR: 2
+  Flow cover: 3
+  Relax-and-lift: 1
+
+Explored 1 nodes (923 simplex iterations) in 0.08 seconds (0.10 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 3: 3298.62 3285.27 3269.65 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.298622303704e+03, best bound 3.315363385575e+03, gap 0.5075%
+
+User-callback calls 916, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7195
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 5247 rows, 1969 columns and 16405 nonzeros
+Model fingerprint: 0x18c156dd
+Variable types: 1393 continuous, 576 integer (576 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3197.92 (0.03s)
+Loaded MIP start from previous solve with objective 3197.92
+
+Presolve removed 2330 rows and 682 columns
+Presolve time: 0.04s
+Presolved: 2917 rows, 1287 columns, 10097 nonzeros
+Variable types: 1093 continuous, 194 integer (194 binary)
+
+Root relaxation: objective 3.241465e+03, 1590 iterations, 0.02 seconds (0.02 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3241.46512    0    6 3197.92125 3241.46512  1.36%     -    0s
+     0     0 3239.06233    0    6 3197.92125 3239.06233  1.29%     -    0s
+     0     0 3227.83831    0    6 3197.92125 3227.83831  0.94%     -    0s
+
+Cutting planes:
+  MIR: 4
+
+Explored 1 nodes (1644 simplex iterations) in 0.12 seconds (0.15 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 1: 3197.92 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.197921245503e+03, best bound 3.227838308415e+03, gap 0.9355%
+
+User-callback calls 861, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7194
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 6796 rows, 2473 columns and 21382 nonzeros
+Model fingerprint: 0x6416c44d
+Variable types: 1849 continuous, 624 integer (624 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3192.44 (0.04s)
+Loaded MIP start from previous solve with objective 3192.44
+
+Presolve removed 2943 rows and 819 columns
+Presolve time: 0.06s
+Presolved: 3853 rows, 1654 columns, 13200 nonzeros
+Variable types: 1458 continuous, 196 integer (194 binary)
+
+Root relaxation: objective 3.224750e+03, 2031 iterations, 0.03 seconds (0.03 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3224.75015    0    7 3192.43844 3224.75015  1.01%     -    0s
+
+Cutting planes:
+  Gomory: 2
+  MIR: 3
+  Flow cover: 1
+
+Explored 1 nodes (2031 simplex iterations) in 0.16 seconds (0.21 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 1: 3192.44 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.192438441270e+03, best bound 3.223307163047e+03, gap 0.9669%
+
+User-callback calls 913, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7192
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 8345 rows, 2977 columns and 26361 nonzeros
+Model fingerprint: 0x4266ee93
+Variable types: 2305 continuous, 672 integer (672 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3128.99 (0.05s)
+Loaded MIP start from previous solve with objective 3128.99
+
+Presolve removed 3575 rows and 955 columns
+Presolve time: 0.07s
+Presolved: 4770 rows, 2022 columns, 16313 nonzeros
+Variable types: 1825 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.206110e+03, 2573 iterations, 0.04 seconds (0.06 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3206.11042    0    7 3128.99267 3206.11042  2.46%     -    0s
+H    0     0                    3132.6050641 3206.11042  2.35%     -    0s
+     0     0 3201.28702    0   11 3132.60506 3201.28702  2.19%     -    0s
+H    0     0                    3163.6796340 3201.28702  1.19%     -    0s
+     0     0 3197.38542    0    7 3163.67963 3197.38542  1.07%     -    0s
+
+Cutting planes:
+  Gomory: 4
+  MIR: 10
+  Flow cover: 6
+
+Explored 1 nodes (2681 simplex iterations) in 0.25 seconds (0.32 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 3: 3163.68 3132.61 3128.99 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.163679634028e+03, best bound 3.194067089279e+03, gap 0.9605%
+
+User-callback calls 915, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7190
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 9894 rows, 3481 columns and 31342 nonzeros
+Model fingerprint: 0xb6788048
+Variable types: 2761 continuous, 720 integer (720 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3124.73 (0.07s)
+Loaded MIP start from previous solve with objective 3124.73
+
+Presolve removed 4181 rows and 1089 columns
+Presolve time: 0.08s
+Presolved: 5713 rows, 2392 columns, 19530 nonzeros
+Variable types: 2195 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.179567e+03, 3132 iterations, 0.06 seconds (0.08 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3179.56710    0    7 3124.73341 3179.56710  1.75%     -    0s
+     0     0 3178.17802    0   13 3124.73341 3178.17802  1.71%     -    0s
+     0     0 3175.80663    0   17 3124.73341 3175.80663  1.63%     -    0s
+     0     0 3175.80663    0   17 3124.73341 3175.80663  1.63%     -    0s
+     0     0 3171.11599    0   18 3124.73341 3171.11599  1.48%     -    0s
+H    0     0                    3128.4226741 3171.11599  1.36%     -    0s
+H    0     0                    3147.5097111 3164.08318  0.53%     -    0s
+
+Cutting planes:
+  Gomory: 2
+  MIR: 22
+  Flow cover: 11
+  Relax-and-lift: 4
+
+Explored 1 nodes (3550 simplex iterations) in 0.35 seconds (0.45 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 3: 3147.51 3128.42 3124.73 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.147509711111e+03, best bound 3.164083177950e+03, gap 0.5266%
+
+User-callback calls 933, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7187
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 11443 rows, 3985 columns and 36321 nonzeros
+Model fingerprint: 0x481fc1e1
+Variable types: 3217 continuous, 768 integer (768 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3129.25 (0.09s)
+Loaded MIP start from previous solve with objective 3129.25
+
+Presolve removed 4793 rows and 1227 columns
+Presolve time: 0.09s
+Presolved: 6650 rows, 2758 columns, 22727 nonzeros
+Variable types: 2561 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.173580e+03, 3759 iterations, 0.06 seconds (0.10 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3173.58037    0    7 3129.24582 3173.58037  1.42%     -    0s
+     0     0 3171.63470    0   14 3129.24582 3171.63470  1.35%     -    0s
+     0     0 3159.80583    0   23 3129.24582 3159.80583  0.98%     -    0s
+
+Cutting planes:
+  Gomory: 5
+  MIR: 22
+  Flow cover: 5
+  Relax-and-lift: 4
+
+Explored 1 nodes (3994 simplex iterations) in 0.34 seconds (0.45 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 1: 3129.25 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.129245822222e+03, best bound 3.159805829207e+03, gap 0.9766%
+
+User-callback calls 921, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7185
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 12992 rows, 4489 columns and 41302 nonzeros
+Model fingerprint: 0x5ef5a9f5
+Variable types: 3673 continuous, 816 integer (816 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3065.54 (0.09s)
+Loaded MIP start from previous solve with objective 3065.54
+
+Presolve removed 5405 rows and 1362 columns
+Presolve time: 0.10s
+Presolved: 7587 rows, 3127 columns, 25931 nonzeros
+Variable types: 2930 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.144934e+03, 4329 iterations, 0.09 seconds (0.13 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3144.93436    0    7 3065.54212 3144.93436  2.59%     -    0s
+H    0     0                    3119.2717308 3144.93436  0.82%     -    0s
+
+Explored 1 nodes (4329 simplex iterations) in 0.33 seconds (0.48 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3119.27 3065.54 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.119271730787e+03, best bound 3.144934360511e+03, gap 0.8227%
+
+User-callback calls 889, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7182
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 14541 rows, 4993 columns and 46281 nonzeros
+Model fingerprint: 0xa1417e33
+Variable types: 4129 continuous, 864 integer (864 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3088.95 (0.11s)
+Loaded MIP start from previous solve with objective 3088.95
+
+Presolve removed 6038 rows and 1500 columns
+Presolve time: 0.12s
+Presolved: 8503 rows, 3493 columns, 29089 nonzeros
+Variable types: 3296 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.113975e+03, 4851 iterations, 0.07 seconds (0.08 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3113.97476    0   13 3088.94517 3113.97476  0.81%     -    0s
+
+Explored 1 nodes (4868 simplex iterations) in 0.33 seconds (0.46 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3088.95 -3088.95 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.088945166204e+03, best bound 3.113974763860e+03, gap 0.8103%
+
+User-callback calls 886, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7180
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 16090 rows, 5497 columns and 51262 nonzeros
+Model fingerprint: 0xbbce8572
+Variable types: 4585 continuous, 912 integer (912 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3087.38 (0.10s)
+Loaded MIP start from previous solve with objective 3087.38
+
+Presolve removed 6650 rows and 1635 columns
+Presolve time: 0.13s
+Presolved: 9440 rows, 3862 columns, 32296 nonzeros
+Variable types: 3665 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.112509e+03, 5320 iterations, 0.08 seconds (0.10 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3112.50920    0   13 3087.37964 3112.50920  0.81%     -    0s
+
+Explored 1 nodes (5329 simplex iterations) in 0.35 seconds (0.49 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3087.38 -3087.38 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.087379635648e+03, best bound 3.112509201796e+03, gap 0.8139%
+
+User-callback calls 890, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7177
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 17639 rows, 6001 columns and 56241 nonzeros
+Model fingerprint: 0x4ae0de95
+Variable types: 5041 continuous, 960 integer (960 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3083.45 (0.11s)
+Loaded MIP start from previous solve with objective 3083.45
+
+Presolve removed 7262 rows and 1773 columns
+Presolve time: 0.14s
+Presolved: 10377 rows, 4228 columns, 35493 nonzeros
+Variable types: 4031 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.107102e+03, 6039 iterations, 0.11 seconds (0.11 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3107.10185    0   13 3083.45050 3107.10185  0.77%     -    0s
+
+Explored 1 nodes (6063 simplex iterations) in 0.39 seconds (0.54 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3083.45 -3083.45 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.083450503472e+03, best bound 3.107101846019e+03, gap 0.7670%
+
+User-callback calls 900, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7175
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 19188 rows, 6505 columns and 61220 nonzeros
+Model fingerprint: 0x680db9ad
+Variable types: 5497 continuous, 1008 integer (1008 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3083.13 (0.12s)
+Loaded MIP start from previous solve with objective 3083.13
+
+Presolve removed 7874 rows and 1911 columns
+Presolve time: 0.15s
+Presolved: 11314 rows, 4594 columns, 38690 nonzeros
+Variable types: 4397 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.099038e+03, 6712 iterations, 0.11 seconds (0.11 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3099.03816    0   13 3083.13260 3099.03816  0.52%     -    0s
+
+Explored 1 nodes (6749 simplex iterations) in 0.42 seconds (0.58 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 1: 3083.13 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.083132603318e+03, best bound 3.099038161870e+03, gap 0.5159%
+
+User-callback calls 905, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7172
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 20737 rows, 7009 columns and 66199 nonzeros
+Model fingerprint: 0x35925080
+Variable types: 5953 continuous, 1056 integer (1056 binary)
+Coefficient statistics:
+  Matrix range     [5e-01, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3063.31 (0.15s)
+Loaded MIP start from previous solve with objective 3063.31
+
+Presolve removed 8486 rows and 2049 columns
+Presolve time: 0.16s
+Presolved: 12251 rows, 4960 columns, 41890 nonzeros
+Variable types: 4763 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.096511e+03, 7127 iterations, 0.12 seconds (0.12 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3096.51140    0   10 3063.30556 3096.51140  1.08%     -    0s
+     0     0 3094.16704    0   10 3063.30556 3094.16704  1.01%     -    0s
+     0     0 3093.23572    0   21 3063.30556 3093.23572  0.98%     -    0s
+
+Cutting planes:
+  Gomory: 2
+  MIR: 14
+  Flow cover: 8
+  RLT: 1
+  Relax-and-lift: 4
+
+Explored 1 nodes (7925 simplex iterations) in 0.61 seconds (0.75 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3063.31 -3063.31 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.063305561574e+03, best bound 3.093235722029e+03, gap 0.9771%
+
+User-callback calls 965, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7166
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 22286 rows, 7513 columns and 71178 nonzeros
+Model fingerprint: 0xdcdfcb13
+Variable types: 6409 continuous, 1104 integer (1104 binary)
+Coefficient statistics:
+  Matrix range     [7e-03, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3063.31 (0.15s)
+Loaded MIP start from previous solve with objective 3063.31
+
+Presolve removed 9144 rows and 2196 columns
+Presolve time: 0.18s
+Presolved: 13142 rows, 5317 columns, 44995 nonzeros
+Variable types: 5120 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.096511e+03, 7287 iterations, 0.11 seconds (0.11 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3096.51140    0   10 3063.30556 3096.51140  1.08%     -    0s
+     0     0 3094.74272    0   10 3063.30556 3094.74272  1.03%     -    0s
+     0     0 3093.11510    0   17 3063.30556 3093.11510  0.97%     -    0s
+
+Cutting planes:
+  Gomory: 3
+  MIR: 9
+  Flow cover: 12
+  RLT: 1
+  Relax-and-lift: 10
+
+Explored 1 nodes (8069 simplex iterations) in 0.63 seconds (0.79 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3063.31 -3063.31 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.063305561574e+03, best bound 3.093115099993e+03, gap 0.9731%
+
+User-callback calls 962, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7163
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 23835 rows, 8017 columns and 76159 nonzeros
+Model fingerprint: 0x981195a8
+Variable types: 6865 continuous, 1152 integer (1152 binary)
+Coefficient statistics:
+  Matrix range     [7e-03, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3052.47 (0.16s)
+Loaded MIP start from previous solve with objective 3052.47
+
+Presolve removed 9756 rows and 2331 columns
+Presolve time: 0.19s
+Presolved: 14079 rows, 5686 columns, 48202 nonzeros
+Variable types: 5489 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.090765e+03, 7882 iterations, 0.11 seconds (0.11 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3090.76530    0   13 3052.47365 3090.76530  1.25%     -    0s
+     0     0 3087.07892    0   23 3052.47365 3087.07892  1.13%     -    0s
+     0     0 3083.44429    0   23 3052.47365 3083.44429  1.01%     -    0s
+     0     0 3082.16098    0   23 3052.47365 3082.16098  0.97%     -    0s
+
+Cutting planes:
+  Gomory: 1
+  MIR: 18
+  Flow cover: 14
+  Relax-and-lift: 3
+
+Explored 1 nodes (8452 simplex iterations) in 0.67 seconds (0.84 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3052.47 -3052.47 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.052473646759e+03, best bound 3.082160983849e+03, gap 0.9726%
+
+User-callback calls 977, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7157
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 25384 rows, 8521 columns and 81138 nonzeros
+Model fingerprint: 0xb1e0e55a
+Variable types: 7321 continuous, 1200 integer (1200 binary)
+Coefficient statistics:
+  Matrix range     [7e-03, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3052.47 (0.18s)
+Loaded MIP start from previous solve with objective 3052.47
+
+Presolve removed 10368 rows and 2469 columns
+Presolve time: 0.21s
+Presolved: 15016 rows, 6052 columns, 51399 nonzeros
+Variable types: 5855 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.089298e+03, 9660 iterations, 0.16 seconds (0.17 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3089.29753    0   10 3052.47365 3089.29753  1.21%     -    0s
+     0     0 3083.59733    0   17 3052.47365 3083.59733  1.02%     -    0s
+
+Cutting planes:
+  Gomory: 3
+  MIR: 64
+  Flow cover: 69
+  Relax-and-lift: 18
+
+Explored 1 nodes (10026 simplex iterations) in 0.78 seconds (0.96 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3052.47 -3052.47 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.052473646759e+03, best bound 3.082884567446e+03, gap 0.9963%
+
+User-callback calls 1002, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7155
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 26933 rows, 9025 columns and 86119 nonzeros
+Model fingerprint: 0x5e5c4a28
+Variable types: 7777 continuous, 1248 integer (1248 binary)
+Coefficient statistics:
+  Matrix range     [7e-03, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3052.47 (0.18s)
+Loaded MIP start from previous solve with objective 3052.47
+
+Presolve removed 10980 rows and 2604 columns
+Presolve time: 0.22s
+Presolved: 15953 rows, 6421 columns, 54603 nonzeros
+Variable types: 6224 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.087772e+03, 9125 iterations, 0.15 seconds (0.16 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3087.77249    0   10 3052.47365 3087.77249  1.16%     -    0s
+     0     0 3081.24910    0   14 3052.47365 3081.24910  0.94%     -    0s
+
+Cutting planes:
+  Gomory: 2
+  MIR: 19
+  Flow cover: 12
+  Relax-and-lift: 7
+
+Explored 1 nodes (9695 simplex iterations) in 0.72 seconds (0.93 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 1: 3052.47 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.052473646759e+03, best bound 3.081249098005e+03, gap 0.9427%
+
+User-callback calls 963, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7150
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 28482 rows, 9529 columns and 91098 nonzeros
+Model fingerprint: 0x43adfe3c
+Variable types: 8233 continuous, 1296 integer (1296 binary)
+Coefficient statistics:
+  Matrix range     [7e-03, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3051.03 (0.21s)
+Loaded MIP start from previous solve with objective 3051.03
+
+Presolve removed 11592 rows and 2742 columns
+Presolve time: 0.24s
+Presolved: 16890 rows, 6787 columns, 57797 nonzeros
+Variable types: 6590 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.073317e+03, 10472 iterations, 0.20 seconds (0.21 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3073.31719    0   13 3051.02578 3073.31719  0.73%     -    0s
+
+Explored 1 nodes (10486 simplex iterations) in 0.72 seconds (0.94 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3051.03 -3051.03 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.051025784907e+03, best bound 3.073317189276e+03, gap 0.7306%
+
+User-callback calls 946, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7146
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 30031 rows, 10033 columns and 96079 nonzeros
+Model fingerprint: 0x3ee4a2ca
+Variable types: 8689 continuous, 1344 integer (1344 binary)
+Coefficient statistics:
+  Matrix range     [7e-03, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3046.27 (0.20s)
+Loaded MIP start from previous solve with objective 3046.27
+
+Presolve removed 12204 rows and 2877 columns
+Presolve time: 0.24s
+Presolved: 17827 rows, 7156 columns, 61001 nonzeros
+Variable types: 6959 continuous, 197 integer (194 binary)
+
+Root relaxation: objective 3.070971e+03, 12012 iterations, 0.32 seconds (0.33 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 3070.97085    0   10 3046.26852 3070.97085  0.81%     -    0s
+
+Explored 1 nodes (12036 simplex iterations) in 0.84 seconds (1.06 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 3046.27 -3046.27 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 3.046268524537e+03, best bound 3.070970851348e+03, gap 0.8109%
+
+User-callback calls 965, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7143
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 31580 rows, 10537 columns and 101060 nonzeros
+Model fingerprint: 0xbe28ced5
+Variable types: 9145 continuous, 1392 integer (1392 binary)
+Coefficient statistics:
+  Matrix range     [7e-03, 8e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+03, 1e+03]
+  RHS range        [1e+00, 1e+06]
+
+MIP start from previous solve produced solution with objective 3041.95 (0.21s)
+Loaded MIP start from previous solve with objective 3041.95
+
+Presolve removed 12816 rows and 3012 columns
+Presolve time: 0.26s
+Presolved: 18764 rows, 7525 columns, 64208 nonzeros
