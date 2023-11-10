@@ -14,9 +14,9 @@ Results = OuterLoop(
     outer_max_itr=20, 
     objective_types=2,
     inner_epsilon=1.0, 
-    inner_routine=InnerLoopHeuristic, 
+    inner_routine=InnerLoopHeuristic,
     block_demands=0, 
     make_plot=false, 
-    msp_optimality_gap=0.05,
+    msp_optimality_gap=0.01,
     session_time_out=7200
 );  
