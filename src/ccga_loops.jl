@@ -846,6 +846,7 @@ Performs the outter forloop of the CCGA algorithm with initialized parameters.
 to call. 
 - `session_time_out::Bool=False`
 - `msp_optimality_gap::Float64=1e-2`, this is the optimality MIP optimality passed to the solver for the MSP problem. 
+the tolerance for solvers setup or FMP, FSP problems, they are in the source code. 
 """
 function OuterLoop(
     d_hat::Vector{N1}, 
