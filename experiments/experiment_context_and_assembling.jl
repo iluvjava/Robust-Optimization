@@ -21,8 +21,8 @@ module MatrixConstruct
     STORAGE_SYSTEM.Capacity[1] = 100
     PRIMARY_GENERATORS.Pmax .*= 1
     PRIMARY_GENERATORS.Pmin .*= 1
-    PRIMARY_GENERATORS.RU .*= 2
-    PRIMARY_GENERATORS.RD .*= 2
+    PRIMARY_GENERATORS.RU .*= 1
+    PRIMARY_GENERATORS.RD .*= 1
     @info "Manual multipliers has been applied to the parameters on the data set for experiments. "
 
     include("../src/matrix_constructions.jl")
