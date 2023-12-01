@@ -61,6 +61,7 @@ mutable struct Generators
         beta_file::CSV.File
     )
         this = new()
+        # [ ]: Change here, adapt to the new data format. 
         this.generator_count = gen_file|>length
         this.Pmin = gen_file["Pmin"]
         this.Pmax = gen_file["Pmax"]
@@ -117,6 +118,7 @@ mutable struct StorageSystem
     
 end
 
+
 mutable struct DemandResponse
     level::Int
     rho::Vector
@@ -141,7 +143,6 @@ function ConvertCSV(data::CSV.File)
         m[II, III] = data[II][properties[III + 1]]
     end
 return m end
-
 
 
 "The constant parameters for the problem. "

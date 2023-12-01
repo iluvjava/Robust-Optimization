@@ -1,3 +1,15 @@
+# CONTEXT OF THE CODE ===================================================================================================
+# Requires, problem_parameters.jl, coeff-mgr.jl, util.jl, prior to loading. 
+#   The code that generated the first stage constraints problem for the MSP problem is legacy code hanled in ccga_modeling_mp.jl
+#   separately. 
+# The code is simple and it does this: 
+#   - Assign coefficient for a varibale. 
+#   - Call it with the matrix to add the coefficientto a specific row, i.e: `C(x)`, 
+#   - Make a new line on the coefficient matrix, i.e: `C()`, crates a new row on the sparse matrix. 
+#   - Sync the row for all matrices, so that the current row is the same for all matrix. 
+# This code creates the coefficient matrix for the abstract form in the paper. 
+# ===================================================================================================
+
 
 
 # Enumeration set Cardinality.
@@ -104,6 +116,7 @@ function EstablishMatrices()
             push!(rhs, 0)
         end
         Sync()
+        # [ ]: Chane here!
         for t = 2:T, n = 1:(gen|>length)
             # (14)
             p[n, t - 1] = 1

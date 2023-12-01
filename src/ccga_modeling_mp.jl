@@ -386,7 +386,7 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
             w[:y, :, 1] .== w[:x, :, 1] - w[:z, :, 1]
         )...
     )
-
+    # [ ]: Change here. 
     for t in 2: this.T
         push!(
             this.con,

@@ -330,11 +330,11 @@ The value `ρ⁺`, `ρ⁻` are not stored, nor is the last demand value tried by
 - `this::CCGAInnerResults`: It's a member method of this type. 
 """
 function ProduceReport(this::IRBHeuristic)::String
-    # TODO:[x](2) Produce Report for IRBHeuristic. 
+    
     @warn "CCGAIRBH Producereport not yet implemented. "
     string_list = Vector{String}()
     append!(string_list, ProduceReport(this, this.fsp))
-    # insert newline character text at the end of each line oof. 
+    
     for idx in length(string_list) + 1 :-1: 1
         insert!(string_list, idx, "\n")
     end
