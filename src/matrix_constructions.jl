@@ -135,6 +135,7 @@ function EstablishMatrices()
             push!(rhs, gen.RD[n]*gen.initial_status[n] - gen.initial_pg[n])
         end
         Sync()
+        
         for t = 2:T, n = 1:(gen|>length)
             # (14)
             p[n, t - 1] = 1
