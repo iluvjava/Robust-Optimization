@@ -54,6 +54,8 @@ mutable struct Generators
 
     alphas::Matrix{Number}
     betas::Matrix{Number}
+    initial_status::Vector{Number}
+    initial_pg::Vector{Number}
     
     function Generators(
         gen_file::CSV.File, 
@@ -61,7 +63,7 @@ mutable struct Generators
         beta_file::CSV.File
     )
         this = new()
-        # [ ]: Change here, adapt to the new data format. 
+        # [x]: Change here, adapt to the new data format. 
         this.generator_count = gen_file|>length
         this.Pmin = gen_file["Pmin"]
         this.Pmax = gen_file["Pmax"]
@@ -82,6 +84,9 @@ mutable struct Generators
         this.NSP = CSV_P_GEN["NSP"]
         this.alphas = ConvertCSV(alpha_file)
         this.betas = ConvertCSV(beta_file)
+        this.initial_status = gen_file["status"]
+        this.initial_pg = gen_file["pg"]
+
     return this end
     
     function Base.length(this::Generators)

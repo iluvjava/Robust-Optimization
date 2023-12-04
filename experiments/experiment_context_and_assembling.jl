@@ -7,7 +7,7 @@ include("../src/utilities.jl")
 
 module MatrixConstruct
     "Experiments data folder. "
-    DATA_DIR = "data"
+    DATA_DIR = "data_3"
 
     include("../src/coef_mgr_v2.jl")
     include("../src/problem_parameters.jl")

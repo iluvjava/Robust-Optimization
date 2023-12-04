@@ -245,6 +245,8 @@ on julia REPL for more information.
     Tmind::Array{Int}
     "The minimum up time for the primary generators. "
     Tminu::Array{Int}
+    "The y(0) constant. It's should be provided as data from the MatrixConstruct Module. "
+    initial_status::Array{Int}
     "A counter for the number of cuts introduced to the current master problem. "
     cut_count::Int
     "A secondary continous decision variables, indexed by the number of cuts introduced. "
@@ -281,6 +283,7 @@ on julia REPL for more information.
         this.Tminu = MatrixConstruct.PRIMARY_GENERATORS.Tminu
         @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
+        this.initial_status = MatrixConstruct.PRIMARY_GENERATORS.initial_status
         this.gamma_upper = gamma_upper
         this.con = Vector()
         this.d_hat = d_hat
@@ -386,7 +389,16 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
             w[:y, :, 1] .== w[:x, :, 1] - w[:z, :, 1]
         )...
     )
-    # [ ]: Change here. 
+    # [x]: Change here by adding a single constraint to include the initial condition. 
+    t = 1
+    push!(
+        this.con, 
+        @constraint(
+            this|>GetModel,
+            w[:y, :, t] -  this.initial_status[:] .== w[:x, :, t] - w[:z, :, t]
+
+        )
+    )
     for t in 2: this.T
         push!(
             this.con,

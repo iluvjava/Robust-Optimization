@@ -105,6 +105,15 @@ function EstablishMatrices()
     function CapacityContraints()
         gen = PRIMARY_GENERATORS
         rhs = Vector{Number}()
+        # [x]: Add initial conditions here. 
+        for t = 1:1, n = 1:(gen|>length)
+            p[n, t] = 1
+            x[n, t] = -gen.RU_bar[n]
+            C(p); C()
+            B(y, x); B()
+            push!(rhs, -gen.RU[n]*gen.initial_status[n] + gen.initial_pg[n])
+        end
+        Sync()
         for t = 2:T, n = 1:(gen|>length)
             # (13)
             p[n, t] = 1
@@ -116,7 +125,16 @@ function EstablishMatrices()
             push!(rhs, 0)
         end
         Sync()
-        # [ ]: Chane here!
+        # [x]: Change here, on the value of p, the initial condition. 
+        for t = 1:1, n = 1:(gen|>length)
+            p[n, t] = -1
+            y[n, t] = -gen.RD[n]
+            z[n, t] = -gen.RD_bar[n]
+            C(p); C()
+            B(y, z); B()
+            push!(rhs, gen.RD[n]*gen.initial_status[n] - gen.initial_pg[n])
+        end
+        Sync()
         for t = 2:T, n = 1:(gen|>length)
             # (14)
             p[n, t - 1] = 1
@@ -128,6 +146,7 @@ function EstablishMatrices()
             push!(rhs, 0)
         end
         Sync()
+       
         for t = 1:T, n = 1:(gen|>length)
             # (16)
             p[n, t] = 1
