@@ -402,7 +402,7 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
         this.con, 
         @constraint(
             this|>GetModel,
-            w[:y, :, t] -  this.initial_status[:] .== w[:x, :, t] - w[:z, :, t]
+            w[:y, :, t] - this.initial_status[:] .== w[:x, :, t] - w[:z, :, t]
         )...
     )
     for t in 2:this.T

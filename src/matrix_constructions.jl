@@ -111,7 +111,7 @@ function EstablishMatrices()
             x[n, t] = -gen.RU_bar[n]
             C(p); C()
             B(y, x); B()
-            push!(rhs, -gen.RU[n]*gen.initial_status[n] + gen.initial_pg[n])
+            push!(rhs, gen.RU[n]*gen.initial_status[n] + gen.initial_pg[n])
         end
         Sync()
         for t = 2:T, n = 1:(gen|>length)
@@ -141,7 +141,7 @@ function EstablishMatrices()
             p[n, t - 1] = 1
             p[n, t] = -1
             y[n, t] = -gen.RD[n]
-            z[n, t] = - gen.RD_bar[n]
+            z[n, t] = -gen.RD_bar[n]
             C(p); C()
             B(y, z); B()
             push!(rhs, 0)

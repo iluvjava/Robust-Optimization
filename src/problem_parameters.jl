@@ -85,7 +85,7 @@ mutable struct Generators
         this.alphas = ConvertCSV(alpha_file)
         this.betas = ConvertCSV(beta_file)
         this.initial_status = gen_file["status"]
-        this.initial_pg = gen_file["pg"]
+        this.initial_pg = gen_file["Pg"]
 
     return this end
     
