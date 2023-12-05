@@ -37,12 +37,17 @@ MP: Master problem.
     Tmind::Array{Int}           
     "Min up time for the primary generators. "
     Tminu::Array{Int}
+    # [x]: Changed her, a new added field for MP
+    "The y(0) constant. It's should be provided as data from the MatrixConstruct Module. "
+    initial_status::Array{Int}
 
     function MP(M::Model, gamma_upper=1e4)
         this = new(M)
         this.G = MatrixConstruct.PRIMARY_GENERATORS.generator_count
         this.T = MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON
         this.Tmind = MatrixConstruct.PRIMARY_GENERATORS.Tmind
+        # [x]: Changed here, constructing the field for MP. 
+        this.initial_status = MatrixConstruct.PRIMARY_GENERATORS.initial_status
         @assert any(this.T .> this.Tmind) "Tmind: Minimum down time has to be less than "*
         "time horizon"
         this.Tminu = MatrixConstruct.PRIMARY_GENERATORS.Tminu
@@ -245,6 +250,7 @@ on julia REPL for more information.
     Tmind::Array{Int}
     "The minimum up time for the primary generators. "
     Tminu::Array{Int}
+    # :[x] Changed her, a new added field for MSP
     "The y(0) constant. It's should be provided as data from the MatrixConstruct Module. "
     initial_status::Array{Int}
     "A counter for the number of cuts introduced to the current master problem. "
@@ -283,6 +289,7 @@ on julia REPL for more information.
         this.Tminu = MatrixConstruct.PRIMARY_GENERATORS.Tminu
         @assert any(this.T .> this.Tminu) "Tmind: Minimum up time has to be less than "*
         "time horizon"
+        # [x]: Changed here, constructing the field for MSP. 
         this.initial_status = MatrixConstruct.PRIMARY_GENERATORS.initial_status
         this.gamma_upper = gamma_upper
         this.con = Vector()
@@ -396,7 +403,7 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
         @constraint(
             this|>GetModel,
             w[:y, :, t] -  this.initial_status[:] .== w[:x, :, t] - w[:z, :, t]
-        )
+        )...
     )
     for t in 2:this.T
         push!(
