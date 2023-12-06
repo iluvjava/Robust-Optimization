@@ -398,13 +398,13 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
     )
     # [x]: Change here by adding a single constraint to include the initial condition. 
     t = 1
-    push!(
-        this.con, 
-        @constraint(
-            this|>GetModel,
-            w[:y, :, t] - this.initial_status[:] .== w[:x, :, t] - w[:z, :, t]
-        )...
-    )
+    # push!(
+    #     this.con, 
+    #     @constraint(
+    #         this|>GetModel,
+    #         w[:y, :, t] - this.initial_status[:] .== w[:x, :, t] - w[:z, :, t]
+    #     )...
+    # )
     for t in 2:this.T
         push!(
             this.con,
