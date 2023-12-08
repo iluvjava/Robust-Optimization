@@ -899,7 +899,7 @@ function OuterLoop(
     PortOutVariable!(mp, :d) do d fix.(d, d̂, force=true) end
     PortOutVariable!(mp, :v) do v fix.(v, 0, force=true) end
     Solve!(mp)
-    # BUG: infeasibility occured here. 
+    # BUG: Exfiltrate here. 
     if !has_values(mp|>GetModel)
         PrintConstraintsGroup(mp.con)
         DebugReport(mp)

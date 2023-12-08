@@ -5,4 +5,4 @@ elseif Sys.isapple()
 elseif Sys.iswindows()
     ENV["GUROBI_HOME"] = "C:\\gurobi952\\win64"
 end
-using SparseArrays, LinearAlgebra, JuMP, GLPK, HiGHS, Gurobi, Plots
+using SparseArrays, LinearAlgebra, JuMP, GLPK, HiGHS, Gurobi, Plots, Serialization
