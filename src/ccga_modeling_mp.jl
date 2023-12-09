@@ -389,22 +389,22 @@ function PreppareConstraintsPrimary!(this::Union{MP, MSP})
             this|>GetModel, w[:x, :, :] + w[:z, :, :] .<= 1
         )...
     )
-
-    push!(
-        this.con,
-        @constraint(this|>GetModel,
-            w[:y, :, 1] .== w[:x, :, 1] - w[:z, :, 1]
-        )...
-    )
-    # BUG: Removing the constraints here will not result in infeasibility at the mp. 
-    # t = 1
     # push!(
-    #     this.con, 
-    #     @constraint(
-    #         this|>GetModel,
-    #         w[:y, :, t] - this.initial_status[:] .== w[:x, :, t] - w[:z, :, t]
+    #     this.con,
+    #     @constraint(this|>GetModel,
+    #         w[:y, :, 1] .== w[:x, :, 1] - w[:z, :, 1]
     #     )...
     # )
+
+    # BUG: Removing the constraints here will not result in infeasibility at the mp. 
+    t = 1
+    push!(
+        this.con, 
+        @constraint(
+            this|>GetModel,
+            w[:y, :, t] - this.initial_status[:] .== w[:x, :, t] - w[:z, :, t]
+        )...
+    )
     for t in 2:this.T
         push!(
             this.con,
