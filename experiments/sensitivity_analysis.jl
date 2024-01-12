@@ -2,10 +2,10 @@ include("experiment_context_and_assembling.jl")
 
 # Experiment code here, for example: 
 global DEMANDS_PROFILES = "$(MatrixConstruct.DATA_DIR)/demand_profiles.csv"|>open|>CSV.File
-global PROFILE = 19
+global PROFILE = 13
 d̂ = [DEMANDS_PROFILES[PROFILE][idx] for idx in 2:(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON + 1)]
 TOL = 1.0
-GAMMA_UPPER = 1400
+GAMMA_UPPER = 1000
 
 Results = OuterLoop(
     d̂,
@@ -17,7 +17,7 @@ Results = OuterLoop(
     inner_routine=InnerLoopHeuristic,
     block_demands=0, 
     make_plot=false, 
-    msp_optimality_gap=0.05,
+    msp_optimality_gap=0.01,
     session_time_out=7200
 );
 
