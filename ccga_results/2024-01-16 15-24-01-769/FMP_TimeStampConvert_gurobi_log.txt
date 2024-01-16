@@ -1,0 +1,398 @@
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:24:03 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7200
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:24:03 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7200
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 1216 rows, 1083 columns and 6040 nonzeros
+Model fingerprint: 0x4aa48e2b
+Variable types: 1059 continuous, 24 integer (24 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 1e+08]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+00, 1e+08]
+Presolve removed 163 rows and 120 columns
+Presolve time: 0.01s
+Presolved: 1053 rows, 963 columns, 5424 nonzeros
+Variable types: 951 continuous, 12 integer (12 binary)
+Found heuristic solution: objective 18.7500000
+
+Root relaxation: objective 1.000000e+03, 346 iterations, 0.00 seconds (0.01 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 1000.00000    0    1   18.75000 1000.00000  5233%     -    0s
+     0     0 1000.00000    0    4   18.75000 1000.00000  5233%     -    0s
+H    0     0                      99.6666667 1000.00000   903%     -    0s
+     0     0 1000.00000    0    4   99.66667 1000.00000   903%     -    0s
+     0     0 1000.00000    0    4   99.66667 1000.00000   903%     -    0s
+     0     0  330.00000    0    1   99.66667  330.00000   231%     -    0s
+H    0     0                     106.3333333  330.00000   210%     -    0s
+     0     0  321.66667    0    4  106.33333  321.66667   203%     -    0s
+H    0     0                     119.7435897  321.66667   169%     -    0s
+     0     2  321.66667    0    4  119.74359  321.66667   169%     -    0s
+*  116   106              12     122.1153846  321.66667   163%  60.7    0s
+H  145   105                     122.1153846  321.66667   163%  62.5    0s
+*  210   166              12     122.3076923  321.66667   163%  68.4    0s
+
+Cutting planes:
+  Gomory: 1
+  MIR: 18
+  RLT: 44
+  Relax-and-lift: 3
+
+Explored 8189 nodes (691085 simplex iterations) in 4.48 seconds (10.37 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 6: 122.308 122.115 119.744 ... 18.75
+
+Optimal solution found (tolerance 5.00e-02)
+Best objective 1.223076923077e+02, best bound 1.223076923077e+02, gap 0.0000%
+
+User-callback calls 17241, time in user-callback 0.00 sec
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:24:08 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7195
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:24:08 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7195
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 1216 rows, 1083 columns and 5888 nonzeros
+Model fingerprint: 0x58897732
+Variable types: 1059 continuous, 24 integer (24 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 1e+08]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+00, 1e+08]
+Presolve removed 251 rows and 249 columns
+Presolve time: 0.01s
+Presolved: 965 rows, 834 columns, 4644 nonzeros
+Variable types: 822 continuous, 12 integer (12 binary)
+Found heuristic solution: objective 1.0000000
+
+Root relaxation: objective 1.000000e+03, 708 iterations, 0.02 seconds (0.01 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 1000.00000    0    4    1.00000 1000.00000      -     -    0s
+     0     0 1000.00000    0    4    1.00000 1000.00000      -     -    0s
+     0     0 1000.00000    0    3    1.00000 1000.00000      -     -    0s
+     0     0 1000.00000    0    1    1.00000 1000.00000      -     -    0s
+     0     0  500.00000    0    3    1.00000  500.00000      -     -    0s
+     0     0  500.00000    0    4    1.00000  500.00000      -     -    0s
+H    0     0                     130.7692308  500.00000   282%     -    0s
+     0     0  500.00000    0    3  130.76923  500.00000   282%     -    0s
+     0     0  400.00000    0    3  130.76923  400.00000   206%     -    0s
+H    0     0                     149.4285714  400.00000   168%     -    0s
+     0     2  400.00000    0    3  149.42857  400.00000   168%     -    0s
+*  107    72               9     151.4285714  330.00000   118%  47.5    0s
+*  136    77               9     151.7391304  330.00000   117%  50.0    0s
+
+Cutting planes:
+  Implied bound: 2
+  MIR: 20
+  Flow cover: 2
+  RLT: 41
+  Relax-and-lift: 2
+
+Explored 1023 nodes (78553 simplex iterations) in 0.68 seconds (1.30 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 5: 151.739 151.429 149.429 ... 1
+
+Optimal solution found (tolerance 5.00e-02)
+Best objective 1.517391304348e+02, best bound 1.517391304348e+02, gap 0.0000%
+
+User-callback calls 2549, time in user-callback 0.00 sec
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:24:09 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7194
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:24:09 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7194
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 1216 rows, 1083 columns and 6010 nonzeros
+Model fingerprint: 0xccbbd2a4
+Variable types: 1059 continuous, 24 integer (24 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 1e+08]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+00, 1e+08]
+Presolve removed 183 rows and 150 columns
+Presolve time: 0.01s
+Presolved: 1033 rows, 933 columns, 5244 nonzeros
+Variable types: 921 continuous, 12 integer (12 binary)
+Found heuristic solution: objective 1.0000000
+
+Root relaxation: objective 1.000000e+03, 623 iterations, 0.00 seconds (0.01 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 1000.00000    0    2    1.00000 1000.00000      -     -    0s
+     0     0  500.00000    0    2    1.00000  500.00000      -     -    0s
+     0     0  500.00000    0    3    1.00000  500.00000      -     -    0s
+     0     0  330.00000    0    1    1.00000  330.00000      -     -    0s
+H    0     0                     150.0000000  250.00000  66.7%     -    0s
+     0     0  250.00000    0    2  150.00000  250.00000  66.7%     -    0s
+     0     0  250.00000    0    1  150.00000  250.00000  66.7%     -    0s
+     0     0  205.00000    0    1  150.00000  205.00000  36.7%     -    0s
+     0     0  200.00000    0    1  150.00000  200.00000  33.3%     -    0s
+     0     2  200.00000    0    1  150.00000  200.00000  33.3%     -    0s
+
+Cutting planes:
+  Implied bound: 1
+  MIR: 19
+  Flow cover: 2
+  RLT: 32
+  Relax-and-lift: 1
+
+Explored 63 nodes (3485 simplex iterations) in 0.12 seconds (0.19 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 150 1 
+
+Optimal solution found (tolerance 5.00e-02)
+Best objective 1.500000000000e+02, best bound 1.500000000000e+02, gap 0.0000%
+
+User-callback calls 556, time in user-callback 0.00 sec
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:24:09 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7194
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:24:09 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7194
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 1216 rows, 1083 columns and 6052 nonzeros
+Model fingerprint: 0x9e259ab5
+Variable types: 1059 continuous, 24 integer (24 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 1e+08]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+00, 1e+08]
+Presolve removed 155 rows and 107 columns
+Presolve time: 0.00s
+Presolved: 1061 rows, 976 columns, 5500 nonzeros
+Variable types: 964 continuous, 12 integer (12 binary)
+Found heuristic solution: objective 1.0000000
+
+Root relaxation: objective 3.000000e+02, 536 iterations, 0.00 seconds (0.01 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0  300.00000    0    1    1.00000  300.00000      -     -    0s
+     0     0  300.00000    0    1    1.00000  300.00000      -     -    0s
+H    0     0                       2.1875000  300.00000      -     -    0s
+H    0     0                       5.0000000  300.00000  5900%     -    0s
+     0     0  230.00000    0    1    5.00000  230.00000  4500%     -    0s
+     0     0  225.00000    0    1    5.00000  225.00000  4400%     -    0s
+     0     0  170.00000    0    1    5.00000  170.00000  3300%     -    0s
+     0     0  150.00000    0    2    5.00000  150.00000  2900%     -    0s
+     0     2  150.00000    0    2    5.00000  150.00000  2900%     -    0s
+H   42    46                       5.0000000  140.55556  2711%  86.4    0s
+*   97    92              12       5.0000002  140.55556  2711%   118    0s
+*   98    92              12       6.6666670  140.55556  2008%   117    0s
+*  117    99              12       6.6666671  140.55556  2008%   114    0s
+*  196   135              12       6.6666682  100.00000  1400%  99.1    0s
+*  483   214              12       6.6666781  100.00000  1400%  88.5    0s
+  5273   337   12.31481   10    2    6.66668   29.60000   344%  68.8    5s
+* 5903   317              12       6.6666785   29.60000   344%  67.7    5s
+* 6907   208              12       6.6666786   28.68690   330%  66.7    5s
+
+Cutting planes:
+  MIR: 48
+  Flow cover: 5
+  RLT: 34
+  PSD: 1
+
+Explored 8190 nodes (529123 simplex iterations) in 6.42 seconds (13.68 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 10: 6.66668 6.66668 6.66668 ... 1
+
+Optimal solution found (tolerance 5.00e-02)
+Best objective 6.666678643506e+00, best bound 6.666678643506e+00, gap 0.0000%
+
+User-callback calls 17389, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7188
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 2432 rows, 2141 columns and 12092 nonzeros
+Model fingerprint: 0x49acc076
+Variable types: 2117 continuous, 24 integer (24 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 1e+08]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+00, 1e+08]
+
+MIP start from previous solve produced solution with objective -0 (0.07s)
+Loaded MIP start from previous solve with objective -0
+
+Presolve removed 311 rows and 203 columns
+Presolve time: 0.02s
+Presolved: 2121 rows, 1938 columns, 11001 nonzeros
+Variable types: 1926 continuous, 12 integer (12 binary)
+
+Root relaxation: objective 3.000000e+02, 1741 iterations, 0.02 seconds (0.05 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0  300.00000    0    1   -0.00000  300.00000      -     -    0s
+     0     0  300.00000    0    2   -0.00000  300.00000      -     -    0s
+     0     0  225.00000    0    1   -0.00000  225.00000      -     -    0s
+     0     0  225.00000    0    1   -0.00000  225.00000      -     -    0s
+     0     0  170.00000    0    1   -0.00000  170.00000      -     -    0s
+     0     0  150.00000    0    3   -0.00000  150.00000      -     -    0s
+     0     2  150.00000    0    3   -0.00000  150.00000      -     -    1s
+H  175   129                       0.3769841  140.55556      -   378    2s
+H  181   129                       0.7407407  140.55556      -   388    2s
+   297   156  100.00000    7    1    0.74074  140.55556      -   413    5s
+*  376   163              12       2.5128205  140.55556  5494%   415    5s
+H  724   221                       2.5128208  139.50001  5452%   427    8s
+*  846   240              12       2.5128208  139.50001  5452%   429    9s
+  1295   289 infeasible   12         2.51282  100.00000  3880%   436   15s
+H 1351   289                       2.5128252  100.00000  3880%   436   15s
+H 1619   320                       2.5128284  100.00000  3880%   436   18s
+H 1715   322                       2.5128284  100.00000  3880%   435   19s
+  2220   322 infeasible   12         2.51283  100.00000  3880%   450   20s
+H 2326   322                       2.5128314  100.00000  3880%   452   20s
+H 3406   394                       2.5128423   75.00000  2885%   453   21s
+  4283   390 infeasible   12         2.51284   75.00000  2885%   450   26s
+  4491   407   56.25000   10    1    2.51284   75.00000  2885%   451   32s
+  4882   439 infeasible   12         2.51284   74.37500  2860%   454   35s
+H 4900   439                       2.5128682   74.37500  2860%   454   35s
+  6300   389     cutoff   12         2.51287   64.73195  2476%   452   45s
+H 6371   389                       2.5134348   64.70241  2474%   451   45s
+  6970   320   42.50000   11    1    2.51343   56.25000  2138%   449   52s
+
+Cutting planes:
+  MIR: 41
+  Flow cover: 11
+  RLT: 62
+  Relax-and-lift: 10
+  PSD: 1
+
+Explored 8189 nodes (3687843 simplex iterations) in 53.93 seconds (120.96 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 10: 2.51343 2.51287 2.51284 ... 0.376984
+
+Optimal solution found (tolerance 5.00e-02)
+Best objective 2.513434796650e+00, best bound 2.513434796650e+00, gap 0.0000%
+
+User-callback calls 21188, time in user-callback 0.00 sec
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:25:10 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7133
+
+Gurobi 9.5.2 (win64) logging started Tue Jan 16 15:25:10 2024
+
+Set parameter LogFile to value "./ccga_results/2024-01-16 15-24-01-769/FMP_TimeStampConvert_gurobi_log.txt"
+Set parameter TimeLimit to value 7133
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 1216 rows, 1083 columns and 6046 nonzeros
+Model fingerprint: 0x5ae981d1
+Variable types: 1059 continuous, 24 integer (24 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 1e+08]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+00, 1e+08]
+Presolve removed 159 rows and 113 columns
+Presolve time: 0.01s
+Presolved: 1057 rows, 970 columns, 5464 nonzeros
+Variable types: 958 continuous, 12 integer (12 binary)
+Found heuristic solution: objective 1.0000000
+
+Root relaxation: objective 2.888889e+02, 987 iterations, 0.02 seconds (0.02 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0  288.88889    0    1    1.00000  288.88889      -     -    0s
+     0     0  286.11111    0    1    1.00000  286.11111      -     -    0s
+H    0     0                       6.2500000  286.11111  4478%     -    0s
+     0     0  250.00000    0    1    6.25000  250.00000  3900%     -    0s
+     0     0  200.00000    0    1    6.25000  200.00000  3100%     -    0s
+     0     0  170.00000    0    1    6.25000  170.00000  2620%     -    0s
+     0     0  150.00000    0    2    6.25000  150.00000  2300%     -    0s
+     0     2  150.00000    0    2    6.25000  150.00000  2300%     -    0s
+  6865   299     cutoff   12         6.25000   23.60000   278%  65.4    5s
+
+Cutting planes:
+  MIR: 39
+  Flow cover: 5
+  RLT: 30
+
+Explored 7921 nodes (506262 simplex iterations) in 5.50 seconds (11.20 work units)
+Thread count was 20 (of 20 available processors)
+
+Solution count 2: 6.25 1 
+
+Optimal solution found (tolerance 5.00e-02)
+Best objective 6.250000000000e+00, best bound 6.250000000000e+00, gap 0.0000%
+
+User-callback calls 16706, time in user-callback 0.00 sec
+Set parameter TimeLimit to value 7128
+Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (win64)
+Thread count: 10 physical cores, 20 logical processors, using up to 20 threads
+Optimize a model with 2432 rows, 2141 columns and 12080 nonzeros
+Model fingerprint: 0x6452ccbd
+Variable types: 2117 continuous, 24 integer (24 binary)
+Coefficient statistics:
+  Matrix range     [9e-01, 1e+08]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+00, 1e+08]
+
+MIP start from previous solve produced solution with objective -0 (0.05s)
+Loaded MIP start from previous solve with objective -0
+
+Presolve removed 321 rows and 215 columns
+Presolve time: 0.02s
+Presolved: 2111 rows, 1926 columns, 10923 nonzeros
+Variable types: 1914 continuous, 12 integer (12 binary)
+
+Root relaxation: objective 2.888889e+02, 1740 iterations, 0.02 seconds (0.06 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0  288.88889    0    1   -0.00000  288.88889      -     -    0s
+     0     0  286.11111    0    2   -0.00000  286.11111      -     -    0s
+     0     0  236.94444    0    1   -0.00000  236.94444      -     -    0s
+     0     0  200.00000    0    1   -0.00000  200.00000      -     -    0s
+     0     0  170.00000    0    1   -0.00000  170.00000      -     -    0s
