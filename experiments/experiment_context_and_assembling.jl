@@ -7,13 +7,13 @@ include("../src/utilities.jl")
 
 module MatrixConstruct
     "Experiments data folder. "
-    DATA_DIR = "data"
+    DATA_DIR = "data_big"
 
     include("../src/coef_mgr_v2.jl")
     include("../src/problem_parameters.jl")
     
     # Apply multiplers on different parameters for the data. The below is the default profile. 
-    CONST_PROBLEM_PARAMETERS.HORIZON = 12
+    CONST_PROBLEM_PARAMETERS.HORIZON = 24
     CONST_PROBLEM_PARAMETERS.Φ = 1e8
     for k in keys(DEMAND_RESPONSE.R)
         DEMAND_RESPONSE.R[k] *= 1
