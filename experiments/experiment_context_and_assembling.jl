@@ -16,7 +16,7 @@ module MatrixConstruct
     CONST_PROBLEM_PARAMETERS.HORIZON = 24
     CONST_PROBLEM_PARAMETERS.Φ = 1e8
     for k in keys(DEMAND_RESPONSE.R)
-        DEMAND_RESPONSE.R[k] *= 0.5
+        DEMAND_RESPONSE.R[k] *= 2
     end
     STORAGE_SYSTEM.Capacity[1] = 100
     PRIMARY_GENERATORS.Pmax .*= 1
