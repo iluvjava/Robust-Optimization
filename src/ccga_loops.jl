@@ -2,19 +2,23 @@
 const GUROBI_ENV = Gurobi.Env()
 "The major directories where every session of the ccga results are going to output to. "
 const RESULTS_DIRECTORY = "./ccga_results"
-"The parameters for default time out options for the solver made for JuMP Models. "
+"""
+The parameters for default time out options for the solver made for JuMP Models for FMP, FSP or the 
+solvers involved in the bilinear solving. 
+"""
 const SOLVER_TIME_OUT = 1800
-"The total amount of time allowed for executing the CCGA algorithm. "
-global SESSION_TIME_OUT = 1800
+"""
+The total amount of time allowed for executing the CCGA algorithm. 
+It can be changed by the CCGA outer for loop function. 
+"""
+global SESSION_TIME_LIMIT = typemax(Int) # Default value. 
+"""
+The int epoch time for when the session was started. This can be modified. 
+This is established by the outer forloop function. 
+"""
+global SESSION_START_TIME = datetime2unix(now())|>floor|>Int
 
-if SESSION_TIME_OUT <= 0
-    error("SESSION_TIME_OUT out can't be <= 0. ")
-end
-
-"The int epoch time for when the session was started. This can be modified. "
-global SESSION_START_TIME = nothing
-
-
+# Check results directories, make it if it's not there. 
 if !isdir(RESULTS_DIRECTORY)
     mkdir(RESULTS_DIRECTORY)
 end
@@ -26,23 +30,23 @@ this function is being called.
 
 """
 function Elapsed()::Int
-    if SESSION_START_TIME === nothing
-        return -1
-    end
     return (now()|>datetime2unix|>floor|>Int) - SESSION_START_TIME
 end
 
 """
-Change the solver timeout to be the amount of time remains for this section. 
+Change the solver timeout to be the amount of time remains for the whole CCGA algorithm, denpending on the total 
+available time set for the whole session and the `SESSION_TIME_LIMIT` global var. 
 """
 function AdaptSolverTimeout(model::Model)::Model
-    if Elapsed() == -1
-        return model
-    end
-    timeRemains = SESSION_TIME_OUT - Elapsed()
+    if SESSION_TIME_LIMIT <= 0
+        error("SESSION_TIME_LIMIT out can't be <= 0. ")
+    end    
+    timeRemains = SESSION_TIME_LIMIT - Elapsed()
     if timeRemains <= 0 
         error("We run out of time, forced terminations by errors. ")
     end
+    @info("Time Remaining for the MSP: $(timeRemains). Setting this time limit for assigned optimizer. ")
+
     set_optimizer_attribute(model, "TIME_LIMIT", timeRemains)
     return model
 end
@@ -129,7 +133,7 @@ gurobi solver can be found here [here](https://www.gurobi.com/documentation/9.5/
 
 # Named Arguments
 - `optimality_gap`: The "MIPGap" for the gurobi solver. 
-- `time_out::=1`: Try to terminate the gurobi solver after a certain number of seconds has passed. 
+- `time_limit::=1`: Try to terminate the gurobi solver after a certain number of seconds has passed. 
 - `solver_name::String`: Give the solver a name, if this parameter is specified then a file with the 
 given solver name and a TimeStamp will be stored to the global SESSION_DIR. 
 - `mip_focus::Int`: Change the mode of focus for the GUROBI solver. 
@@ -137,14 +141,14 @@ given solver name and a TimeStamp will be stored to the global SESSION_DIR.
 """
 function GetJuMPModel(
     ;optimality_gap=0.05, 
-    time_out::Int=SOLVER_TIME_OUT, 
+    time_limit::Int=SOLVER_TIME_OUT, 
     solver_name::String="", 
     mip_focus::Int=0, 
     log_to_console::Int=0
 )
     model = Model(() -> Gurobi.Optimizer(GUROBI_ENV))
     set_optimizer_attribute(model, "MIPGap", optimality_gap)
-    set_optimizer_attribute(model, "TIME_LIMIT", time_out)
+    set_optimizer_attribute(model, "TIME_LIMIT", time_limit)
     set_optimizer_attribute(model, "MIPFocus", mip_focus)
     set_optimizer_attribute(model, "LogToConsole", log_to_console)
     if solver_name !== ""
@@ -844,7 +848,7 @@ Performs the outter forloop of the CCGA algorithm with initialized parameters.
 - `block_demands::Int=1`: See doc for type *MSP* for more information. 
 - `inner_routine::Function=CCGAInnerLoop`, the inner routine function you want the outter CCGA forloop function 
 to call. 
-- `session_time_out::Bool=False`
+- `session_time_out::Int=False`
 - `msp_optimality_gap::Float64=1e-2`, this is the optimality MIP optimality passed to the solver for the MSP problem. 
 the tolerance for solvers setup or FMP, FSP problems, they are in the source code. 
 """
@@ -854,7 +858,7 @@ function OuterLoop(
     outer_max_itr::Int=40,
     make_plot::Bool=true, 
     inner_routine::Function=InnerLoopMIP,
-    session_time_out::Int=-1,
+    session_time_limit::Int=-1,
     msp_optimality_gap::Float64=1e-2,
     kwargs...
 ) where {N1 <: Number, N2 <: Number}
@@ -884,10 +888,9 @@ function OuterLoop(
             println(io, "DR = $(MatrixConstruct.DEMAND_RESPONSE.R)")
         end
     end
-    if session_time_out >= 0
-        global SESSION_START_TIME = datetime2unix(now())|>floor|>Int
-        global SESSION_TIME_OUT = session_time_out
-        @info "Session time limit has been set to $(SESSION_TIME_OUT) seconds. "*
+    if session_time_limit >= 0
+        global SESSION_TIME_LIMIT = session_time_limit
+        @info "Session time limit has been set to $(SESSION_TIME_LIMIT) seconds. "*
             "This will dynamically adjust solver time_out options depending on the amount of time remainds. "
     end
     γ⁺ = gamma_upper; d̂ = d_hat
