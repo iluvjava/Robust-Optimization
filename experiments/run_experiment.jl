@@ -13,11 +13,11 @@ Results = OuterLoop(
     inner_max_itr=20,
     outer_max_itr=20, 
     objective_types=2,
-    inner_epsilon=1.0, 
+    epsilon=0.1, 
     inner_routine=InnerLoopHeuristic,
     block_demands=0, 
     make_plot=false, 
     msp_optimality_gap=0.01, 
-    SESSION_TIME_LIMIT=36000
+    session_time_limit=36000
 );
 
