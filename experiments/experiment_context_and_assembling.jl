@@ -19,10 +19,10 @@ module MatrixConstruct
         DEMAND_RESPONSE.R[k] *= 1
     end
     STORAGE_SYSTEM.Capacity[1] = 100
-    PRIMARY_GENERATORS.Pmax .*= 1.15
+    PRIMARY_GENERATORS.Pmax .*= 1
     PRIMARY_GENERATORS.Pmin .*= 1
-    PRIMARY_GENERATORS.RU .*= 1
-    PRIMARY_GENERATORS.RD .*= 1
+    PRIMARY_GENERATORS.RU .*= 0.5
+    PRIMARY_GENERATORS.RD .*= 0.5
     @info "Manual multipliers has been applied to the parameters on the data set for experiments. "
 
     include("../src/matrix_constructions.jl")
