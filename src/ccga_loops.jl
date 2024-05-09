@@ -904,6 +904,7 @@ function OuterLoop(
     Solve!(mp)
     # BUG: Exfiltrate here. 
     if !has_values(mp|>GetModel)
+        @warn("Debug report generated due infeasible Master Problem. ")
         PrintConstraintsGroup(mp.con)
         DebugReport(mp)
         serialize("debug_data_dump/serialized_mp", mp.model)
