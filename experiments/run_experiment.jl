@@ -11,7 +11,7 @@ Results = OuterLoop(
     d̂,
     GAMMA_UPPER,
     inner_max_itr=20,
-    outer_max_itr=20, 
+    outer_max_itr=20,
     objective_types=2,
     epsilon=0.1, 
     inner_routine=InnerLoopHeuristic,
