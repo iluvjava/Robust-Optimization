@@ -13,7 +13,7 @@ module MatrixConstruct
     include("../src/problem_parameters.jl")
     
     # Apply multiplers on different parameters for the data. The below is the default profile. 
-    CONST_PROBLEM_PARAMETERS.HORIZON = 12
+    CONST_PROBLEM_PARAMETERS.HORIZON = 6
     CONST_PROBLEM_PARAMETERS.Φ = 2400
     for k in keys(DEMAND_RESPONSE.R)
         DEMAND_RESPONSE.R[k] *= 4
