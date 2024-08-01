@@ -18,8 +18,8 @@ module MatrixConstruct
     for k in keys(DEMAND_RESPONSE.R)
         DEMAND_RESPONSE.R[k] *= 1
     end
-    STORAGE_SYSTEM.Capacity[1] = 100*3.5
-    PRIMARY_GENERATORS.Pmax .*= 1
+    STORAGE_SYSTEM.Capacity[1] = 100
+    PRIMARY_GENERATORS.Pmax .*= 3
     PRIMARY_GENERATORS.Pmin .*= 1
     PRIMARY_GENERATORS.RU .*= 1
     PRIMARY_GENERATORS.RD .*= 1
