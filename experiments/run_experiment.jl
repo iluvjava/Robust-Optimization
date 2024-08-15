@@ -2,7 +2,7 @@ include("experiment_context_and_assembling.jl")
 
 # Experiment code here, for example: 
 global DEMANDS_PROFILES = "$(MatrixConstruct.DATA_DIR)/demand_profiles.csv"|>open|>CSV.File
-global PROFILE = 38
+global PROFILE = 37
 d̂ = [DEMANDS_PROFILES[PROFILE][idx] for idx in 2:(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON + 1)]
 GAMMA_UPPER = 1000
 
