@@ -14,12 +14,12 @@ module MatrixConstruct
     
     # Apply multiplers on different parameters for the data. The below is the default profile. 
     CONST_PROBLEM_PARAMETERS.HORIZON = 24
-    CONST_PROBLEM_PARAMETERS.Φ = 1171875.0 - 1171875.0/2
+    CONST_PROBLEM_PARAMETERS.Φ = 8e5
     for k in keys(DEMAND_RESPONSE.R)
         DEMAND_RESPONSE.R[k] *= 1
     end
     STORAGE_SYSTEM.Capacity[1] = 100
-    PRIMARY_GENERATORS.Pmax .*= 2
+    PRIMARY_GENERATORS.Pmax .*= 1
     PRIMARY_GENERATORS.Pmin .*= 1
     PRIMARY_GENERATORS.RU .*= 1
     PRIMARY_GENERATORS.RD .*= 1
