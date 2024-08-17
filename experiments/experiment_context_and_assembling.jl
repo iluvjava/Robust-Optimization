@@ -14,7 +14,7 @@ module MatrixConstruct
     
     # Apply multiplers on different parameters for the data. The below is the default profile. 
     CONST_PROBLEM_PARAMETERS.HORIZON = 24
-    CONST_PROBLEM_PARAMETERS.Φ = 8e5
+    CONST_PROBLEM_PARAMETERS.Φ = 8e5 + 8e5/2 - 8e5/4
     for k in keys(DEMAND_RESPONSE.R)
         DEMAND_RESPONSE.R[k] *= 1
     end
