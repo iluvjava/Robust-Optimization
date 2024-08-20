@@ -4,13 +4,13 @@ include("experiment_context_and_assembling.jl")
 global DEMANDS_PROFILES = "$(MatrixConstruct.DATA_DIR)/demand_profiles.csv"|>open|>CSV.File
 global PROFILE = 38
 d̂ = [DEMANDS_PROFILES[PROFILE][idx] for idx in 2:(MatrixConstruct.CONST_PROBLEM_PARAMETERS.HORIZON + 1)]
-GAMMA_UPPER = 500
+GAMMA_UPPER = 1000
 
 Results = OuterLoop(
     d̂,
     GAMMA_UPPER,
     inner_max_itr=50,
-    outer_max_itr=20,
+    outer_max_itr=20,   
     objective_types=2,
     epsilon=0.1, 
     inner_routine=InnerLoopHeuristic, 
